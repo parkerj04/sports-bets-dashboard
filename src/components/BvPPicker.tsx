@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { BatterLine } from "@/lib/mlb";
 import type { BvP } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import { BatterZones } from "@/components/PitcherZones";
+
+type Opt = BatterLine & { vsId?: number | null; vsName?: string | null; side: string };
 
 export function BvPPicker({
   homeHitters,
@@ -25,73 +27,83 @@ export function BvPPicker({
   homeTeam: string;
   awayTeam: string;
 }) {
-  const homeOptions = useMemo(
-    () => homeHitters.map((b) => ({ ...b, vsId: awayPitcherId, vsName: awayPitcherName, side: homeTeam })),
-    [homeHitters, awayPitcherId, awayPitcherName, homeTeam]
-  );
-  const awayOptions = useMemo(
-    () => awayHitters.map((b) => ({ ...b, vsId: homePitcherId, vsName: homePitcherName, side: awayTeam })),
-    [awayHitters, homePitcherId, homePitcherName, awayTeam]
-  );
-  const all = [...awayOptions, ...homeOptions].filter((b) => b.id && b.vsId);
+  const awayOptions: Opt[] = (awayHitters || []).map((b) => ({
+    ...b,
+    vsId: homePitcherId || null,
+    vsName: homePitcherName || "home starter",
+    side: awayTeam,
+  }));
+  const homeOptions: Opt[] = (homeHitters || []).map((b) => ({
+    ...b,
+    vsId: awayPitcherId || null,
+    vsName: awayPitcherName || "away starter",
+    side: homeTeam,
+  }));
 
-  const [key, setKey] = useState("");
+  const [picked, setPicked] = useState<Opt | null>(null);
   const [loading, setLoading] = useState(false);
   const [bvp, setBvp] = useState<BvP | null>(null);
   const [form, setForm] = useState<HitterLog | null>(null);
   const [error, setError] = useState("");
+  const [openSide, setOpenSide] = useState<"away" | "home">("away");
 
-  async function load(val: string) {
-    setKey(val);
+  async function tap(row: Opt) {
+    setPicked(row);
     setError("");
     setBvp(null);
     setForm(null);
-    const row = all.find((b) => String(b.id) === val);
-    if (!row || !row.vsId) return;
-    setLoading(true);
-    const res = await fetch(
-      `/api/research/bvp?batterId=${row.id}&pitcherId=${row.vsId}&name=${encodeURIComponent(row.name)}`
-    );
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error || "Could not load matchup");
+    if (!row.id || !row.vsId) {
+      setError("No starter ID for this matchup yet.");
       return;
     }
-    setBvp(data.bvp);
-    setForm(data.form);
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/research/bvp?batterId=${row.id}&pitcherId=${row.vsId}&name=${encodeURIComponent(row.name)}`
+      );
+      const data = await res.json();
+      if (!res.ok) setError(data.error || "Could not load matchup");
+      else {
+        setBvp(data.bvp || null);
+        setForm(data.form || null);
+      }
+    } catch {
+      setError("Network error loading matchup");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const selected = all.find((b) => String(b.id) === key);
+  const list = openSide === "away" ? awayOptions : homeOptions;
 
   return (
     <div className="card p-4 space-y-3">
       <h3 className="font-semibold text-sm">Pick any batter vs the starter</h3>
-      <select className="input" value={key} onChange={(e) => load(e.target.value)}>
-        <option value="">Select a hitter…</option>
-        <optgroup label={awayTeam}>
-          {awayOptions.filter((b) => b.vsId).map((b) => (
-            <option key={`a${b.id}`} value={b.id}>
-              {b.name} vs {homePitcherName || "home SP"}
-            </option>
-          ))}
-        </optgroup>
-        <optgroup label={homeTeam}>
-          {homeOptions.filter((b) => b.vsId).map((b) => (
-            <option key={`h${b.id}`} value={b.id}>
-              {b.name} vs {awayPitcherName || "away SP"}
-            </option>
-          ))}
-        </optgroup>
-      </select>
-      {loading && <p className="text-xs text-muted">Loading matchup…</p>}
-      {error && <p className="text-xs text-danger">{error}</p>}
-      {selected && !loading && (
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setOpenSide("away")} className={`text-xs px-3 py-1.5 rounded-full border ${openSide === "away" ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{awayTeam}</button>
+        <button type="button" onClick={() => setOpenSide("home")} className={`text-xs px-3 py-1.5 rounded-full border ${openSide === "home" ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{homeTeam}</button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {list.map((b) => (
+          <button
+            type="button"
+            key={`${b.side}-${b.id}`}
+            onClick={() => tap(b)}
+            className={`text-xs px-2.5 py-1.5 rounded-lg border ${picked?.id === b.id && picked?.side === b.side ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}
+          >
+            {b.name}
+          </button>
+        ))}
+        {list.length === 0 && <p className="text-xs text-muted">No hitters loaded for this side.</p>}
+      </div>
+      {picked && (
         <p className="text-xs text-muted">
-          {selected.name} vs {selected.vsName} ({selected.avg} / {selected.ops} season)
+          {picked.name} vs {picked.vsName} · season {picked.avg} / {picked.ops}
         </p>
       )}
-      {bvp ? (
+      {loading && <p className="text-xs text-muted">Loading matchup…</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
+      {bvp && (
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           <Stat k="AB" v={bvp.ab} />
           <Stat k="H" v={bvp.h} />
@@ -100,15 +112,16 @@ export function BvPPicker({
           <Stat k="AVG" v={bvp.avg} />
           <Stat k="OPS" v={bvp.ops} />
         </div>
-      ) : (
-        key && !loading && <p className="text-xs text-muted">No career sample vs this pitcher yet.</p>
+      )}
+      {picked && !loading && !bvp && !error && (
+        <p className="text-xs text-muted">No career sample vs this pitcher.</p>
       )}
       {form && form.games.length > 0 && (
         <p className="text-xs font-mono text-muted">
           L5: {form.l5h}/{form.l5ab} · {form.l5hr} HR · {form.games.map((g) => `${g.h}/${g.ab}`).join(" · ")}
         </p>
       )}
-      {selected && <BatterZones id={selected.id} name={selected.name} />}
+      {picked && <BatterZones id={picked.id} name={picked.name} />}
     </div>
   );
 }
