@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findTodaysEdges, getPitcherSeasonStats, getTeamKPct, getTodaysGames } from "@/lib/mlb";
-import { gameMarketEdges } from "@/lib/mlb-markets";
+import { alwaysCard } from "@/lib/game-card";
 import { getMlbLines, matchLine } from "@/lib/mlb-odds";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         getTeamKPct(g.homeId),
         getTeamKPct(g.awayId),
       ]);
-      extras.push(...gameMarketEdges(g, homeP, awayP, homeT, awayT));
+      extras.push(...alwaysCard(g, homeP, awayP, homeT, awayT));
     }
     const all = [...extras, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
     const slate = games.map((g) => ({
