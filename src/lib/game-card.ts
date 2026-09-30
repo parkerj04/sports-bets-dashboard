@@ -1,19 +1,23 @@
 import type { Edge, GameMatchup, PitcherStats, TeamKStats } from "./mlb";
-import { projectKs, lsPitcherRating } from "./propdesk";
+import { getPitcherLogs, lsPitcherRating, projectKs } from "./propdesk";
 
 function clamp(n: number, lo = 52, hi = 91) {
   return Math.round(Math.min(hi, Math.max(lo, n)));
 }
 
-export function alwaysCard(
+export async function alwaysCard(
   g: GameMatchup,
   homeP: PitcherStats | null,
   awayP: PitcherStats | null,
   homeT: TeamKStats | null,
   awayT: TeamKStats | null
-): Edge[] {
+): Promise<Edge[]> {
   const game = `${g.awayTeam} @ ${g.homeTeam}`;
   const edges: Edge[] = [];
+  const [homeLogs, awayLogs] = await Promise.all([
+    homeP ? getPitcherLogs(homeP.id) : Promise.resolve([]),
+    awayP ? getPitcherLogs(awayP.id) : Promise.resolve([]),
+  ]);
 
   const aK = awayP?.k9 || 7.5;
   const hK = homeP?.k9 || 7.5;
@@ -26,13 +30,14 @@ export function alwaysCard(
 
   const awayProjK = projectKs(aK, homeKpct);
   const homeProjK = projectKs(hK, awayKpct);
-  const awayLS = awayP ? lsPitcherRating(aK, homeKpct, aEra, 8) : 55;
-  const homeLS = homeP ? lsPitcherRating(hK, awayKpct, hEra, 8) : 55;
+  const awayLS = awayP ? lsPitcherRating(aK, homeKpct, aEra, awayLogs.reduce((s, x) => s + x.k, 0)) : 55;
+  const homeLS = homeP ? lsPitcherRating(hK, awayKpct, hEra, homeLogs.reduce((s, x) => s + x.k, 0)) : 55;
 
-  const homeBetter = (hEra + 0.15) < aEra || homeLS > awayLS + 4;
+  const homeBetter = hEra + 0.15 < aEra || homeLS > awayLS + 4;
   const mlTeam = homeBetter ? g.homeTeam : g.awayTeam;
   const ace = homeBetter ? homeP : awayP;
   const dog = homeBetter ? awayP : homeP;
+  const aceLogs = homeBetter ? homeLogs : awayLogs;
   const mlScore = clamp(58 + Math.abs(aEra - hEra) * 10 + Math.abs(homeLS - awayLS) * 0.25);
   edges.push({
     gamePk: g.gamePk,
@@ -41,8 +46,12 @@ export function alwaysCard(
     pick: `${mlTeam} ML`,
     edgeScore: mlScore,
     pitcher: ace?.name,
-    reasoning: `${ace?.name || "The sharper starter"} holds a ${ace?.era ?? "?"} ERA and ${ace?.k9 ?? "?"} K/9 against ${dog?.name || "the other arm"} (${dog?.era ?? "?"} ERA, ${dog?.k9 ?? "?"} K/9). LS ratings ${homeLS} vs ${awayLS}. Confidence ${mlScore}: the starter gap is the cleanest ML signal we have without a paid model.`,
-    stats: { "Home ERA": hEra, "Away ERA": aEra, "Home LS": homeLS, "Away LS": awayLS },
+    reasoning: `${ace?.name || "The sharper starter"} holds a ${ace?.era ?? "?"} ERA and ${ace?.k9 ?? "?"} K/9 against ${dog?.name || "the other arm"} (${dog?.era ?? "?"} ERA). LS ${homeLS} vs ${awayLS}.`,
+    stats: {
+      "L5 hit rate": aceLogs.length
+        ? `Ace L5 starts: ${aceLogs.map((x) => `${x.k}K/${x.er}ER`).join(" · ")}`
+        : "No L5 starter log",
+    },
   });
 
   const combEra = (aEra + hEra) / 2;
@@ -57,17 +66,21 @@ export function alwaysCard(
     pick: under ? "Under runs" : "Over runs",
     edgeScore: totScore,
     reasoning: under
-      ? `Combined starter ERA ${combEra.toFixed(2)} and lineup K% ${combK.toFixed(1)}. That is a suppress-contact environment. Confidence ${totScore}: unders hit when both arms miss bats and neither offense is a .800 OPS club (here ${combOps.toFixed(3)}).`
-      : `Combined starter ERA ${combEra.toFixed(2)} with combined OPS ${combOps.toFixed(3)}. Contact should leak. Confidence ${totScore}: overs when ERAs sit over ~3.9 and both lineups still do damage.`,
-    stats: { "Comb ERA": combEra.toFixed(2), "Comb K%": combK.toFixed(1), "Comb OPS": combOps.toFixed(3) },
+      ? `Combined ERA ${combEra.toFixed(2)}, lineup K% ${combK.toFixed(1)}. Under environment.`
+      : `Combined ERA ${combEra.toFixed(2)}, OPS ${combOps.toFixed(3)}. Over environment.`,
+    stats: {
+      "L5 hit rate": `Home SP L5 ER: ${homeLogs.map((x) => x.er).join("-") || "—"} · Away SP L5 ER: ${awayLogs.map((x) => x.er).join("-") || "—"}`,
+    },
   });
 
   const kSideHome = homeProjK >= awayProjK;
   const kPitcher = kSideHome ? homeP : awayP;
+  const kLogs = kSideHome ? homeLogs : awayLogs;
   const kProj = kSideHome ? homeProjK : awayProjK;
   const kOpp = kSideHome ? awayT : homeT;
   const kScore = clamp(60 + ((kPitcher?.k9 || 8) - 7.2) * 6 + ((kOpp?.kPct || 22) - 21) * 1.6);
   if (kPitcher) {
+    const overProj = kLogs.filter((x) => x.k >= Math.floor(kProj)).length;
     edges.push({
       gamePk: g.gamePk,
       game,
@@ -75,10 +88,13 @@ export function alwaysCard(
       pick: `${kPitcher.name} strikeouts (proj ${kProj})`,
       edgeScore: kScore,
       pitcher: kPitcher.name,
-      reasoning: `${kPitcher.name} is a ${kPitcher.k9} K/9 arm into a ${kOpp?.kPct}% K lineup. Model projects ${kProj} Ks over ~5.8 IP (K/9 ÷ 9 × innings, scaled by lineup K% vs 22% league). Confidence ${kScore}: this is the most modelable prop on the slate — punchout rate is stable and the lineup adjustment is the whole edge.`,
-      stats: { "K/9": kPitcher.k9, "Opp K%": `${kOpp?.kPct}%`, "Proj K": kProj },
+      reasoning: `${kPitcher.name} ${kPitcher.k9} K/9 into ${kOpp?.kPct}% K lineup. Proj ${kProj} Ks.`,
+      stats: {
+        "L5 hit rate": kLogs.length
+          ? `${overProj}/${kLogs.length} starts at or above ${Math.floor(kProj)} K · L5: ${kLogs.map((x) => x.k).join("-")} K`
+          : "No L5 log",
+      },
     });
   }
-
   return edges;
 }
