@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Edge, GameMatchup } from "@/lib/mlb";
+import type { MlbLine } from "@/lib/mlb-odds";
 import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
+
+type SlateGame = GameMatchup & { line?: MlbLine | null };
 
 export default function ResearchPage() {
   const [sport, setSport] = useState<"MLB" | "NFL">("MLB");
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [games, setGames] = useState<GameMatchup[]>([]);
+  const [games, setGames] = useState<SlateGame[]>([]);
   const [nfl, setNfl] = useState<{ week: number; games: NflGame[] }>({ week: 0, games: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,13 +91,20 @@ export default function ResearchPage() {
               {loading && <p className="text-muted text-sm">Loading slate…</p>}
               <div className="space-y-2">
                 {games.map((g) => (
-                  <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm hover:border-accent/40 block">
-                    <div>
-                      <span className="font-medium">{g.awayTeam}</span>
-                      <span className="text-muted mx-1.5">@</span>
-                      <span className="font-medium">{g.homeTeam}</span>
+                  <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card px-4 py-3 block hover:border-accent/40">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">{g.awayTeam}</span>
+                        <span className="text-muted mx-1.5">@</span>
+                        <span className="font-medium">{g.homeTeam}</span>
+                      </div>
+                      <div className="text-xs text-accent">Open game →</div>
                     </div>
-                    <div className="text-xs text-accent">Open game →</div>
+                    {g.line && (
+                      <div className="text-[11px] font-mono text-muted mt-1">
+                        {g.line.spread} · O/U {g.line.total} · ML {g.line.mlAway}/{g.line.mlHome}
+                      </div>
+                    )}
                   </Link>
                 ))}
               </div>
