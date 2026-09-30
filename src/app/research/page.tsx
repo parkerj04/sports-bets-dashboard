@@ -57,6 +57,10 @@ export default function ResearchPage() {
         {sport === "NFL" && (
           <section className="space-y-3">
             <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
+            <p className="text-sm text-muted">
+              Lines + first lean on this page. Full handicap walk-through:{" "}
+              <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>.
+            </p>
             {loading && <p className="text-muted text-sm">Loading NFL…</p>}
             {nfl.games.map((g) => (
               <div key={g.id} className="card p-4 space-y-2">
