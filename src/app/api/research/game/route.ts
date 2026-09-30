@@ -14,6 +14,9 @@ import { getBvP, getPitcherLogs, getPitcherSplits, lsPitcherRating, projectKs } 
 import { getHitterLogs } from "@/lib/hitter-form";
 import { getLineups, type LineupBat } from "@/lib/lineups";
 import { dedupeEdges } from "@/lib/edges";
+import { getMlbLines, matchLine } from "@/lib/mlb-odds";
+import { mlbTicket } from "@/lib/mlb-context";
+import { stampEdges } from "@/lib/ticket";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +53,7 @@ export async function GET(request: Request) {
     const game = await getGameBrief(gamePk);
     if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
-    const [homeP, awayP, homeHit, awayHit, homeTeam, awayTeam, edges, lineups, steals] = await Promise.all([
+    const [homeP, awayP, homeHit, awayHit, homeTeam, awayTeam, edges, lineups, steals, lines] = await Promise.all([
       game.homePitcherId ? getPitcherSeasonStats(game.homePitcherId) : Promise.resolve(null),
       game.awayPitcherId ? getPitcherSeasonStats(game.awayPitcherId) : Promise.resolve(null),
       getTeamHitters(game.homeId),
@@ -71,14 +74,27 @@ export async function GET(request: Request) {
         awayPitcherId: game.awayPitcherId,
         homePitcherId: game.homePitcherId,
       }),
+      getMlbLines(),
     ]);
 
     const homeLive = mergeLineup(lineups.home, homeHit);
     const awayLive = mergeLineup(lineups.away, awayHit);
+    const line = matchLine(lines, game.awayTeam, game.homeTeam);
+    const ticket = await mlbTicket({
+      gamePk: game.gamePk,
+      game: `${game.awayTeam} @ ${game.homeTeam}`,
+      venueName: game.venue,
+      lineupPosted: lineups.posted,
+      homeId: game.homeId,
+      awayId: game.awayId,
+      line,
+    });
 
     const card = await alwaysCard(game, homeP, awayP, homeTeam, awayTeam);
     const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
-    const all = dedupeEdges([...card, ...markets, ...edges.filter((e) => e.market !== "Pitcher Ks"), ...steals]);
+    let all = dedupeEdges([...card, ...markets, ...edges.filter((e) => e.market !== "Pitcher Ks"), ...steals]);
+    all = stampEdges(all, ticket);
+    const stealCards = stampEdges(steals, ticket);
 
     const [homeLogs, awayLogs, homeSplits, awaySplits] = await Promise.all([
       game.homePitcherId ? getPitcherLogs(game.homePitcherId) : Promise.resolve([]),
@@ -144,7 +160,8 @@ export async function GET(request: Request) {
       homeTeam,
       awayTeam,
       edges: all,
-      steals,
+      steals: stealCards,
+      ticket,
       homeDeep,
       awayDeep,
       bvp: bvp.filter(Boolean),
