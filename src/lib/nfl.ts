@@ -21,6 +21,8 @@ export interface NflGame {
   leanScore?: number;
 }
 
+import { impliedTotals } from "./ticket";
+
 function winPct(rec: string) {
   const m = rec.match(/(\d+)\s*-\s*(\d+)/);
   if (!m) return 0.5;
@@ -38,13 +40,15 @@ function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanSc
   if (Math.abs(gap) < 0.08) leanML = `Lean home ${g.home} (small edge)`;
   const leanTotal = total >= 46.5 ? "Under" : total <= 41.5 ? "Over" : hm + aw > 1.15 ? "Over" : "Under";
   const leanScore = Math.min(72, Math.round(48 + Math.abs(gap) * 40 + Math.min(8, Math.abs(total - 44))));
+  const imp = impliedTotals(g.total, g.spread, g.home, g.away);
   const leanWhy =
     `${g.away} ${g.awayRecord} at ${g.home} ${g.homeRecord}, ${g.venue || "site TBD"}. Posted ${g.spread}, total ${total}, ML ${g.mlAway || "—"}/${g.mlHome || "—"}. ` +
+    (imp ? `Implied points ${g.away} ${imp.awayImp} / ${g.home} ${imp.homeImp}. ` : "") +
     (Math.abs(gap) >= 0.15
       ? `Record gap is real (${g.awayRecord} vs ${g.homeRecord}), so the ML lean is ${leanML}.`
       : `Records are close (${g.awayRecord} vs ${g.homeRecord}). ML lean ${leanML} is a home/record tie-break, not a mismatch.`) +
     ` Total lean ${leanTotal} because the number sits at ${total}. ` +
-    `Case against: this card does not have this week's injury report or snap-count confirmation. Do not treat ${leanScore} as an 80.`;
+    `Case against: this slate card does not settle inactives. Open the game lab ticket desk before a unit. Do not treat ${leanScore} as an 80.`;
   return { ...g, leanML, leanTotal, leanWhy, leanScore };
 }
 
