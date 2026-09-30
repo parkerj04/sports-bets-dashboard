@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/lib/mlb";
+import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import { BatterZones, PitcherZones } from "@/components/PitcherZones";
 
 function scoreColor(score: number) {
@@ -12,7 +13,7 @@ function scoreColor(score: number) {
   return "text-muted";
 }
 
-function PitcherCard({ p, label }: { p: PitcherStats | null; label: string }) {
+function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
   if (!p) {
     return (
       <div className="card p-4">
@@ -23,10 +24,18 @@ function PitcherCard({ p, label }: { p: PitcherStats | null; label: string }) {
   }
   return (
     <div className="card p-4 space-y-3">
-      <div>
-        <div className="text-xs text-muted">{label} · {p.hand}HP</div>
-        <h3 className="font-semibold text-lg">{p.name}</h3>
-        <p className="text-xs text-muted">{p.wins}-{p.losses} · {p.gamesStarted} GS · {p.inningsPitched} IP</p>
+      <div className="flex justify-between gap-3">
+        <div>
+          <div className="text-xs text-muted">{label} · {p.hand}HP</div>
+          <h3 className="font-semibold text-lg">{p.name}</h3>
+          <p className="text-xs text-muted">{p.wins}-{p.losses} · {p.gamesStarted} GS · {p.inningsPitched} IP</p>
+        </div>
+        {deep && (
+          <div className="text-right">
+            <div className="text-[10px] text-muted uppercase">LS</div>
+            <div className={`text-2xl font-mono font-bold ${scoreColor(deep.lsRating)}`}>{deep.lsRating}</div>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-4 gap-2 text-center">
         {[["ERA", p.era], ["WHIP", p.whip], ["K/9", p.k9], ["HR/9", p.hr9]].map(([k, v]) => (
@@ -36,6 +45,44 @@ function PitcherCard({ p, label }: { p: PitcherStats | null; label: string }) {
           </div>
         ))}
       </div>
+      {deep && (
+        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+          <div className="bg-white/5 rounded-lg py-2">
+            <div className="text-muted">Proj Ks</div>
+            <div className="font-mono text-sm font-semibold">{deep.projK}</div>
+          </div>
+          <div className="bg-white/5 rounded-lg py-2">
+            <div className="text-muted">L5 Ks</div>
+            <div className="font-mono text-sm font-semibold">{deep.last5K} / {deep.last5IP} IP</div>
+          </div>
+        </div>
+      )}
+      {deep && deep.splits.length > 0 && (
+        <div className="text-xs space-y-1">
+          <div className="text-muted uppercase tracking-wide">vs L / R</div>
+          {deep.splits.map((s) => (
+            <div key={s.side} className="flex justify-between font-mono">
+              <span>{s.side}</span>
+              <span>AVG {s.avg} · {s.so} K</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {deep && deep.last5.length > 0 && (
+        <div className="overflow-x-auto">
+          <div className="text-[10px] text-muted uppercase mb-1">Last 5 starts</div>
+          <table className="w-full text-[11px] font-mono">
+            <thead className="text-muted"><tr><th className="text-left">Date</th><th>OPP</th><th>IP</th><th>K</th><th>ER</th></tr></thead>
+            <tbody>
+              {deep.last5.map((g) => (
+                <tr key={g.date + g.opp} className="border-t border-card-border">
+                  <td>{g.date.slice(5)}</td><td>{g.opp}</td><td>{g.ip}</td><td>{g.k}</td><td>{g.er}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div>
         <div className="text-xs text-muted uppercase tracking-wide mb-2">Pitch mix</div>
         {p.arsenal.length === 0 && <p className="text-xs text-muted">No arsenal data yet.</p>}
@@ -101,6 +148,9 @@ function GameInner() {
     homeTeam: TeamKStats | null;
     awayTeam: TeamKStats | null;
     edges: Edge[];
+    homeDeep: PitcherDeep | null;
+    awayDeep: PitcherDeep | null;
+    bvp: BvP[];
   } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -126,9 +176,29 @@ function GameInner() {
         <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
       </div>
       <section className="grid sm:grid-cols-2 gap-3">
-        <PitcherCard p={data.awayPitcher} label="Away starter" />
-        <PitcherCard p={data.homePitcher} label="Home starter" />
+        <PitcherCard p={data.awayPitcher} label="Away starter" deep={data.awayDeep} />
+        <PitcherCard p={data.homePitcher} label="Home starter" deep={data.homeDeep} />
       </section>
+      {data.bvp?.length > 0 && (
+        <div className="card p-4 overflow-x-auto">
+          <h3 className="font-semibold text-sm mb-2">Batter vs this starter (career)</h3>
+          <table className="w-full text-xs">
+            <thead className="text-muted">
+              <tr className="text-left">
+                <th className="pb-2">Batter</th><th>AB</th><th>H</th><th>HR</th><th>SO</th><th>AVG</th><th>OPS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.bvp.map((r) => (
+                <tr key={r.batterId} className="border-t border-card-border font-mono">
+                  <td className="py-1.5 pr-2 font-sans font-medium">{r.batter}</td>
+                  <td>{r.ab}</td><td>{r.h}</td><td>{r.hr}</td><td>{r.so}</td><td>{r.avg}</td><td>{r.ops}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <section className="grid sm:grid-cols-2 gap-3">
         <PitcherZones id={data.awayPitcher?.id} name={data.awayPitcher?.name || "Away"} />
         <PitcherZones id={data.homePitcher?.id} name={data.homePitcher?.name || "Home"} />
