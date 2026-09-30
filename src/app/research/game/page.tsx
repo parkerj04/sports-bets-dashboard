@@ -8,6 +8,8 @@ import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
+import { StealBoard } from "@/components/StealBoard";
+import { SlipTray } from "@/components/SlipTray";
 import { scoreTone } from "@/lib/score-color";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
@@ -145,6 +147,7 @@ function GameInner() {
     homeTeam: TeamKStats | null;
     awayTeam: TeamKStats | null;
     edges: Edge[];
+    steals?: Edge[];
     homeDeep: PitcherDeep | null;
     awayDeep: PitcherDeep | null;
     bvp: BvP[];
@@ -165,9 +168,10 @@ function GameInner() {
   if (loading) return <p className="text-muted text-center py-16">Loading game lab…</p>;
   if (error || !data) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
   const { game } = data;
+  const otherPlays = (data.edges || []).filter((e) => e.market !== "Stolen Bases");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <div>
         <Link href="/research" className="text-xs text-muted hover:text-accent">← Back to slate</Link>
         <h1 className="text-2xl font-bold mt-2">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
@@ -187,6 +191,7 @@ function GameInner() {
         homeTeam={game.homeTeam}
         awayTeam={game.awayTeam}
       />
+      <StealBoard edges={data.steals || []} />
       {data.bvp?.length > 0 && (
         <div className="card p-4 overflow-x-auto">
           <h3 className="font-semibold text-sm mb-2">Batter vs this starter (career)</h3>
@@ -211,7 +216,7 @@ function GameInner() {
       <section>
         <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Plays for this game</h2>
         <div className="space-y-3">
-          {data.edges.map((e, i) => (
+          {otherPlays.map((e, i) => (
             <div key={i} className="card p-4 space-y-2">
               <div className="flex justify-between gap-3">
                 <div>
@@ -227,6 +232,7 @@ function GameInner() {
       </section>
       <BatterTable title={`${game.awayTeam} hitters`} rows={data.awayHitters} />
       <BatterTable title={`${game.homeTeam} hitters`} rows={data.homeHitters} />
+      <SlipTray />
     </div>
   );
 }
