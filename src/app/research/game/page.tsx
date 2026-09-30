@@ -8,6 +8,7 @@ import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import { BatterZones, PitcherZones } from "@/components/PitcherZones";
 import { HitterForm } from "@/components/HitterForm";
+import { BvPPicker } from "@/components/BvPPicker";
 
 function scoreColor(score: number) {
   if (score >= 75) return "text-accent";
@@ -182,6 +183,16 @@ function GameInner() {
         <PitcherCard p={data.awayPitcher} label="Away starter" deep={data.awayDeep} />
         <PitcherCard p={data.homePitcher} label="Home starter" deep={data.homeDeep} />
       </section>
+      <BvPPicker
+        homeHitters={data.homeHitters}
+        awayHitters={data.awayHitters}
+        homePitcherId={data.homePitcher?.id}
+        awayPitcherId={data.awayPitcher?.id}
+        homePitcherName={data.homePitcher?.name}
+        awayPitcherName={data.awayPitcher?.name}
+        homeTeam={game.homeTeam}
+        awayTeam={game.awayTeam}
+      />
       {data.bvp?.length > 0 && (
         <div className="card p-4 overflow-x-auto">
           <h3 className="font-semibold text-sm mb-2">Batter vs this starter (career)</h3>
