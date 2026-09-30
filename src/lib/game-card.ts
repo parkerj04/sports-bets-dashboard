@@ -1,8 +1,11 @@
 import type { Edge, GameMatchup, PitcherStats, TeamKStats } from "./mlb";
-import { getPitcherLogs, lsPitcherRating, projectKs } from "./propdesk";
+import { getPitcherLogs, projectKs } from "./propdesk";
+import { grade } from "./confidence";
+import type { StartLog } from "./propdesk";
 
-function clamp(n: number, lo = 52, hi = 91) {
-  return Math.round(Math.min(hi, Math.max(lo, n)));
+function lastVs(logs: StartLog[], abbr?: string) {
+  if (!abbr) return null;
+  return logs.find((x) => x.opp.toUpperCase() === abbr.toUpperCase()) || null;
 }
 
 export async function alwaysCard(
@@ -19,79 +22,88 @@ export async function alwaysCard(
     awayP ? getPitcherLogs(awayP.id) : Promise.resolve([]),
   ]);
 
-  const aK = awayP?.k9 || 7.5;
-  const hK = homeP?.k9 || 7.5;
-  const aEra = awayP?.era || 4.2;
-  const hEra = homeP?.era || 4.2;
-  const homeKpct = homeT?.kPct || 22;
-  const awayKpct = awayT?.kPct || 22;
-  const homeOps = parseFloat(homeT?.ops || ".700");
-  const awayOps = parseFloat(awayT?.ops || ".700");
+  const pack = (
+    p: PitcherStats | null,
+    logs: StartLog[],
+    opp: TeamKStats | null,
+    oppAbbr?: string
+  ) => {
+    if (!p) return null;
+    const last = logs[0];
+    const vs = lastVs(logs, oppAbbr);
+    const proj = projectKs(p.k9, opp?.kPct || 22);
+    const overProj = logs.filter((x) => x.k >= Math.floor(proj)).length;
+    const confirms: string[] = [];
+    const flags: string[] = [];
+    if (p.k9 >= 9.5) confirms.push(`${p.k9} K/9`);
+    if ((opp?.kPct || 0) >= 23.5) confirms.push(`opp K% ${opp?.kPct}`);
+    if (p.avgAgainst > 0 && p.avgAgainst <= 0.21) confirms.push(`AVG against ${p.avgAgainst.toFixed(3)}`);
+    if (p.whip > 0 && p.whip <= 1.15) confirms.push(`WHIP ${p.whip}`);
+    if (logs.length >= 4 && overProj >= 4) confirms.push(`L5 K hit rate ${overProj}/${logs.length} vs proj ${proj}`);
+    if (p.era > 0 && p.era <= 3.2) confirms.push(`ERA ${p.era}`);
+    if (last && last.h >= 6) flags.push(`last start ${last.h} H in ${last.ip}`);
+    if (last && last.bb >= 4) flags.push(`last start ${last.bb} BB`);
+    if (vs && vs.h >= 6) flags.push(`last vs ${vs.opp}: ${vs.h} H`);
+    if (p.avgAgainst >= 0.23) flags.push(`season AVG against ${p.avgAgainst.toFixed(3)}`);
+    if (p.whip >= 1.28) flags.push(`WHIP ${p.whip}`);
+    if (logs.length >= 3) {
+      const avgH = logs.reduce((s, x) => s + x.h, 0) / logs.length;
+      if (avgH >= 5) flags.push(`L5 avg ${avgH.toFixed(1)} H/start`);
+    }
+    return { p, logs, opp, proj, overProj, ...grade(confirms, flags), confirms, flags };
+  };
 
-  const awayProjK = projectKs(aK, homeKpct);
-  const homeProjK = projectKs(hK, awayKpct);
-  const awayLS = awayP ? lsPitcherRating(aK, homeKpct, aEra, awayLogs.reduce((s, x) => s + x.k, 0)) : 55;
-  const homeLS = homeP ? lsPitcherRating(hK, awayKpct, hEra, homeLogs.reduce((s, x) => s + x.k, 0)) : 55;
+  const home = pack(homeP, homeLogs, awayT, g.awayAbbr);
+  const away = pack(awayP, awayLogs, homeT, g.homeAbbr);
 
-  const homeBetter = hEra + 0.15 < aEra || homeLS > awayLS + 4;
-  const mlTeam = homeBetter ? g.homeTeam : g.awayTeam;
-  const ace = homeBetter ? homeP : awayP;
-  const dog = homeBetter ? awayP : homeP;
-  const aceLogs = homeBetter ? homeLogs : awayLogs;
-  const mlScore = clamp(58 + Math.abs(aEra - hEra) * 10 + Math.abs(homeLS - awayLS) * 0.25);
-  edges.push({
-    gamePk: g.gamePk,
-    game,
-    market: "Moneyline",
-    pick: `${mlTeam} ML`,
-    edgeScore: mlScore,
-    pitcher: ace?.name,
-    reasoning: `${ace?.name || "The sharper starter"} holds a ${ace?.era ?? "?"} ERA and ${ace?.k9 ?? "?"} K/9 against ${dog?.name || "the other arm"} (${dog?.era ?? "?"} ERA). LS ${homeLS} vs ${awayLS}.`,
-    stats: {
-      "L5 hit rate": aceLogs.length
-        ? `Ace L5 starts: ${aceLogs.map((x) => `${x.k}K/${x.er}ER`).join(" · ")}`
-        : "No L5 starter log",
-    },
-  });
+  const ace = (home?.score || 0) >= (away?.score || 0) ? home : away;
+  const dog = ace === home ? away : home;
+  if (ace?.p) {
+    edges.push({
+      gamePk: g.gamePk,
+      game,
+      market: "Moneyline",
+      pick: `${ace === home ? g.homeTeam : g.awayTeam} ML`,
+      edgeScore: ace.score,
+      pitcher: ace.p.name,
+      reasoning: `${ace.p.name} vs ${dog?.p?.name || "the other starter"}. ${ace.why}`,
+      stats: {
+        "L5 hit rate": ace.logs.map((x) => `${x.k}K/${x.h}H/${x.bb}BB`).join(" · ") || "—",
+      },
+    });
+  }
 
-  const combEra = (aEra + hEra) / 2;
-  const combK = (homeKpct + awayKpct) / 2;
-  const combOps = (homeOps + awayOps) / 2;
-  const under = combEra <= 3.85 || combK >= 23;
-  const totScore = clamp(56 + Math.abs(3.9 - combEra) * 12 + Math.abs(combK - 22) * 1.4);
+  const combEra = ((awayP?.era || 4.2) + (homeP?.era || 4.2)) / 2;
+  const combK = ((homeT?.kPct || 22) + (awayT?.kPct || 22)) / 2;
+  const totConfirms: string[] = [];
+  const totFlags: string[] = [];
+  if (combEra <= 3.5) totConfirms.push(`combined ERA ${combEra.toFixed(2)}`);
+  if (combK >= 24) totConfirms.push(`combined K% ${combK.toFixed(1)}`);
+  if ((home?.flags.length || 0) + (away?.flags.length || 0) >= 2) totFlags.push("both starters have contact/walk flags");
+  const tot = grade(totConfirms, totFlags);
   edges.push({
     gamePk: g.gamePk,
     game,
     market: "Game Total",
-    pick: under ? "Under runs" : "Over runs",
-    edgeScore: totScore,
-    reasoning: under
-      ? `Combined ERA ${combEra.toFixed(2)}, lineup K% ${combK.toFixed(1)}. Under environment.`
-      : `Combined ERA ${combEra.toFixed(2)}, OPS ${combOps.toFixed(3)}. Over environment.`,
-    stats: {
-      "L5 hit rate": `Home SP L5 ER: ${homeLogs.map((x) => x.er).join("-") || "—"} · Away SP L5 ER: ${awayLogs.map((x) => x.er).join("-") || "—"}`,
-    },
+    pick: combEra <= 3.85 || combK >= 23 ? "Under runs" : "Over runs",
+    edgeScore: tot.score,
+    reasoning: tot.why,
+    stats: { "Home L5 ER": homeLogs.map((x) => x.er).join("-") || "—", "Away L5 ER": awayLogs.map((x) => x.er).join("-") || "—" },
   });
 
-  const kSideHome = homeProjK >= awayProjK;
-  const kPitcher = kSideHome ? homeP : awayP;
-  const kLogs = kSideHome ? homeLogs : awayLogs;
-  const kProj = kSideHome ? homeProjK : awayProjK;
-  const kOpp = kSideHome ? awayT : homeT;
-  const kScore = clamp(60 + ((kPitcher?.k9 || 8) - 7.2) * 6 + ((kOpp?.kPct || 22) - 21) * 1.6);
-  if (kPitcher) {
-    const overProj = kLogs.filter((x) => x.k >= Math.floor(kProj)).length;
+  const kSide = (home?.p?.k9 || 0) >= (away?.p?.k9 || 0) ? home : away;
+  if (kSide?.p) {
     edges.push({
       gamePk: g.gamePk,
       game,
       market: "Pitcher Ks",
-      pick: `${kPitcher.name} strikeouts (proj ${kProj})`,
-      edgeScore: kScore,
-      pitcher: kPitcher.name,
-      reasoning: `${kPitcher.name} ${kPitcher.k9} K/9 into ${kOpp?.kPct}% K lineup. Proj ${kProj} Ks.`,
+      pick: `${kSide.p.name} strikeouts (proj ${kSide.proj})`,
+      edgeScore: kSide.score,
+      pitcher: kSide.p.name,
+      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9 into ${kSide.opp?.kPct ?? "?"}% K lineup. ${kSide.why}`,
       stats: {
-        "L5 hit rate": kLogs.length
-          ? `${overProj}/${kLogs.length} starts at or above ${Math.floor(kProj)} K · L5: ${kLogs.map((x) => x.k).join("-")} K`
+        "L5 hit rate": kSide.logs.length
+          ? `${kSide.overProj}/${kSide.logs.length} starts at or above ${Math.floor(kSide.proj)} K · L5: ${kSide.logs.map((x) => `${x.k}K/${x.h}H`).join("-")}`
           : "No L5 log",
       },
     });
