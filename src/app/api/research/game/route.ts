@@ -7,6 +7,7 @@ import {
   getTeamKPct,
 } from "@/lib/mlb";
 import { gameMarketEdges } from "@/lib/mlb-markets";
+import { getBvP, getPitcherLogs, getPitcherSplits, lsPitcherRating, projectKs } from "@/lib/propdesk";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,42 @@ export async function GET(request: Request) {
     const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
     const all = [...markets, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
 
+    const [homeLogs, awayLogs, homeSplits, awaySplits] = await Promise.all([
+      game.homePitcherId ? getPitcherLogs(game.homePitcherId) : Promise.resolve([]),
+      game.awayPitcherId ? getPitcherLogs(game.awayPitcherId) : Promise.resolve([]),
+      game.homePitcherId ? getPitcherSplits(game.homePitcherId) : Promise.resolve([]),
+      game.awayPitcherId ? getPitcherSplits(game.awayPitcherId) : Promise.resolve([]),
+    ]);
+
+    async function desk(p: typeof homeP, logs: Awaited<ReturnType<typeof getPitcherLogs>>, splits: Awaited<ReturnType<typeof getPitcherSplits>>, oppK: number) {
+      if (!p) return null;
+      const last5K = logs.reduce((s, g) => s + g.k, 0);
+      const last5IP = logs.reduce((s, g) => s + parseFloat(g.ip || "0"), 0);
+      return {
+        last5: logs,
+        last5K,
+        last5IP: Math.round(last5IP * 10) / 10,
+        projK: projectKs(p.k9, oppK),
+        lsRating: lsPitcherRating(p.k9, oppK, p.era, last5K),
+        splits,
+      };
+    }
+
+    const homeDeep = await desk(homeP, homeLogs, homeSplits, awayTeam?.kPct || 22);
+    const awayDeep = await desk(awayP, awayLogs, awaySplits, homeTeam?.kPct || 22);
+
+    const bvp: Awaited<ReturnType<typeof getBvP>>[] = [];
+    if (game.awayPitcherId) {
+      for (const b of homeHit.slice(0, 5)) {
+        bvp.push(await getBvP(b.id, game.awayPitcherId, b.name));
+      }
+    }
+    if (game.homePitcherId) {
+      for (const b of awayHit.slice(0, 5)) {
+        bvp.push(await getBvP(b.id, game.homePitcherId, b.name));
+      }
+    }
+
     return NextResponse.json({
       game,
       homePitcher: homeP,
@@ -40,6 +77,9 @@ export async function GET(request: Request) {
       homeTeam,
       awayTeam,
       edges: all,
+      homeDeep,
+      awayDeep,
+      bvp: bvp.filter(Boolean),
     });
   } catch (err) {
     console.error(err);
