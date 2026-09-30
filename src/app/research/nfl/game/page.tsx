@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import type { NflGame } from "@/lib/nfl";
 import type { NflLab } from "@/lib/nfl-game";
 import { CoverageSplit } from "@/components/CoverageSplit";
+import { Scheme2026 } from "@/components/Scheme2026";
 
 function Inner() {
   const id = useSearchParams().get("id");
@@ -20,10 +21,7 @@ function Inner() {
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
-        else {
-          setLab(d.lab);
-          setCard(d.card);
-        }
+        else { setLab(d.lab); setCard(d.card); }
       })
       .catch(() => setError("Could not load NFL game"))
       .finally(() => setLoading(false));
@@ -31,7 +29,6 @@ function Inner() {
 
   if (loading) return <p className="text-muted text-center py-16">Loading NFL lab…</p>;
   if (error || !lab) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
-
   const awayInj = lab.injuries.filter((i) => i.team === lab.away);
   const homeInj = lab.injuries.filter((i) => i.team === lab.home);
 
@@ -42,13 +39,11 @@ function Inner() {
         <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
-
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
       </div>
-
       {card && (
         <div className="card p-4 space-y-1">
           <div className="text-xs text-muted uppercase">Desk lean</div>
@@ -57,15 +52,11 @@ function Inner() {
           <Link href="/research/nfl-playbook" className="text-xs text-accent">Open full checklist →</Link>
         </div>
       )}
-
+      <Scheme2026 away={lab.awayAbbr} home={lab.homeAbbr} />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} />
-
       {(lab.predHome || lab.predAway) && (
-        <div className="card p-4 text-sm">
-          ESPN matchup predictor: {lab.away} {lab.predAway}% · {lab.home} {lab.predHome}%
-        </div>
+        <div className="card p-4 text-sm">ESPN matchup predictor: {lab.away} {lab.predAway}% · {lab.home} {lab.predHome}%</div>
       )}
-
       <div className="card p-4 overflow-x-auto">
         <h3 className="font-semibold text-sm mb-2">Season unit stats</h3>
         <table className="w-full text-xs">
@@ -73,15 +64,12 @@ function Inner() {
           <tbody>
             {lab.stats.map((s) => (
               <tr key={s.label} className="border-t border-card-border font-mono">
-                <td className="py-1.5 pr-2 font-sans">{s.label}</td>
-                <td>{s.away}</td>
-                <td>{s.home}</td>
+                <td className="py-1.5 pr-2 font-sans">{s.label}</td><td>{s.away}</td><td>{s.home}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
       {lab.leaders.length > 0 && (
         <div className="card p-4">
           <h3 className="font-semibold text-sm mb-2">Leaders</h3>
@@ -95,19 +83,15 @@ function Inner() {
           </div>
         </div>
       )}
-
       <div className="grid sm:grid-cols-2 gap-3">
         <Inj title={`${lab.away} injuries`} rows={awayInj} />
         <Inj title={`${lab.home} injuries`} rows={homeInj} />
       </div>
-
       {lab.lastFive.length > 0 && (
         <div className="card p-4 text-xs">
           <h3 className="font-semibold text-sm mb-2">Last 5</h3>
           {lab.lastFive.map((g, i) => (
-            <div key={i} className="font-mono border-t border-card-border py-1">
-              {g.team} {g.result} {g.score} {g.opp}
-            </div>
+            <div key={i} className="font-mono border-t border-card-border py-1">{g.team} {g.result} {g.score} {g.opp}</div>
           ))}
         </div>
       )}
