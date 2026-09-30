@@ -6,10 +6,12 @@ import { useSearchParams } from "next/navigation";
 import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/lib/mlb";
 import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
+import type { Ticket } from "@/lib/ticket";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
 import { StealBoard } from "@/components/StealBoard";
 import { SlipTray } from "@/components/SlipTray";
+import { TicketDesk } from "@/components/TicketDesk";
 import { scoreTone } from "@/lib/score-color";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
@@ -148,6 +150,7 @@ function GameInner() {
     awayTeam: TeamKStats | null;
     edges: Edge[];
     steals?: Edge[];
+    ticket?: Ticket;
     homeDeep: PitcherDeep | null;
     awayDeep: PitcherDeep | null;
     bvp: BvP[];
@@ -177,6 +180,7 @@ function GameInner() {
         <h1 className="text-2xl font-bold mt-2">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
         <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
       </div>
+      {data.ticket && <TicketDesk ticket={data.ticket} />}
       <section className="grid sm:grid-cols-2 gap-3">
         <PitcherCard p={data.awayPitcher} label="Away starter" deep={data.awayDeep} />
         <PitcherCard p={data.homePitcher} label="Home starter" deep={data.homeDeep} />
