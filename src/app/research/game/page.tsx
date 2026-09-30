@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/lib/mlb";
+import { BatterZones, PitcherZones } from "@/components/PitcherZones";
 
 function scoreColor(score: number) {
   if (score >= 75) return "text-accent";
@@ -128,17 +129,14 @@ function GameInner() {
         <PitcherCard p={data.awayPitcher} label="Away starter" />
         <PitcherCard p={data.homePitcher} label="Home starter" />
       </section>
-      {(data.awayTeam || data.homeTeam) && (
-        <div className="grid grid-cols-2 gap-3 text-center">
-          {[data.awayTeam, data.homeTeam].filter(Boolean).map((t) => (
-            <div key={t!.teamId} className="card p-3">
-              <div className="text-xs text-muted truncate">{t!.name}</div>
-              <div className="font-mono text-lg font-bold">{t!.kPct}% K</div>
-              <div className="text-xs text-muted">{t!.avg} AVG · {t!.ops} OPS</div>
-            </div>
-          ))}
-        </div>
-      )}
+      <section className="grid sm:grid-cols-2 gap-3">
+        <PitcherZones id={data.awayPitcher?.id} name={data.awayPitcher?.name || "Away"} />
+        <PitcherZones id={data.homePitcher?.id} name={data.homePitcher?.name || "Home"} />
+      </section>
+      <section className="grid sm:grid-cols-2 gap-3">
+        <BatterZones id={data.awayHitters[0]?.id} name={data.awayHitters[0]?.name || "Top away bat"} />
+        <BatterZones id={data.homeHitters[0]?.id} name={data.homeHitters[0]?.name || "Top home bat"} />
+      </section>
       <section>
         <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Plays for this game</h2>
         <div className="space-y-3">
@@ -167,7 +165,7 @@ export default function GamePage() {
     <div className="min-h-screen">
       <header className="border-b border-card-border sticky top-0 z-10 bg-background/90 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/research" className="flex items-center gap-2 text-sm"><span>🎯</span><span className="font-semibold">Game lab</span></Link>
+          <Link href="/research" className="text-sm font-semibold">Game lab</Link>
           <Link href="/picks" className="text-sm text-muted hover:text-accent">Picks</Link>
         </div>
       </header>
