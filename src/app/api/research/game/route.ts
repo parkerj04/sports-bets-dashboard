@@ -9,9 +9,11 @@ import {
 } from "@/lib/mlb";
 import { gameMarketEdges } from "@/lib/mlb-markets";
 import { alwaysCard } from "@/lib/game-card";
+import { stealDesk } from "@/lib/sb";
 import { getBvP, getPitcherLogs, getPitcherSplits, lsPitcherRating, projectKs } from "@/lib/propdesk";
 import { getHitterLogs } from "@/lib/hitter-form";
 import { getLineups, type LineupBat } from "@/lib/lineups";
+import { dedupeEdges } from "@/lib/edges";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +50,7 @@ export async function GET(request: Request) {
     const game = await getGameBrief(gamePk);
     if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
-    const [homeP, awayP, homeHit, awayHit, homeTeam, awayTeam, edges, lineups] = await Promise.all([
+    const [homeP, awayP, homeHit, awayHit, homeTeam, awayTeam, edges, lineups, steals] = await Promise.all([
       game.homePitcherId ? getPitcherSeasonStats(game.homePitcherId) : Promise.resolve(null),
       game.awayPitcherId ? getPitcherSeasonStats(game.awayPitcherId) : Promise.resolve(null),
       getTeamHitters(game.homeId),
@@ -57,6 +59,16 @@ export async function GET(request: Request) {
       getTeamKPct(game.awayId),
       edgesForGame(game),
       getLineups(gamePk),
+      stealDesk({
+        gamePk: game.gamePk,
+        game: `${game.awayTeam} @ ${game.homeTeam}`,
+        awayId: game.awayId,
+        homeId: game.homeId,
+        awayTeam: game.awayTeam,
+        homeTeam: game.homeTeam,
+        awayPitcher: game.awayPitcher,
+        homePitcher: game.homePitcher,
+      }),
     ]);
 
     const homeLive = mergeLineup(lineups.home, homeHit);
@@ -64,7 +76,7 @@ export async function GET(request: Request) {
 
     const card = await alwaysCard(game, homeP, awayP, homeTeam, awayTeam);
     const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
-    const all = [...card, ...markets, ...edges];
+    const all = dedupeEdges([...card, ...markets, ...edges.filter((e) => e.market !== "Pitcher Ks"), ...steals]);
 
     const [homeLogs, awayLogs, homeSplits, awaySplits] = await Promise.all([
       game.homePitcherId ? getPitcherLogs(game.homePitcherId) : Promise.resolve([]),
@@ -130,6 +142,7 @@ export async function GET(request: Request) {
       homeTeam,
       awayTeam,
       edges: all,
+      steals,
       homeDeep,
       awayDeep,
       bvp: bvp.filter(Boolean),
