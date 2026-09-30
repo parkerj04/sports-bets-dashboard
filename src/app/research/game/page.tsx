@@ -8,12 +8,7 @@ import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
-
-function scoreColor(score: number) {
-  if (score >= 75) return "text-accent";
-  if (score >= 60) return "text-warning";
-  return "text-muted";
-}
+import { scoreTone } from "@/lib/score-color";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
   if (!p) {
@@ -35,7 +30,7 @@ function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string
         {deep && (
           <div className="text-right">
             <div className="text-[10px] text-muted uppercase">LS</div>
-            <div className={`text-2xl font-mono font-bold ${scoreColor(deep.lsRating)}`}>{deep.lsRating}</div>
+            <div className={`text-2xl font-mono font-bold ${scoreTone(deep.lsRating)}`}>{deep.lsRating}</div>
           </div>
         )}
       </div>
@@ -223,7 +218,7 @@ function GameInner() {
                   <div className="text-xs text-muted uppercase">{e.market}</div>
                   <div className="font-semibold">{e.pick}</div>
                 </div>
-                <div className={`text-2xl font-bold font-mono ${scoreColor(e.edgeScore)}`}>{e.edgeScore}</div>
+                <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
               </div>
               <p className="text-sm">{e.reasoning}</p>
             </div>
