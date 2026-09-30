@@ -15,22 +15,39 @@ export type Sport =
 
 export interface Bet {
   id: string;
+  user_id: string;
   sport: Sport;
   event: string;
   selection: string;
   odds: number;
   stake: number;
-  book?: string;
-  notes?: string;
+  book?: string | null;
+  notes?: string | null;
+  research?: string | null;
   status: BetStatus;
-  placedAt: string;
-  settledAt?: string;
-  isPublic: boolean;
+  is_public: boolean;
+  placed_at: string;
+  settled_at?: string | null;
 }
 
-export interface AuthState {
-  isLoggedIn: boolean;
-  displayName: string;
+export interface Profile {
+  id: string;
+  display_name: string | null;
+  is_owner: boolean;
+  created_at: string;
+}
+
+export interface ResearchEdge {
+  id: string;
+  game: string;
+  market: string;
+  pick: string;
+  edge_score: number;
+  reasoning: string;
+  pitcher?: string;
+  team?: string;
+  stats: Record<string, string | number>;
+  date: string;
 }
 
 export function americanToDecimal(odds: number): number {
@@ -38,10 +55,6 @@ export function americanToDecimal(odds: number): number {
   return 100 / Math.abs(odds) + 1;
 }
 
-export function potentialPayout(stake: number, odds: number): number {
-  return stake * americanToDecimal(odds);
-}
-
 export function profitIfWon(stake: number, odds: number): number {
-  return potentialPayout(stake, odds) - stake;
+  return stake * americanToDecimal(odds) - stake;
 }
