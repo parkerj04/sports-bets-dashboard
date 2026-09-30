@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { NflGame } from "@/lib/nfl";
 import type { NflLab } from "@/lib/nfl-game";
+import { CoverageSplit } from "@/components/CoverageSplit";
 
 function Inner() {
   const id = useSearchParams().get("id");
@@ -56,6 +57,8 @@ function Inner() {
           <Link href="/research/nfl-playbook" className="text-xs text-accent">Open full checklist →</Link>
         </div>
       )}
+
+      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} />
 
       {(lab.predHome || lab.predAway) && (
         <div className="card p-4 text-sm">
