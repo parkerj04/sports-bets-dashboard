@@ -9,6 +9,7 @@ import {
 import { gameMarketEdges } from "@/lib/mlb-markets";
 import { alwaysCard } from "@/lib/game-card";
 import { getBvP, getPitcherLogs, getPitcherSplits, lsPitcherRating, projectKs } from "@/lib/propdesk";
+import { getHitterLogs } from "@/lib/hitter-form";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,11 @@ export async function GET(request: Request) {
       for (const b of awayHit.slice(0, 8)) bvp.push(await getBvP(b.id, game.homePitcherId, b.name));
     }
 
+    const form = [];
+    for (const b of [...awayHit.slice(0, 6), ...homeHit.slice(0, 6)]) {
+      form.push(await getHitterLogs(b.id, b.name));
+    }
+
     return NextResponse.json({
       game,
       homePitcher: homeP,
@@ -78,6 +84,7 @@ export async function GET(request: Request) {
       homeDeep,
       awayDeep,
       bvp: bvp.filter(Boolean),
+      form,
     });
   } catch (err) {
     console.error(err);
