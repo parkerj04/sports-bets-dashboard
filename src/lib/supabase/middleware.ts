@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/dashboard", "/plays", "/picks", "/research", "/api/research"];
+const PROTECTED = ["/dashboard", "/plays", "/picks", "/research", "/api/research", "/auth/security"];
+const AUTH_OK_WHEN_LOGGED_IN = ["/auth/update-password", "/auth/mfa", "/auth/security"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -40,7 +41,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  const stayOnAuth = AUTH_OK_WHEN_LOGGED_IN.some((p) => path === p || path.startsWith(p + "/"));
+  if (user && isAuthPage && !stayOnAuth) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
