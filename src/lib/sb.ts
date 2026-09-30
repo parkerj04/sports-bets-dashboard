@@ -3,6 +3,7 @@ import type { Edge } from "./mlb";
 
 const BASE = "https://statsapi.mlb.com/api/v1";
 const SEASON = 2026;
+const LG_SPRINT = 27;
 
 export type StealRunner = {
   id: number;
@@ -12,6 +13,8 @@ export type StealRunner = {
   cs: number;
   success: number;
   games: number;
+  obp: string;
+  runs: number;
 };
 
 export type CatcherArm = {
@@ -21,10 +24,68 @@ export type CatcherArm = {
   games: number;
 };
 
+export type SprintRow = {
+  id: number;
+  ft: number;
+  hp: string;
+  bolts: number;
+  runs: number;
+};
+
+export type PitcherHold = {
+  name: string;
+  sb: number;
+  cs: number;
+  pk: number;
+};
+
 async function json(url: string) {
   const res = await fetch(url, { next: { revalidate: 1800 } });
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function getSprintMap(): Promise<Map<number, SprintRow>> {
+  const url = `https://baseballsavant.mlb.com/leaderboard/sprint_speed?min_season=${SEASON}&max_season=${SEASON}&min=1&csv=true`;
+  const res = await fetch(url, {
+    next: { revalidate: 86400 },
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      Referer: "https://baseballsavant.mlb.com/leaderboard/sprint_speed",
+    },
+  });
+  const map = new Map<number, SprintRow>();
+  if (!res.ok) return map;
+  const text = await res.text();
+  const lines = text.split(/\r?\n/).slice(1);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cols = line.split(",").map((c) => c.replace(/^"|"$/g, "").trim());
+    const id = Number(cols[1]);
+    const ft = parseFloat(cols[9]);
+    if (!id || Number.isNaN(ft)) continue;
+    map.set(id, {
+      id,
+      ft,
+      hp: cols[8] || "—",
+      bolts: Number(cols[7]) || 0,
+      runs: Number(cols[6]) || 0,
+    });
+  }
+  return map;
+}
+
+export async function getPitcherHold(id: number | null, fallbackName: string): Promise<PitcherHold | null> {
+  if (!id) return fallbackName ? { name: fallbackName, sb: 0, cs: 0, pk: 0 } : null;
+  const data = await json(`${BASE}/people/${id}/stats?stats=season&group=pitching&season=${SEASON}&sportId=1`);
+  const s = data?.stats?.[0]?.splits?.[0]?.stat || {};
+  const name = data?.stats?.[0]?.splits?.[0]?.player?.fullName || fallbackName;
+  return {
+    name,
+    sb: s.stolenBases || 0,
+    cs: s.caughtStealing || 0,
+    pk: s.pickoffs || 0,
+  };
 }
 
 export async function getTeamRunners(teamId: number, teamName: string): Promise<StealRunner[]> {
@@ -45,6 +106,8 @@ export async function getTeamRunners(teamId: number, teamName: string): Promise<
       cs,
       success: sb + cs > 0 ? Math.round((sb / (sb + cs)) * 1000) / 10 : 0,
       games: s.gamesPlayed || 0,
+      obp: s.obp || ".000",
+      runs: s.runs || 0,
     });
   }
   out.sort((a, b) => b.sb - a.sb || b.success - a.success);
@@ -74,43 +137,95 @@ export async function getTeamCatcher(teamId: number): Promise<CatcherArm | null>
   return best;
 }
 
+function speedBand(ft: number) {
+  if (ft >= 30) return "bolt tier (30+)";
+  if (ft >= 28.5) return `plus (${(ft - LG_SPRINT).toFixed(1)} over league 27)`;
+  if (ft >= 27) return "right at league average";
+  return `${(LG_SPRINT - ft).toFixed(1)} under league 27`;
+}
+
+function caseAgainst(
+  r: StealRunner,
+  speed: SprintRow | undefined,
+  hold: PitcherHold | null,
+  catcher: CatcherArm | null
+) {
+  if (speed && speed.ft < 26.5) {
+    return `Case against: ${speed.ft} ft/s is not a steal-first profile. The ${r.sb} SB may be opportunism, not a prop you can count on tonight.`;
+  }
+  if (parseFloat(r.obp) > 0 && parseFloat(r.obp) < 0.31) {
+    return `Case against: ${r.obp} OBP. No reach, no steal. Speed is wasted if he is making outs.`;
+  }
+  if (hold && hold.sb + hold.cs >= 8 && hold.cs / Math.max(1, hold.sb + hold.cs) >= 0.35) {
+    return `Case against: ${hold.name} already has ${hold.cs} CS vs ${hold.sb} SB allowed. Runners are not auto-safe on him.`;
+  }
+  if (hold && hold.sb <= 5 && hold.pk >= 2) {
+    return `Case against: ${hold.name} holds the running game (${hold.sb} SB allowed, ${hold.pk} pickoffs).`;
+  }
+  if (catcher?.csPct != null && catcher.csPct >= 28) {
+    return `Case against: ${catcher.name} at ${catcher.csPct}% CS is a plus arm. Do not treat this as a free base.`;
+  }
+  if (r.cs >= 8) {
+    return `Case against: ${r.name} has already been thrown out ${r.cs} times. The jump is not automatic.`;
+  }
+  if (speed && speed.hp && parseFloat(speed.hp) > 4.35) {
+    return `Case against: home-to-first ${speed.hp}s is not a burner first step even if the season SB total looks loud.`;
+  }
+  return `Case against: ${r.name} still has to be on first. One slide-step from ${hold?.name || "the starter"} and this prop is dead. Savant pop time for tonight is not in the file.`;
+}
+
 export function stealCards(
   runners: StealRunner[],
-  vsPitcher: string,
+  hold: PitcherHold | null,
   catcher: CatcherArm | null,
+  sprint: Map<number, SprintRow>,
   game: string,
   gamePk?: number
 ): Edge[] {
   const edges: Edge[] = [];
   for (const r of runners) {
+    const speed = sprint.get(r.id);
     const confirms: string[] = [];
     const flags: string[] = [];
     if (r.sb >= 20) confirms.push(`${r.sb} SB`);
-    if (r.sb >= 12 && r.sb < 20) confirms.push(`${r.sb} SB (volume)`);
     if (r.success >= 78) confirms.push(`${r.success}% success`);
-    if (catcher?.csPct != null && catcher.csPct <= 22) confirms.push(`${catcher.name} CS% ${catcher.csPct} is below average`);
-    if (r.success < 70 && r.sb + r.cs >= 10) flags.push(`success only ${r.success}% (${r.sb}/${r.cs} CS)`);
-    if (catcher?.csPct != null && catcher.csPct >= 30) flags.push(`${catcher.name} throws out ${catcher.csPct}%`);
-    if (r.sb < 10) flags.push(`only ${r.sb} steals — small sample to bet a stolen-base prop`);
+    if (speed && speed.ft >= 28.5) confirms.push(`${speed.ft} ft/s sprint`);
+    if (hold && hold.sb >= 12) confirms.push(`${hold.name} has allowed ${hold.sb} SB`);
+    if (catcher?.csPct != null && catcher.csPct <= 22) confirms.push(`${catcher.name} CS% ${catcher.csPct}`);
+    if (speed && speed.ft < 26.5) flags.push(`${speed.ft} ft/s`);
+    if (r.success < 70 && r.sb + r.cs >= 10) flags.push(`${r.success}% success`);
+    if (catcher?.csPct != null && catcher.csPct >= 30) flags.push(`${catcher.name} CS% ${catcher.csPct}`);
+    if (parseFloat(r.obp) > 0 && parseFloat(r.obp) < 0.3) flags.push(`${r.obp} OBP`);
+    if (r.sb < 10) flags.push(`only ${r.sb} SB`);
     const gde = grade(confirms, flags);
-    const against =
-      flags.length > 0
-        ? `Case against: ${flags.join("; ")}.`
-        : `Case against: he still has to reach base, and one pitchout or slide-step from ${vsPitcher || "the starter"} kills the attempt. Catcher sample is regular-season fielding, not tonight's pop time.`;
+    const speedLine = speed
+      ? `Savant sprint ${speed.ft} ft/s (${speedBand(speed.ft)}), home-to-first ${speed.hp || "n/a"}s, ${speed.bolts} bolts on ${speed.runs} competitive runs.`
+      : `No Savant sprint row posted (under the competitive-run cutoff or not tracked).`;
+    const holdLine = hold
+      ? `${hold.name} hold line: ${hold.sb} SB allowed, ${hold.cs} CS, ${hold.pk} pickoffs.`
+      : "Starter hold line not loaded.";
+    const armLine =
+      catcher?.csPct != null
+        ? `${catcher.name} has thrown out ${catcher.cs} runners at ${catcher.csPct}% CS.`
+        : `${catcher?.name || "Opposing catcher"} CS% not posted.`;
     edges.push({
       gamePk,
       game,
       market: "Stolen Bases",
       pick: `${r.name} steals`,
       edgeScore: gde.score,
-      pitcher: vsPitcher,
+      pitcher: hold?.name,
       team: r.team,
-      reasoning: `${r.name} (${r.team}) ${r.sb} SB / ${r.cs} CS, ${r.success}% success in ${r.games} games. Running on ${vsPitcher || "TBD starter"}. Opposing catcher ${catcher?.name || "unlisted"}${catcher?.csPct != null ? ` CS% ${catcher.csPct}` : " (no CS% loaded)"}${catcher ? `, ${catcher.cs} CS recorded` : ""}. ${against} Score ${gde.score}.`,
+      reasoning: `${r.name}: ${r.sb} SB / ${r.cs} CS (${r.success}%) in ${r.games} G, ${r.obp} OBP, ${r.runs} runs. ${speedLine} ${holdLine} ${armLine} ${caseAgainst(r, speed, hold, catcher)} Score ${gde.score}.`,
       stats: {
         SB: r.sb,
         CS: r.cs,
         "SB%": `${r.success}%`,
-        Catcher: catcher?.name || "—",
+        OBP: r.obp,
+        "ft/s": speed?.ft ?? "n/a",
+        "HP-1B": speed?.hp || "n/a",
+        Bolts: speed?.bolts ?? "n/a",
+        "P SB-A": hold?.sb ?? "n/a",
         "C CS%": catcher?.csPct ?? "—",
       },
     });
@@ -127,15 +242,20 @@ export async function stealDesk(opts: {
   homeTeam: string;
   awayPitcher: string | null;
   homePitcher: string | null;
+  awayPitcherId?: number | null;
+  homePitcherId?: number | null;
 }): Promise<Edge[]> {
-  const [awayRun, homeRun, awayC, homeC] = await Promise.all([
+  const [awayRun, homeRun, awayC, homeC, sprint, awayHold, homeHold] = await Promise.all([
     getTeamRunners(opts.awayId, opts.awayTeam),
     getTeamRunners(opts.homeId, opts.homeTeam),
     getTeamCatcher(opts.awayId),
     getTeamCatcher(opts.homeId),
+    getSprintMap(),
+    getPitcherHold(opts.homePitcherId ?? null, opts.homePitcher || "home starter"),
+    getPitcherHold(opts.awayPitcherId ?? null, opts.awayPitcher || "away starter"),
   ]);
   return [
-    ...stealCards(awayRun, opts.homePitcher || "home starter", homeC, opts.game, opts.gamePk),
-    ...stealCards(homeRun, opts.awayPitcher || "away starter", awayC, opts.game, opts.gamePk),
+    ...stealCards(awayRun, awayHold, homeC, sprint, opts.game, opts.gamePk),
+    ...stealCards(homeRun, homeHold, awayC, sprint, opts.game, opts.gamePk),
   ].sort((a, b) => b.edgeScore - a.edgeScore);
 }
