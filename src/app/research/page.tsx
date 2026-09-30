@@ -8,6 +8,7 @@ import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
 import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
+import { SportPicks } from "@/components/SportPicks";
 
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
@@ -54,7 +55,12 @@ export default function ResearchPage() {
             <button key={s} onClick={() => setSport(s)} className={`px-4 py-1.5 rounded-full text-sm border ${sport === s ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{s}</button>
           ))}
         </div>
-        {sport === "CFB" && <CfbBoard />}
+        {sport === "CFB" && (
+          <>
+            <CfbBoard />
+            <SportPicks sport="CFB" />
+          </>
+        )}
         {sport === "NFL" && (
           <>
             <section className="space-y-3">
@@ -83,6 +89,7 @@ export default function ResearchPage() {
                 </Link>
               ))}
             </section>
+            <SportPicks sport="NFL" />
             <PropBoards sport="NFL" />
           </>
         )}
