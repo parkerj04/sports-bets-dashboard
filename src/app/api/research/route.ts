@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         getTeamKPct(g.homeId),
         getTeamKPct(g.awayId),
       ]);
-      extras.push(...alwaysCard(g, homeP, awayP, homeT, awayT));
+      extras.push(...(await alwaysCard(g, homeP, awayP, homeT, awayT)));
     }
     const all = [...extras, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
     const slate = games.map((g) => ({
