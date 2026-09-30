@@ -5,13 +5,16 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { NflGame } from "@/lib/nfl";
 import type { NflLab } from "@/lib/nfl-game";
+import type { Ticket } from "@/lib/ticket";
 import { CoverageSplit } from "@/components/CoverageSplit";
 import { Scheme2026 } from "@/components/Scheme2026";
+import { TicketDesk } from "@/components/TicketDesk";
 
 function Inner() {
   const id = useSearchParams().get("id");
   const [lab, setLab] = useState<NflLab | null>(null);
   const [card, setCard] = useState<NflGame | null>(null);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +24,7 @@ function Inner() {
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
-        else { setLab(d.lab); setCard(d.card); }
+        else { setLab(d.lab); setCard(d.card); setTicket(d.ticket || null); }
       })
       .catch(() => setError("Could not load NFL game"))
       .finally(() => setLoading(false));
@@ -39,6 +42,7 @@ function Inner() {
         <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
+      {ticket && <TicketDesk ticket={ticket} />}
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
