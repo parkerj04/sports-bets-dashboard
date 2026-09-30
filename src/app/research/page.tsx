@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Edge, GameMatchup } from "@/lib/mlb";
 
@@ -9,6 +9,7 @@ export default function ResearchPage() {
   const [games, setGames] = useState<GameMatchup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [market, setMarket] = useState("All");
 
   useEffect(() => {
     fetch("/api/research")
@@ -21,6 +22,13 @@ export default function ResearchPage() {
       .catch(() => setError("Could not load research"))
       .finally(() => setLoading(false));
   }, []);
+
+  const markets = useMemo(() => {
+    const set = new Set(edges.map((e) => e.market));
+    return ["All", ...Array.from(set)];
+  }, [edges]);
+
+  const shown = market === "All" ? edges : edges.filter((e) => e.market === market);
 
   function scoreColor(score: number) {
     if (score >= 75) return "text-accent";
@@ -36,7 +44,7 @@ export default function ResearchPage() {
             <Link href="/" className="text-xl">🎯</Link>
             <div>
               <div className="font-semibold text-sm">Research Desk</div>
-              <div className="text-xs text-muted">MLB edges · live data</div>
+              <div className="text-xs text-muted">Every game · click through</div>
             </div>
           </div>
           <div className="flex gap-3 text-sm">
@@ -48,21 +56,42 @@ export default function ResearchPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
         <section>
-          <h1 className="text-xl font-bold mb-1">Best plays of the day</h1>
-          <p className="text-sm text-muted mb-4">
-            Auto-scored from season pitcher K/9 and opposing team strikeout rate.
-          </p>
-          {loading && <p className="text-muted py-10 text-center">Scanning matchups…</p>}
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">
+            Today’s slate ({games.length})
+          </h2>
+          {loading && <p className="text-muted text-sm">Loading slate…</p>}
+          <div className="space-y-2">
+            {games.map((g) => (
+              <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm hover:border-accent/40 transition-colors block">
+                <div>
+                  <span className="font-medium">{g.awayTeam}</span>
+                  <span className="text-muted mx-1.5">@</span>
+                  <span className="font-medium">{g.homeTeam}</span>
+                  <div className="text-xs text-muted mt-0.5">{g.status}{g.venue ? ` · ${g.venue}` : ""}</div>
+                </div>
+                <div className="text-xs text-right text-muted">
+                  <div>{g.awayPitcher || "TBD"}</div>
+                  <div>vs {g.homePitcher || "TBD"}</div>
+                  <div className="text-accent mt-1">Open game →</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h1 className="text-xl font-bold mb-1">Board — all plays</h1>
+          <p className="text-sm text-muted mb-3">Ks, team hits, and batter hits from live MLB data.</p>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {markets.map((m) => (
+              <button key={m} onClick={() => setMarket(m)} className={`text-xs px-3 py-1.5 rounded-full border whitespace-nowrap ${market === m ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{m}</button>
+            ))}
+          </div>
           {error && !loading && <p className="text-danger text-sm">{error}</p>}
-          {!loading && edges.length === 0 && (
-            <div className="card p-8 text-center text-muted">
-              <p className="mb-1">No strong edges found for today</p>
-              <p className="text-xs">No games / probable pitchers listed yet, or matchups are neutral.</p>
-            </div>
-          )}
-          <div className="space-y-3">
-            {edges.map((e, i) => (
-              <div key={i} className="card p-4 space-y-3">
+          {loading && <p className="text-muted py-8 text-center">Scoring every matchup…</p>}
+          <div className="space-y-3 mt-3">
+            {shown.map((e, i) => (
+              <Link key={i} href={e.gamePk ? `/research/game?id=${e.gamePk}` : "/research"} className="card p-4 space-y-2 block hover:border-accent/40 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-xs text-muted uppercase tracking-wide">{e.market}</div>
@@ -72,41 +101,9 @@ export default function ResearchPage() {
                   <div className={`text-2xl font-bold font-mono ${scoreColor(e.edgeScore)}`}>{e.edgeScore}</div>
                 </div>
                 <p className="text-sm leading-relaxed">{e.reasoning}</p>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {Object.entries(e.stats).map(([k, v]) => (
-                    <span key={k} className="px-2 py-1 rounded-md bg-white/5 text-muted">
-                      {k}: <span className="text-foreground font-medium">{v}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
-        </section>
-
-        <section>
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">
-            Today’s slate ({games.length} games)
-          </h2>
-          {games.length === 0 && !loading ? (
-            <p className="text-sm text-muted">No MLB games scheduled for this date.</p>
-          ) : (
-            <div className="space-y-2">
-              {games.map((g) => (
-                <div key={g.gamePk} className="card px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <div>
-                    <span className="font-medium">{g.awayTeam}</span>
-                    <span className="text-muted mx-1.5">@</span>
-                    <span className="font-medium">{g.homeTeam}</span>
-                  </div>
-                  <div className="text-xs text-muted">
-                    {g.awayPitcher || "TBD"} vs {g.homePitcher || "TBD"}
-                    {g.venue && ` · ${g.venue}`}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </section>
       </main>
     </div>
