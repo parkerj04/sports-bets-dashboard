@@ -1,6 +1,8 @@
 const BASE = "https://statsapi.mlb.com/api/v1";
 const SEASON = 2026;
 
+import { grade } from "./confidence";
+
 export interface GameMatchup {
   gamePk: number;
   awayTeam: string;
@@ -198,22 +200,68 @@ export async function edgesForGame(g: GameMatchup): Promise<Edge[]> {
     const [p, t, bats] = await Promise.all([getPitcherSeasonStats(m.pitcherId), getTeamKPct(m.oppId), getTeamHitters(m.oppId)]);
     if (!p || p.inningsPitched < 15) continue;
     if (t) {
-      const k9Score = Math.min(100, Math.max(0, ((p.k9 - 7.0) / 7) * 100));
-      const kPctScore = Math.min(100, Math.max(0, ((t.kPct - 17) / 14) * 100));
-      const kScore = Math.round(k9Score * 0.55 + kPctScore * 0.45);
-      edges.push({ gamePk: g.gamePk, game, market: "Pitcher Ks", pick: `${p.name} (${p.hand}HP) strikeouts`, edgeScore: Math.max(kScore, 28), reasoning: `${p.name} is ${p.wins}-${p.losses} with a ${p.k9} K/9 and ${p.era} ERA. ${m.opp} K rate is ${t.kPct}% (league ~22%).`, stats: { "K/9": p.k9, ERA: p.era, WHIP: p.whip, "Opp K%": `${t.kPct}%`, "Opp AVG": t.avg }, pitcher: p.name, team: m.opp });
-      if (p.era <= 3.6 && t.kPct >= 21) {
-        edges.push({ gamePk: g.gamePk, game, market: "Team Hits Under", pick: `${m.opp} under team hits`, edgeScore: Math.min(92, Math.round(40 + (3.6 - p.era) * 12 + (t.kPct - 21) * 2)), reasoning: `${p.name} holds opponents to a ${p.avgAgainst.toFixed(3)} AVG (${p.era} ERA, ${p.hr9} HR/9). ${m.opp} punch out ${t.kPct}% of the time.`, stats: { ERA: p.era, "AVG against": p.avgAgainst.toFixed(3), "Opp K%": `${t.kPct}%` }, pitcher: p.name, team: m.opp });
+      const confirms: string[] = [];
+      const flags: string[] = [];
+      if (p.k9 >= 9.5) confirms.push(`${p.k9} K/9`);
+      if (t.kPct >= 23.5) confirms.push(`opp K% ${t.kPct}`);
+      if (p.avgAgainst > 0 && p.avgAgainst <= 0.21) confirms.push(`AVG against ${p.avgAgainst.toFixed(3)}`);
+      if (p.whip > 0 && p.whip <= 1.15) confirms.push(`WHIP ${p.whip}`);
+      if (p.era > 0 && p.era <= 3.2) confirms.push(`ERA ${p.era}`);
+      if (p.avgAgainst >= 0.23) flags.push(`AVG against ${p.avgAgainst.toFixed(3)}`);
+      if (p.whip >= 1.28) flags.push(`WHIP ${p.whip}`);
+      if (parseFloat(t.avg) >= 0.25) flags.push(`opp season AVG ${t.avg}`);
+      const gde = grade(confirms, flags);
+      edges.push({
+        gamePk: g.gamePk, game, market: "Pitcher Ks", pick: `${p.name} (${p.hand}HP) strikeouts`,
+        edgeScore: gde.score,
+        reasoning: `${p.name} ${p.wins}-${p.losses}, ${p.k9} K/9, ${p.era} ERA. ${m.opp} K% ${t.kPct}, AVG ${t.avg}. ${gde.why}`,
+        stats: { "K/9": p.k9, ERA: p.era, WHIP: p.whip, "Opp K%": `${t.kPct}%`, "Opp AVG": t.avg },
+        pitcher: p.name, team: m.opp,
+      });
+      if (p.era <= 3.6 && t.kPct >= 21 && flags.length === 0) {
+        const under = grade(
+          [p.era <= 3.2 ? `ERA ${p.era}` : "", t.kPct >= 23.5 ? `opp K% ${t.kPct}` : "", p.avgAgainst <= 0.21 ? `AVG against ${p.avgAgainst.toFixed(3)}` : ""].filter(Boolean),
+          []
+        );
+        edges.push({
+          gamePk: g.gamePk, game, market: "Team Hits Under", pick: `${m.opp} under team hits`,
+          edgeScore: under.score,
+          reasoning: `${p.name} AVG against ${p.avgAgainst.toFixed(3)}. ${under.why}`,
+          stats: { ERA: p.era, "AVG against": p.avgAgainst.toFixed(3), "Opp K%": `${t.kPct}%` },
+          pitcher: p.name, team: m.opp,
+        });
       }
       if (p.whip >= 1.28 || p.era >= 4.2) {
-        edges.push({ gamePk: g.gamePk, game, market: "Team Hits Over", pick: `${m.opp} over team hits`, edgeScore: Math.min(88, Math.round(35 + (p.whip - 1.2) * 40 + Math.max(0, p.era - 4) * 8)), reasoning: `${p.name} has a ${p.whip} WHIP and ${p.era} ERA vs ${m.opp} (${t.avg} AVG, ${t.ops} OPS).`, stats: { WHIP: p.whip, ERA: p.era, "Opp AVG": t.avg, "Opp OPS": t.ops }, pitcher: p.name, team: m.opp });
+        const over = grade(
+          [p.whip >= 1.35 ? `WHIP ${p.whip}` : "", p.era >= 4.5 ? `ERA ${p.era}` : "", parseFloat(t.ops) >= 0.74 ? `opp OPS ${t.ops}` : ""].filter(Boolean),
+          []
+        );
+        edges.push({
+          gamePk: g.gamePk, game, market: "Team Hits Over", pick: `${m.opp} over team hits`,
+          edgeScore: over.score,
+          reasoning: `${p.name} ${p.whip} WHIP / ${p.era} ERA vs ${m.opp}. ${over.why}`,
+          stats: { WHIP: p.whip, ERA: p.era, "Opp AVG": t.avg, "Opp OPS": t.ops },
+          pitcher: p.name, team: m.opp,
+        });
       }
     }
     const top = bats.filter((b) => parseFloat(b.avg) >= 0.26 || parseFloat(b.ops) >= 0.78).slice(0, 3);
     for (const b of top) {
-      const hitScore = Math.min(90, Math.round(30 + parseFloat(b.avg) * 80 + Math.max(0, parseFloat(b.ops) - 0.7) * 50 + (p.whip - 1.1) * 20));
-      if (hitScore < 40) continue;
-      edges.push({ gamePk: g.gamePk, game, market: "Batter Hits", pick: `${b.name} hits`, edgeScore: hitScore, reasoning: `${b.name} hits ${b.avg} with a ${b.ops} OPS (${b.hits} H, ${b.hr} HR) vs ${p.name} (${p.hand}HP, ${p.whip} WHIP).`, stats: { AVG: b.avg, OPS: b.ops, HR: b.hr, "P WHIP": p.whip, "P hand": `${p.hand}HP` }, pitcher: p.name, team: m.opp });
+      const confirms = [
+        parseFloat(b.avg) >= 0.28 ? `${b.name} ${b.avg} AVG` : "",
+        parseFloat(b.ops) >= 0.85 ? `${b.ops} OPS` : "",
+        p.whip >= 1.3 ? `pitcher WHIP ${p.whip}` : "",
+      ].filter(Boolean);
+      const flags = [parseFloat(b.avg) < 0.24 ? "batter AVG under .240" : ""].filter(Boolean);
+      const hit = grade(confirms, flags);
+      if (hit.score < 50 || confirms.length === 0) continue;
+      edges.push({
+        gamePk: g.gamePk, game, market: "Batter Hits", pick: `${b.name} hits`,
+        edgeScore: hit.score,
+        reasoning: `${b.name} ${b.avg}/${b.ops} vs ${p.name} (${p.whip} WHIP). ${hit.why}`,
+        stats: { AVG: b.avg, OPS: b.ops, HR: b.hr, "P WHIP": p.whip, "P hand": `${p.hand}HP` },
+        pitcher: p.name, team: m.opp,
+      });
     }
   }
   edges.sort((a, b) => b.edgeScore - a.edgeScore);
