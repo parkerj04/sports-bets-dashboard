@@ -54,7 +54,7 @@ export default function ResearchPage() {
         {sport === "NFL" && (
           <section className="space-y-3">
             <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-            <p className="text-sm text-muted">This weekend’s slate with live lines (spread, total, moneyline).</p>
+            <p className="text-sm text-muted">Lines plus a model lean for ML and total. Not a lock — a starting point.</p>
             {loading && <p className="text-muted text-sm">Loading NFL…</p>}
             {nfl.games.map((g) => (
               <div key={g.id} className="card p-4 space-y-2">
@@ -63,16 +63,19 @@ export default function ResearchPage() {
                     <div className="font-semibold">{g.away} ({g.awayRecord})</div>
                     <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
                   </div>
-                  <div className="text-xs text-right text-muted">
-                    {g.broadcast}<br />{g.status}
-                  </div>
+                  <div className={`text-2xl font-mono font-bold ${scoreColor(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.spread}</div></div>
                   <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.total}</div></div>
                   <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.mlAway}/{g.mlHome}</div></div>
                 </div>
-                <p className="text-[11px] text-muted">{g.venue} · {new Date(g.date).toLocaleString()}</p>
+                <div className="text-sm">
+                  <span className="text-accent font-medium">{g.leanML}</span>
+                  {" · "}
+                  <span className="text-accent font-medium">Total: {g.leanTotal}</span>
+                </div>
+                <p className="text-xs text-muted">{g.leanWhy}</p>
               </div>
             ))}
           </section>
