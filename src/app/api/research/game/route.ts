@@ -5,13 +5,40 @@ import {
   getPitcherSeasonStats,
   getTeamHitters,
   getTeamKPct,
+  type BatterLine,
 } from "@/lib/mlb";
 import { gameMarketEdges } from "@/lib/mlb-markets";
 import { alwaysCard } from "@/lib/game-card";
 import { getBvP, getPitcherLogs, getPitcherSplits, lsPitcherRating, projectKs } from "@/lib/propdesk";
 import { getHitterLogs } from "@/lib/hitter-form";
+import { getLineups, type LineupBat } from "@/lib/lineups";
 
 export const dynamic = "force-dynamic";
+
+function mergeLineup(lineup: LineupBat[], season: BatterLine[]): BatterLine[] {
+  if (!lineup.length) return season;
+  return lineup.map((l) => {
+    const s = season.find((h) => h.id === l.id);
+    return (
+      s || {
+        id: l.id,
+        name: `${l.slot}. ${l.name}`,
+        position: l.pos,
+        avg: "—",
+        ops: "—",
+        hr: 0,
+        hits: 0,
+        so: 0,
+        rbi: 0,
+        games: 0,
+      }
+    );
+  }).map((b, i) => ({
+    ...b,
+    name: lineup[i] ? `${lineup[i].slot}. ${lineup[i].name}` : b.name,
+    position: lineup[i]?.pos || b.position,
+  }));
+}
 
 export async function GET(request: Request) {
   const gamePk = Number(new URL(request.url).searchParams.get("gamePk"));
@@ -21,7 +48,7 @@ export async function GET(request: Request) {
     const game = await getGameBrief(gamePk);
     if (!game) return NextResponse.json({ error: "Game not found" }, { status: 404 });
 
-    const [homeP, awayP, homeHit, awayHit, homeTeam, awayTeam, edges] = await Promise.all([
+    const [homeP, awayP, homeHit, awayHit, homeTeam, awayTeam, edges, lineups] = await Promise.all([
       game.homePitcherId ? getPitcherSeasonStats(game.homePitcherId) : Promise.resolve(null),
       game.awayPitcherId ? getPitcherSeasonStats(game.awayPitcherId) : Promise.resolve(null),
       getTeamHitters(game.homeId),
@@ -29,7 +56,11 @@ export async function GET(request: Request) {
       getTeamKPct(game.homeId),
       getTeamKPct(game.awayId),
       edgesForGame(game),
+      getLineups(gamePk),
     ]);
+
+    const homeLive = mergeLineup(lineups.home, homeHit);
+    const awayLive = mergeLineup(lineups.away, awayHit);
 
     const card = await alwaysCard(game, homeP, awayP, homeTeam, awayTeam);
     const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
@@ -59,22 +90,25 @@ export async function GET(request: Request) {
     const homeDeep = await desk(homeP, homeLogs, homeSplits, awayTeam?.kPct || 22);
     const awayDeep = await desk(awayP, awayLogs, awaySplits, homeTeam?.kPct || 22);
 
+    const pickHome = homeLive.length ? homeLive : homeHit;
+    const pickAway = awayLive.length ? awayLive : awayHit;
+
     const bvp = [];
     if (game.awayPitcherId) {
-      for (const b of homeHit.slice(0, 8)) bvp.push(await getBvP(b.id, game.awayPitcherId, b.name));
+      for (const b of pickHome.slice(0, 9)) bvp.push(await getBvP(b.id, game.awayPitcherId, b.name));
     }
     if (game.homePitcherId) {
-      for (const b of awayHit.slice(0, 8)) bvp.push(await getBvP(b.id, game.homePitcherId, b.name));
+      for (const b of pickAway.slice(0, 9)) bvp.push(await getBvP(b.id, game.homePitcherId, b.name));
     }
 
     const form = [];
-    for (const b of [...awayHit.slice(0, 6), ...homeHit.slice(0, 6)]) {
+    for (const b of [...pickAway.slice(0, 9), ...pickHome.slice(0, 9)]) {
       form.push(await getHitterLogs(b.id, b.name));
     }
 
     for (const e of all) {
       if (e.market === "Batter Hits") {
-        const f = form.find((x) => e.pick.includes(x.name));
+        const f = form.find((x) => e.pick.includes(x.name.replace(/^\d+\.\s*/, "")) || x.name.includes(e.pick.split(" ")[0]));
         if (f) {
           const gamesWithHit = f.games.filter((g) => g.h >= 1).length;
           e.stats = {
@@ -90,8 +124,9 @@ export async function GET(request: Request) {
       game,
       homePitcher: homeP,
       awayPitcher: awayP,
-      homeHitters: homeHit,
-      awayHitters: awayHit,
+      homeHitters: pickHome,
+      awayHitters: pickAway,
+      lineupPosted: lineups.posted,
       homeTeam,
       awayTeam,
       edges: all,
