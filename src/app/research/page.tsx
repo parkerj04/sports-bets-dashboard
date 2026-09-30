@@ -57,7 +57,6 @@ export default function ResearchPage() {
         {sport === "CFB" && <CfbBoard />}
         {sport === "NFL" && (
           <>
-            <PropBoards sport="NFL" />
             <section className="space-y-3">
               <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
               <p className="text-sm text-muted">Tap a game for the lab. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>.</p>
@@ -84,11 +83,11 @@ export default function ResearchPage() {
                 </Link>
               ))}
             </section>
+            <PropBoards sport="NFL" />
           </>
         )}
         {sport === "MLB" && (
           <>
-            <PropBoards sport="MLB" />
             <section>
               <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Today’s slate ({games.length})</h2>
               {loading && <p className="text-muted text-sm">Loading slate…</p>}
@@ -132,6 +131,7 @@ export default function ResearchPage() {
                 ))}
               </div>
             </section>
+            <PropBoards sport="MLB" />
           </>
         )}
       </main>
