@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/lib/mlb";
 import type { BvP, PitcherDeep } from "@/lib/propdesk";
+import type { HitterLog } from "@/lib/hitter-form";
 import { BatterZones, PitcherZones } from "@/components/PitcherZones";
+import { HitterForm } from "@/components/HitterForm";
 
 function scoreColor(score: number) {
   if (score >= 75) return "text-accent";
@@ -151,6 +153,7 @@ function GameInner() {
     homeDeep: PitcherDeep | null;
     awayDeep: PitcherDeep | null;
     bvp: BvP[];
+    form: HitterLog[];
   } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -199,6 +202,7 @@ function GameInner() {
           </table>
         </div>
       )}
+      <HitterForm rows={data.form || []} />
       <section className="grid sm:grid-cols-2 gap-3">
         <PitcherZones id={data.awayPitcher?.id} name={data.awayPitcher?.name || "Away"} />
         <PitcherZones id={data.homePitcher?.id} name={data.homePitcher?.name || "Home"} />
@@ -236,7 +240,10 @@ export default function GamePage() {
       <header className="border-b border-card-border sticky top-0 z-10 bg-background/90 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/research" className="text-sm font-semibold">Game lab</Link>
-          <Link href="/picks" className="text-sm text-muted hover:text-accent">Picks</Link>
+          <div className="flex gap-3">
+            <Link href="/research/playbook" className="text-sm text-muted hover:text-accent">Playbook</Link>
+            <Link href="/picks" className="text-sm text-muted hover:text-accent">Picks</Link>
+          </div>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
