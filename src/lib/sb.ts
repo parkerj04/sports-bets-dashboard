@@ -45,6 +45,26 @@ async function json(url: string) {
   return res.json();
 }
 
+function parseCsvLine(line: string) {
+  const out: string[] = [];
+  let cur = "";
+  let q = false;
+  for (const ch of line.replace(/^\uFEFF/, "")) {
+    if (ch === '"') {
+      q = !q;
+      continue;
+    }
+    if (ch === "," && !q) {
+      out.push(cur.trim());
+      cur = "";
+      continue;
+    }
+    cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
+
 export async function getSprintMap(): Promise<Map<number, SprintRow>> {
   const url = `https://baseballsavant.mlb.com/leaderboard/sprint_speed?min_season=${SEASON}&max_season=${SEASON}&min=1&csv=true`;
   const res = await fetch(url, {
@@ -60,7 +80,7 @@ export async function getSprintMap(): Promise<Map<number, SprintRow>> {
   const lines = text.split(/\r?\n/).slice(1);
   for (const line of lines) {
     if (!line.trim()) continue;
-    const cols = line.split(",").map((c) => c.replace(/^"|"$/g, "").trim());
+    const cols = parseCsvLine(line);
     const id = Number(cols[1]);
     const ft = parseFloat(cols[9]);
     if (!id || Number.isNaN(ft)) continue;
@@ -76,15 +96,15 @@ export async function getSprintMap(): Promise<Map<number, SprintRow>> {
 }
 
 export async function getPitcherHold(id: number | null, fallbackName: string): Promise<PitcherHold | null> {
-  if (!id) return fallbackName ? { name: fallbackName, sb: 0, cs: 0, pk: 0 } : null;
+  if (!id) return fallbackName ? { name: fallbackName, sb: -1, cs: 0, pk: 0 } : null;
   const data = await json(`${BASE}/people/${id}/stats?stats=season&group=pitching&season=${SEASON}&sportId=1`);
   const s = data?.stats?.[0]?.splits?.[0]?.stat || {};
   const name = data?.stats?.[0]?.splits?.[0]?.player?.fullName || fallbackName;
   return {
     name,
-    sb: s.stolenBases || 0,
-    cs: s.caughtStealing || 0,
-    pk: s.pickoffs || 0,
+    sb: s.stolenBases ?? 0,
+    cs: s.caughtStealing ?? 0,
+    pk: s.pickoffs ?? 0,
   };
 }
 
@@ -156,10 +176,10 @@ function caseAgainst(
   if (parseFloat(r.obp) > 0 && parseFloat(r.obp) < 0.31) {
     return `Case against: ${r.obp} OBP. No reach, no steal. Speed is wasted if he is making outs.`;
   }
-  if (hold && hold.sb + hold.cs >= 8 && hold.cs / Math.max(1, hold.sb + hold.cs) >= 0.35) {
+  if (hold && hold.sb >= 0 && hold.sb + hold.cs >= 8 && hold.cs / Math.max(1, hold.sb + hold.cs) >= 0.35) {
     return `Case against: ${hold.name} already has ${hold.cs} CS vs ${hold.sb} SB allowed. Runners are not auto-safe on him.`;
   }
-  if (hold && hold.sb <= 5 && hold.pk >= 2) {
+  if (hold && hold.sb >= 0 && hold.sb <= 5 && hold.pk >= 2) {
     return `Case against: ${hold.name} holds the running game (${hold.sb} SB allowed, ${hold.pk} pickoffs).`;
   }
   if (catcher?.csPct != null && catcher.csPct >= 28) {
@@ -171,7 +191,7 @@ function caseAgainst(
   if (speed && speed.hp && parseFloat(speed.hp) > 4.35) {
     return `Case against: home-to-first ${speed.hp}s is not a burner first step even if the season SB total looks loud.`;
   }
-  return `Case against: ${r.name} still has to be on first. One slide-step from ${hold?.name || "the starter"} and this prop is dead. Savant pop time for tonight is not in the file.`;
+  return `Case against: ${r.name} still has to be on first against ${hold?.name || "the starter"}. One slide-step and the prop is dead. Tonight's pop time is not in this file.`;
 }
 
 export function stealCards(
@@ -183,6 +203,7 @@ export function stealCards(
   gamePk?: number
 ): Edge[] {
   const edges: Edge[] = [];
+  const holdReady = hold && hold.sb >= 0;
   for (const r of runners) {
     const speed = sprint.get(r.id);
     const confirms: string[] = [];
@@ -190,7 +211,7 @@ export function stealCards(
     if (r.sb >= 20) confirms.push(`${r.sb} SB`);
     if (r.success >= 78) confirms.push(`${r.success}% success`);
     if (speed && speed.ft >= 28.5) confirms.push(`${speed.ft} ft/s sprint`);
-    if (hold && hold.sb >= 12) confirms.push(`${hold.name} has allowed ${hold.sb} SB`);
+    if (holdReady && hold!.sb >= 12) confirms.push(`${hold!.name} has allowed ${hold!.sb} SB`);
     if (catcher?.csPct != null && catcher.csPct <= 22) confirms.push(`${catcher.name} CS% ${catcher.csPct}`);
     if (speed && speed.ft < 26.5) flags.push(`${speed.ft} ft/s`);
     if (r.success < 70 && r.sb + r.cs >= 10) flags.push(`${r.success}% success`);
@@ -201,9 +222,9 @@ export function stealCards(
     const speedLine = speed
       ? `Savant sprint ${speed.ft} ft/s (${speedBand(speed.ft)}), home-to-first ${speed.hp || "n/a"}s, ${speed.bolts} bolts on ${speed.runs} competitive runs.`
       : `No Savant sprint row posted (under the competitive-run cutoff or not tracked).`;
-    const holdLine = hold
-      ? `${hold.name} hold line: ${hold.sb} SB allowed, ${hold.cs} CS, ${hold.pk} pickoffs.`
-      : "Starter hold line not loaded.";
+    const holdLine = holdReady
+      ? `${hold!.name} hold line: ${hold!.sb} SB allowed, ${hold!.cs} CS, ${hold!.pk} pickoffs.`
+      : `${hold?.name || "Starter"} hold line not loaded.`
     const armLine =
       catcher?.csPct != null
         ? `${catcher.name} has thrown out ${catcher.cs} runners at ${catcher.csPct}% CS.`
@@ -216,7 +237,7 @@ export function stealCards(
       edgeScore: gde.score,
       pitcher: hold?.name,
       team: r.team,
-      reasoning: `${r.name}: ${r.sb} SB / ${r.cs} CS (${r.success}%) in ${r.games} G, ${r.obp} OBP, ${r.runs} runs. ${speedLine} ${holdLine} ${armLine} ${caseAgainst(r, speed, hold, catcher)} Score ${gde.score}.`,
+      reasoning: `${r.name}: ${r.sb} SB / ${r.cs} CS (${r.success}%) in ${r.games} G, ${r.obp} OBP, ${r.runs} runs. ${speedLine} ${holdLine} ${armLine} ${caseAgainst(r, speed, holdReady ? hold : null, catcher)} Score ${gde.score}.`,
       stats: {
         SB: r.sb,
         CS: r.cs,
@@ -225,7 +246,7 @@ export function stealCards(
         "ft/s": speed?.ft ?? "n/a",
         "HP-1B": speed?.hp || "n/a",
         Bolts: speed?.bolts ?? "n/a",
-        "P SB-A": hold?.sb ?? "n/a",
+        "P SB-A": holdReady ? hold!.sb : "n/a",
         "C CS%": catcher?.csPct ?? "—",
       },
     });
