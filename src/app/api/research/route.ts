@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { findTodaysEdges, getPitcherSeasonStats, getTeamKPct, getTodaysGames } from "@/lib/mlb";
 import { alwaysCard } from "@/lib/game-card";
 import { getMlbLines, matchLine } from "@/lib/mlb-odds";
+import { dedupeEdges } from "@/lib/edges";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ export async function GET(request: Request) {
       ]);
       extras.push(...(await alwaysCard(g, homeP, awayP, homeT, awayT)));
     }
-    const all = [...extras, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
+    const noDupK = edges.filter((e) => e.market !== "Pitcher Ks");
+    const all = dedupeEdges([...extras, ...noDupK]);
     const slate = games.map((g) => ({
       ...g,
       line: matchLine(lines, g.awayTeam, g.homeTeam) || null,
