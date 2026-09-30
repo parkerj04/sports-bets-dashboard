@@ -58,18 +58,21 @@ export default function ResearchPage() {
           <section className="space-y-3">
             <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
             <p className="text-sm text-muted">
-              Lines + first lean on this page. Full handicap walk-through:{" "}
+              Tap a game for the lab. Checklist:{" "}
               <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>.
             </p>
             {loading && <p className="text-muted text-sm">Loading NFL…</p>}
             {nfl.games.map((g) => (
-              <div key={g.id} className="card p-4 space-y-2">
+              <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className="card p-4 space-y-2 block hover:border-accent/40">
                 <div className="flex justify-between gap-3">
                   <div>
                     <div className="font-semibold">{g.away} ({g.awayRecord})</div>
                     <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
                   </div>
-                  <div className={`text-2xl font-mono font-bold ${scoreColor(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
+                  <div className="text-right">
+                    <div className={`text-2xl font-mono font-bold ${scoreColor(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
+                    <div className="text-[10px] text-accent">Open game →</div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.spread}</div></div>
@@ -82,7 +85,7 @@ export default function ResearchPage() {
                   <span className="text-accent font-medium">Total: {g.leanTotal}</span>
                 </div>
                 <p className="text-xs text-muted">{g.leanWhy}</p>
-              </div>
+              </Link>
             ))}
           </section>
         )}
