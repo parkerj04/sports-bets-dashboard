@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sports Bets Dashboard",
-  description: "Track your sports bets and share plays with friends",
+  title: "Edge Desk — Picks & Research",
+  description: "Sports picks, research, and daily MLB edges",
 };
 
 export default function RootLayout({
