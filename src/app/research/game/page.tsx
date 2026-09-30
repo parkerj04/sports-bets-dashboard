@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/lib/mlb";
 import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
-import { BatterZones, PitcherZones } from "@/components/PitcherZones";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
 
@@ -214,14 +213,6 @@ function GameInner() {
         </div>
       )}
       <HitterForm rows={data.form || []} />
-      <section className="grid sm:grid-cols-2 gap-3">
-        <PitcherZones id={data.awayPitcher?.id} name={data.awayPitcher?.name || "Away"} />
-        <PitcherZones id={data.homePitcher?.id} name={data.homePitcher?.name || "Home"} />
-      </section>
-      <section className="grid sm:grid-cols-2 gap-3">
-        <BatterZones id={data.awayHitters[0]?.id} name={data.awayHitters[0]?.name || "Top away bat"} />
-        <BatterZones id={data.homeHitters[0]?.id} name={data.homeHitters[0]?.name || "Top home bat"} />
-      </section>
       <section>
         <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Plays for this game</h2>
         <div className="space-y-3">
