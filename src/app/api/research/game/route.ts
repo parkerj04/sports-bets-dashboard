@@ -68,6 +68,8 @@ export async function GET(request: Request) {
         homeTeam: game.homeTeam,
         awayPitcher: game.awayPitcher,
         homePitcher: game.homePitcher,
+        awayPitcherId: game.awayPitcherId,
+        homePitcherId: game.homePitcherId,
       }),
     ]);
 
