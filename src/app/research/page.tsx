@@ -9,7 +9,9 @@ import { BrandMark } from "@/components/Logo";
 import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
+import { SlipCheck, SlipTray } from "@/components/SlipTray";
 import { scoreTone } from "@/lib/score-color";
+import { isPlayable } from "@/lib/edges";
 
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
@@ -40,9 +42,40 @@ export default function ResearchPage() {
 
   const markets = useMemo(() => ["All", ...Array.from(new Set(edges.map((e) => e.market)))], [edges]);
   const shown = market === "All" ? edges : edges.filter((e) => e.market === market);
+  const playable = shown.filter(isPlayable);
+  const watch = shown.filter((e) => !isPlayable(e));
+
+  function card(e: Edge, i: number, live: boolean) {
+    return (
+      <div key={`${e.gamePk}-${e.market}-${e.pick}-${i}`} className="card p-4 space-y-2">
+        <div className="flex justify-between gap-3">
+          <div>
+            <div className="text-xs text-muted uppercase">{e.market}{live ? "" : " · research only"}</div>
+            <h3 className="font-semibold">{e.pick}</h3>
+            <p className="text-sm text-muted">{e.game}</p>
+          </div>
+          <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
+        </div>
+        <p className="text-sm">{e.reasoning}</p>
+        <div className="flex items-center justify-between gap-2">
+          <SlipCheck item={{
+            id: `${e.gamePk}-${e.market}-${e.pick}`,
+            sport: "MLB",
+            game: e.game,
+            market: e.market,
+            pick: e.pick,
+            score: e.edgeScore,
+            why: e.reasoning,
+            playable: live,
+          }} />
+          {e.gamePk ? <Link href={`/research/game?id=${e.gamePk}`} className="text-xs text-accent">Open game →</Link> : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-28">
       <header className="border-b border-card-border sticky top-0 z-10 bg-background/90 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/dashboard"><BrandMark /></Link>
@@ -116,32 +149,24 @@ export default function ResearchPage() {
             </section>
             <section>
               <h1 className="text-xl font-bold mb-1">Board</h1>
+              <p className="text-xs text-muted mb-2">Playable = score 64+ with no contact/walk flags. Everything else is research only. Check cards onto the slip, then copy the list for Gamblybot.</p>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {markets.map((m) => (
                   <button key={m} onClick={() => setMarket(m)} className={`text-xs px-3 py-1.5 rounded-full border whitespace-nowrap ${market === m ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{m}</button>
                 ))}
               </div>
               {error && !loading && <p className="text-danger text-sm">{error}</p>}
-              <div className="space-y-3 mt-3">
-                {shown.map((e, i) => (
-                  <Link key={i} href={e.gamePk ? `/research/game?id=${e.gamePk}` : "/research"} className="card p-4 block">
-                    <div className="flex justify-between gap-3">
-                      <div>
-                        <div className="text-xs text-muted uppercase">{e.market}</div>
-                        <h3 className="font-semibold">{e.pick}</h3>
-                        <p className="text-sm text-muted">{e.game}</p>
-                      </div>
-                      <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
-                    </div>
-                    <p className="text-sm mt-2">{e.reasoning}</p>
-                  </Link>
-                ))}
-              </div>
+              <h2 className="text-sm font-semibold mt-4 mb-2 text-good">Playable</h2>
+              <div className="space-y-3">{playable.map((e, i) => card(e, i, true))}</div>
+              {!playable.length && <p className="text-xs text-muted">Nothing cleared the playable bar on this filter.</p>}
+              <h2 className="text-sm font-semibold mt-6 mb-2 text-danger">Research only</h2>
+              <div className="space-y-3">{watch.map((e, i) => card(e, i, false))}</div>
             </section>
             <PropBoards sport="MLB" />
           </>
         )}
       </main>
+      <SlipTray />
     </div>
   );
 }
