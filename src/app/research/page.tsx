@@ -7,11 +7,13 @@ import type { MlbLine } from "@/lib/mlb-odds";
 import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
 import { PropBoards } from "@/components/PropBoards";
+import { CfbBoard } from "@/components/CfbBoard";
 
+type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
 
 export default function ResearchPage() {
-  const [sport, setSport] = useState<"MLB" | "NFL">("MLB");
+  const [sport, setSport] = useState<Sport>("MLB");
   const [edges, setEdges] = useState<Edge[]>([]);
   const [games, setGames] = useState<SlateGame[]>([]);
   const [nfl, setNfl] = useState<{ week: number; games: NflGame[] }>({ week: 0, games: [] });
@@ -20,16 +22,14 @@ export default function ResearchPage() {
   const [market, setMarket] = useState("All");
 
   useEffect(() => {
+    if (sport === "CFB") { setLoading(false); return; }
     setLoading(true);
     const url = sport === "NFL" ? "/api/research/nfl" : "/api/research";
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
         if (sport === "NFL") setNfl({ week: data.week || 0, games: data.games || [] });
-        else {
-          setEdges(data.edges || []);
-          setGames(data.games || []);
-        }
+        else { setEdges(data.edges || []); setGames(data.games || []); }
         if (data.error) setError(data.error);
       })
       .catch(() => setError("Could not load research"))
@@ -50,11 +50,11 @@ export default function ResearchPage() {
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
         <div className="flex gap-2">
-          {(["MLB", "NFL"] as const).map((s) => (
+          {(["MLB", "NFL", "CFB"] as const).map((s) => (
             <button key={s} onClick={() => setSport(s)} className={`px-4 py-1.5 rounded-full text-sm border ${sport === s ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{s}</button>
           ))}
         </div>
-
+        {sport === "CFB" && <CfbBoard />}
         {sport === "NFL" && (
           <>
             <PropBoards sport="NFL" />
@@ -86,7 +86,6 @@ export default function ResearchPage() {
             </section>
           </>
         )}
-
         {sport === "MLB" && (
           <>
             <PropBoards sport="MLB" />
