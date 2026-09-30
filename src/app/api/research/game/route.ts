@@ -31,9 +31,9 @@ export async function GET(request: Request) {
       edgesForGame(game),
     ]);
 
-    const card = alwaysCard(game, homeP, awayP, homeTeam, awayTeam);
+    const card = await alwaysCard(game, homeP, awayP, homeTeam, awayTeam);
     const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
-    const all = [...card, ...markets, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
+    const all = [...card, ...markets, ...edges];
 
     const [homeLogs, awayLogs, homeSplits, awaySplits] = await Promise.all([
       game.homePitcherId ? getPitcherLogs(game.homePitcherId) : Promise.resolve([]),
@@ -71,6 +71,20 @@ export async function GET(request: Request) {
     for (const b of [...awayHit.slice(0, 6), ...homeHit.slice(0, 6)]) {
       form.push(await getHitterLogs(b.id, b.name));
     }
+
+    for (const e of all) {
+      if (e.market === "Batter Hits") {
+        const f = form.find((x) => e.pick.includes(x.name));
+        if (f) {
+          const gamesWithHit = f.games.filter((g) => g.h >= 1).length;
+          e.stats = {
+            ...e.stats,
+            "L5 hit rate": `${gamesWithHit}/${f.games.length || 5} games with a hit · ${f.l5h}-for-${f.l5ab}`,
+          };
+        }
+      }
+    }
+    all.sort((a, b) => b.edgeScore - a.edgeScore);
 
     return NextResponse.json({
       game,
