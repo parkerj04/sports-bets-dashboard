@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { scoreTone } from "@/lib/score-color";
 
 type Card = { game: string; pick: string; score: number; why: string };
 
@@ -23,7 +24,7 @@ export function PropBoards({ sport }: { sport: "MLB" | "NFL" }) {
               <div className="font-semibold">{c.pick}</div>
               <div className="text-xs text-muted">{c.game}</div>
             </div>
-            <div className="font-mono text-xl text-accent">{c.score}</div>
+            <div className={`font-mono text-xl ${scoreTone(c.score)}`}>{c.score}</div>
           </div>
           <p className="text-sm text-muted mt-2">{c.why}</p>
         </div>

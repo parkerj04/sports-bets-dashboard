@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0b0d;
-  --foreground: #f3ead8;
-  --card: #141210;
-  --card-border: #2a2418;
-  --accent: #d4af70;
-  --accent-dim: #b8924c;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --muted: #a89b82;
+  --background: #0b0c0e;
+  --foreground: #ececec;
+  --card: #16171a;
+  --card-border: #2e3036;
+  --accent: #f3c14b;
+  --accent-dim: #d4a017;
+  --good: #3ddc84;
+  --danger: #ff5c5c;
+  --warning: #ffd24a;
+  --muted: #b4b8bf;
 }
 
 @theme inline {
@@ -19,6 +20,7 @@
   --color-card-border: var(--card-border);
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
+  --color-good: var(--good);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-muted: var(--muted);
@@ -37,8 +39,8 @@ body {
 
 .bg-grid {
   background-image:
-    linear-gradient(rgba(212, 175, 112, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212, 175, 112, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(243, 193, 75, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 193, 75, 0.035) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -50,7 +52,7 @@ body {
 
 .btn-primary {
   background: var(--accent);
-  color: #1a1408;
+  color: #111;
   font-weight: 600;
   border-radius: 8px;
   transition: background 0.15s, transform 0.1s;
@@ -59,7 +61,7 @@ body {
 .btn-primary:active { transform: scale(0.98); }
 
 .input {
-  background: #0d0c0a;
+  background: #101114;
   border: 1px solid var(--card-border);
   border-radius: 8px;
   color: var(--foreground);
@@ -69,7 +71,7 @@ body {
 }
 .input:focus { border-color: var(--accent); }
 
-.status-pending { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
-.status-won { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
-.status-lost { color: #f87171; background: rgba(248, 113, 113, 0.12); }
-.status-push, .status-void { color: #94a3b8; background: rgba(148, 163, 184, 0.12); }
+.status-pending { color: #ffd24a; background: rgba(255, 210, 74, 0.14); }
+.status-won { color: #3ddc84; background: rgba(61, 220, 132, 0.14); }
+.status-lost { color: #ff5c5c; background: rgba(255, 92, 92, 0.14); }
+.status-push, .status-void { color: #b4b8bf; background: rgba(180, 184, 191, 0.12); }

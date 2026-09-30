@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CfbGame } from "@/lib/cfb";
+import { scoreTone } from "@/lib/score-color";
 
 export function CfbBoard() {
   const [week, setWeek] = useState(0);
@@ -24,7 +25,7 @@ export function CfbBoard() {
               <div className="text-[11px] text-muted">{g.awayConf} / {g.homeConf}</div>
             </div>
             <div className="text-right">
-              <div className="font-mono text-2xl text-accent">{g.score}</div>
+              <div className={`font-mono text-2xl ${scoreTone(g.score)}`}>{g.score}</div>
               <div className="text-[10px] text-accent">QBs →</div>
             </div>
           </div>
