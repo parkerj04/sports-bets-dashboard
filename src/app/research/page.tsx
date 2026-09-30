@@ -6,6 +6,7 @@ import type { Edge, GameMatchup } from "@/lib/mlb";
 import type { MlbLine } from "@/lib/mlb-odds";
 import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
+import { PropBoards } from "@/components/PropBoards";
 
 type SlateGame = GameMatchup & { line?: MlbLine | null };
 
@@ -55,43 +56,40 @@ export default function ResearchPage() {
         </div>
 
         {sport === "NFL" && (
-          <section className="space-y-3">
-            <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-            <p className="text-sm text-muted">
-              Tap a game for the lab. Checklist:{" "}
-              <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>.
-            </p>
-            {loading && <p className="text-muted text-sm">Loading NFL…</p>}
-            {nfl.games.map((g) => (
-              <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className="card p-4 space-y-2 block hover:border-accent/40">
-                <div className="flex justify-between gap-3">
-                  <div>
-                    <div className="font-semibold">{g.away} ({g.awayRecord})</div>
-                    <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
+          <>
+            <PropBoards sport="NFL" />
+            <section className="space-y-3">
+              <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
+              <p className="text-sm text-muted">Tap a game for the lab. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>.</p>
+              {loading && <p className="text-muted text-sm">Loading NFL…</p>}
+              {nfl.games.map((g) => (
+                <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className="card p-4 space-y-2 block hover:border-accent/40">
+                  <div className="flex justify-between gap-3">
+                    <div>
+                      <div className="font-semibold">{g.away} ({g.awayRecord})</div>
+                      <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-2xl font-mono font-bold ${scoreColor(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
+                      <div className="text-[10px] text-accent">Open game →</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`text-2xl font-mono font-bold ${scoreColor(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
-                    <div className="text-[10px] text-accent">Open game →</div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.spread}</div></div>
+                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.total}</div></div>
+                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.mlAway}/{g.mlHome}</div></div>
                   </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.spread}</div></div>
-                  <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.total}</div></div>
-                  <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.mlAway}/{g.mlHome}</div></div>
-                </div>
-                <div className="text-sm">
-                  <span className="text-accent font-medium">{g.leanML}</span>
-                  {" · "}
-                  <span className="text-accent font-medium">Total: {g.leanTotal}</span>
-                </div>
-                <p className="text-xs text-muted">{g.leanWhy}</p>
-              </Link>
-            ))}
-          </section>
+                  <div className="text-sm"><span className="text-accent font-medium">{g.leanML}</span>{" · "}<span className="text-accent font-medium">Total: {g.leanTotal}</span></div>
+                  <p className="text-xs text-muted">{g.leanWhy}</p>
+                </Link>
+              ))}
+            </section>
+          </>
         )}
 
         {sport === "MLB" && (
           <>
+            <PropBoards sport="MLB" />
             <section>
               <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Today’s slate ({games.length})</h2>
               {loading && <p className="text-muted text-sm">Loading slate…</p>}
@@ -106,11 +104,7 @@ export default function ResearchPage() {
                       </div>
                       <div className="text-xs text-accent">Open game →</div>
                     </div>
-                    {g.line && (
-                      <div className="text-[11px] font-mono text-muted mt-1">
-                        {g.line.spread} · O/U {g.line.total} · ML {g.line.mlAway}/{g.line.mlHome}
-                      </div>
-                    )}
+                    {g.line && <div className="text-[11px] font-mono text-muted mt-1">{g.line.spread} · O/U {g.line.total} · ML {g.line.mlAway}/{g.line.mlHome}</div>}
                   </Link>
                 ))}
               </div>
@@ -135,9 +129,6 @@ export default function ResearchPage() {
                       <div className={`text-2xl font-bold font-mono ${scoreColor(e.edgeScore)}`}>{e.edgeScore}</div>
                     </div>
                     <p className="text-sm mt-2">{e.reasoning}</p>
-                    {e.stats?.["L5 hit rate"] && (
-                      <p className="text-xs text-accent mt-2 font-mono">{String(e.stats["L5 hit rate"])}</p>
-                    )}
                   </Link>
                 ))}
               </div>
