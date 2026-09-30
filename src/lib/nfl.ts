@@ -37,11 +37,14 @@ function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanSc
   let leanML = hm >= aw ? `${g.home} ML` : `${g.away} ML`;
   if (Math.abs(gap) < 0.08) leanML = `Lean home ${g.home} (small edge)`;
   const leanTotal = total >= 46.5 ? "Under" : total <= 41.5 ? "Over" : hm + aw > 1.15 ? "Over" : "Under";
-  const leanScore = Math.min(84, Math.round(40 + Math.abs(gap) * 80 + Math.abs(total - 44) * 1.2));
+  const leanScore = Math.min(72, Math.round(48 + Math.abs(gap) * 40 + Math.min(8, Math.abs(total - 44))));
   const leanWhy =
-    leanTotal === "Under"
-      ? `${g.spread}, total ${total}. Combined records ${g.awayRecord} / ${g.homeRecord}. Market is high or both sides are grinding — lean under.`
-      : `${g.spread}, total ${total}. Win rates favor scoring or the number is short — lean over.`;
+    `${g.away} ${g.awayRecord} at ${g.home} ${g.homeRecord}, ${g.venue || "site TBD"}. Posted ${g.spread}, total ${total}, ML ${g.mlAway || "—"}/${g.mlHome || "—"}. ` +
+    (Math.abs(gap) >= 0.15
+      ? `Record gap is real (${g.awayRecord} vs ${g.homeRecord}), so the ML lean is ${leanML}.`
+      : `Records are close (${g.awayRecord} vs ${g.homeRecord}). ML lean ${leanML} is a home/record tie-break, not a mismatch.`) +
+    ` Total lean ${leanTotal} because the number sits at ${total}. ` +
+    `Case against: this card does not have this week's injury report or snap-count confirmation. Do not treat ${leanScore} as an 80.`;
   return { ...g, leanML, leanTotal, leanWhy, leanScore };
 }
 

@@ -56,6 +56,7 @@ export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[] }> 
     const aq = qb(away); const hq = qb(home);
     const gap = wins(rec(home)) - wins(rec(away));
     const lean = gap >= 0 ? `${home.team.abbreviation} side, QB ${hq.name}` : `${away.team.abbreviation} side, QB ${aq.name}`;
+    const thin = aq.name === "QB TBD" || hq.name === "QB TBD" || aq.line === "no season line" || hq.line === "no season line";
     games.push({
       id: String(e.id),
       away: away.team.displayName,
@@ -75,8 +76,8 @@ export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[] }> 
       awayQbLine: aq.line,
       homeQbLine: hq.line,
       lean,
-      why: `QB is the card. ${away.team.abbreviation} ${aq.name} (${aq.line}) vs ${home.team.abbreviation} ${hq.name} (${hq.line}). Records ${rec(away)} / ${rec(home)}. Spread ${odds?.details || "NL"} is context only.`,
-      score: Math.min(84, Math.round(52 + Math.abs(gap) * 40)),
+      why: `${away.team.displayName} ${rec(away)} (${awayPower || "other"}) at ${home.team.displayName} ${rec(home)} (${homePower || "other"}). ${aq.name} ${aq.line} vs ${hq.name} ${hq.line}. Lean ${lean}. Posted ${odds?.details || "NL"}, total ${odds?.overUnder ?? "NL"}. Case against: ${thin ? "starter line is incomplete — confirm the QB." : "season passing line is not opponent-adjusted."}`,
+      score: Math.min(72, Math.round(48 + Math.abs(gap) * 30) - (thin ? 8 : 0)),
     });
   }
   return { week: data.week?.number || 0, games };
