@@ -6,7 +6,7 @@ import {
   getTeamHitters,
   getTeamKPct,
 } from "@/lib/mlb";
-import { getZones } from "@/lib/zones";
+import { gameMarketEdges } from "@/lib/mlb-markets";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +28,8 @@ export async function GET(request: Request) {
       edgesForGame(game),
     ]);
 
-    const [homeZones, awayZones, homeBatZones, awayBatZones] = await Promise.all([
-      game.homePitcherId ? getZones(game.homePitcherId, "pitching") : Promise.resolve(null),
-      game.awayPitcherId ? getZones(game.awayPitcherId, "pitching") : Promise.resolve(null),
-      homeHit[0]?.id ? getZones(homeHit[0].id, "hitting") : Promise.resolve(null),
-      awayHit[0]?.id ? getZones(awayHit[0].id, "hitting") : Promise.resolve(null),
-    ]);
+    const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
+    const all = [...markets, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
 
     return NextResponse.json({
       game,
@@ -43,13 +39,7 @@ export async function GET(request: Request) {
       awayHitters: awayHit,
       homeTeam,
       awayTeam,
-      edges,
-      homeZones,
-      awayZones,
-      homeBatZones,
-      awayBatZones,
-      homeBatName: homeHit[0]?.name,
-      awayBatName: awayHit[0]?.name,
+      edges: all,
     });
   } catch (err) {
     console.error(err);
