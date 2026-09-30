@@ -44,7 +44,7 @@ export default function ResearchPage() {
       <header className="border-b border-card-border sticky top-0 z-10 bg-background/90 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/dashboard"><BrandMark /></Link>
-          <Link href="/picks" className="text-sm text-muted hover:text-accent">Picks</Link>
+          <Link href="/research/playbook" className="text-sm text-muted hover:text-accent">Playbook</Link>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
@@ -57,7 +57,6 @@ export default function ResearchPage() {
         {sport === "NFL" && (
           <section className="space-y-3">
             <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-            <p className="text-sm text-muted">Lines plus a model lean for ML and total. Not a lock — a starting point.</p>
             {loading && <p className="text-muted text-sm">Loading NFL…</p>}
             {nfl.games.map((g) => (
               <div key={g.id} className="card p-4 space-y-2">
@@ -129,6 +128,9 @@ export default function ResearchPage() {
                       <div className={`text-2xl font-bold font-mono ${scoreColor(e.edgeScore)}`}>{e.edgeScore}</div>
                     </div>
                     <p className="text-sm mt-2">{e.reasoning}</p>
+                    {e.stats?.["L5 hit rate"] && (
+                      <p className="text-xs text-accent mt-2 font-mono">{String(e.stats["L5 hit rate"])}</p>
+                    )}
                   </Link>
                 ))}
               </div>
