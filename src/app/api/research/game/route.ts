@@ -7,6 +7,7 @@ import {
   getTeamKPct,
 } from "@/lib/mlb";
 import { gameMarketEdges } from "@/lib/mlb-markets";
+import { alwaysCard } from "@/lib/game-card";
 import { getBvP, getPitcherLogs, getPitcherSplits, lsPitcherRating, projectKs } from "@/lib/propdesk";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,9 @@ export async function GET(request: Request) {
       edgesForGame(game),
     ]);
 
+    const card = alwaysCard(game, homeP, awayP, homeTeam, awayTeam);
     const markets = gameMarketEdges(game, homeP, awayP, homeTeam, awayTeam);
-    const all = [...markets, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
+    const all = [...card, ...markets, ...edges].sort((a, b) => b.edgeScore - a.edgeScore);
 
     const [homeLogs, awayLogs, homeSplits, awaySplits] = await Promise.all([
       game.homePitcherId ? getPitcherLogs(game.homePitcherId) : Promise.resolve([]),
@@ -56,16 +58,12 @@ export async function GET(request: Request) {
     const homeDeep = await desk(homeP, homeLogs, homeSplits, awayTeam?.kPct || 22);
     const awayDeep = await desk(awayP, awayLogs, awaySplits, homeTeam?.kPct || 22);
 
-    const bvp: Awaited<ReturnType<typeof getBvP>>[] = [];
+    const bvp = [];
     if (game.awayPitcherId) {
-      for (const b of homeHit.slice(0, 5)) {
-        bvp.push(await getBvP(b.id, game.awayPitcherId, b.name));
-      }
+      for (const b of homeHit.slice(0, 8)) bvp.push(await getBvP(b.id, game.awayPitcherId, b.name));
     }
     if (game.homePitcherId) {
-      for (const b of awayHit.slice(0, 5)) {
-        bvp.push(await getBvP(b.id, game.homePitcherId, b.name));
-      }
+      for (const b of awayHit.slice(0, 8)) bvp.push(await getBvP(b.id, game.homePitcherId, b.name));
     }
 
     return NextResponse.json({
