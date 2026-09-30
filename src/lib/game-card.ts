@@ -107,11 +107,7 @@ export async function alwaysCard(
   });
 
   const kSide = (home?.p?.k9 || 0) >= (away?.p?.k9 || 0) ? home : away;
-  if (kSide?.p) {
-    const kAgainst =
-      kSide.flags.length > 0
-        ? `Case against: ${kSide.flags.join("; ")}. K props die when the starter is wild or the lineup is putting the ball in play.`
-        : `Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead.`;
+  if (kSide?.p && kSide.flags.length === 0 && kSide.confirms.length >= 2) {
     edges.push({
       gamePk: g.gamePk,
       game,
@@ -119,7 +115,7 @@ export async function alwaysCard(
       pick: `${kSide.p.name} strikeouts (proj ${kSide.proj})`,
       edgeScore: kSide.score,
       pitcher: kSide.p.name,
-      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. ${kAgainst} Score ${kSide.score}.`,
+      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. Score ${kSide.score}.`,
       stats: {
         "L5 hit rate": kSide.logs.length
           ? `${kSide.overProj}/${kSide.logs.length} starts at or above ${Math.floor(kSide.proj)} K · ${kSide.logs.map((x) => `${x.k}K/${x.h}H`).join("-")}`
