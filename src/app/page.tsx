@@ -1,36 +1,33 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/Logo";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-card-border">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎯</span>
-            <span className="font-semibold">Edge Desk</span>
-          </div>
+          <BrandMark />
           <div className="flex gap-3 text-sm">
-            <Link href="/research" className="text-muted hover:text-accent">Research</Link>
-            <Link href="/picks" className="text-muted hover:text-accent">Picks</Link>
             <Link href="/auth/login" className="text-muted hover:text-foreground">Sign in</Link>
-            <Link href="/auth/signup" className="btn-primary px-3 py-1.5 text-xs">Join</Link>
+            <Link href="/auth/signup" className="btn-primary px-3 py-1.5 text-xs">Request a key</Link>
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="max-w-2xl text-center space-y-6">
+          <p className="text-xs uppercase tracking-[0.25em] text-accent">Members only</p>
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-            Picks. Research. <span className="text-accent">Edges.</span>
+            We lock the plays.<br />You need a key.
           </h1>
           <p className="text-muted text-lg">
-            Follow daily plays backed by data — strikeout matchups, hitter spots,
-            and transparent research. Create a free account to track everything.
+            Daily MLB research, pitch mixes, and Parker’s card — all behind an account.
+            No public board. No free picks.
           </p>
           <div className="flex flex-wrap gap-3 justify-center pt-2">
-            <Link href="/auth/signup" className="btn-primary px-6 py-3 text-sm">Create free account</Link>
-            <Link href="/research" className="px-6 py-3 text-sm rounded-lg border border-card-border text-muted hover:text-foreground hover:border-muted transition-colors">
-              View today’s research
+            <Link href="/auth/signup" className="btn-primary px-6 py-3 text-sm">Create account</Link>
+            <Link href="/auth/login" className="px-6 py-3 text-sm rounded-lg border border-card-border text-muted hover:text-foreground">
+              I already have a key
             </Link>
           </div>
         </div>

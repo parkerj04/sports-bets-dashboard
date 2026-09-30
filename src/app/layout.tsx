@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Edge Desk — Picks & Research",
-  description: "Sports picks, research, and daily MLB edges",
+  title: "The Locksmith — Locked picks & research",
+  description: "Members-only sports picks, pitch mixes, and daily MLB edges.",
 };
 
 export default function RootLayout({
