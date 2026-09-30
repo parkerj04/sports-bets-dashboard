@@ -9,6 +9,7 @@ import { BrandMark } from "@/components/Logo";
 import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
+import { scoreTone } from "@/lib/score-color";
 
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
@@ -39,7 +40,6 @@ export default function ResearchPage() {
 
   const markets = useMemo(() => ["All", ...Array.from(new Set(edges.map((e) => e.market)))], [edges]);
   const shown = market === "All" ? edges : edges.filter((e) => e.market === market);
-  const scoreColor = (score: number) => (score >= 75 ? "text-accent" : score >= 60 ? "text-warning" : "text-muted");
 
   return (
     <div className="min-h-screen">
@@ -75,7 +75,7 @@ export default function ResearchPage() {
                       <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-2xl font-mono font-bold ${scoreColor(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
+                      <div className={`text-2xl font-mono font-bold ${scoreTone(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
                       <div className="text-[10px] text-accent">Open game →</div>
                     </div>
                   </div>
@@ -131,7 +131,7 @@ export default function ResearchPage() {
                         <h3 className="font-semibold">{e.pick}</h3>
                         <p className="text-sm text-muted">{e.game}</p>
                       </div>
-                      <div className={`text-2xl font-bold font-mono ${scoreColor(e.edgeScore)}`}>{e.edgeScore}</div>
+                      <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
                     </div>
                     <p className="text-sm mt-2">{e.reasoning}</p>
                   </Link>
