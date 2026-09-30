@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,13 +32,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 border border-accent/30 mb-4">
-            <span className="text-3xl">🎯</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
-          <p className="text-muted mt-1 text-sm">See picks, research & best plays of the day</p>
+          <div className="inline-flex mb-4"><Logo size={56} /></div>
+          <h1 className="text-2xl font-bold tracking-tight">The Locksmith</h1>
+          <p className="text-muted mt-1 text-sm">Sign in to unlock the card</p>
         </div>
-
         <form onSubmit={handleLogin} className="card p-6 space-y-4 shadow-xl shadow-black/40">
           <div>
             <label className="block text-sm text-muted mb-1.5">Email</label>
@@ -49,17 +47,11 @@ export default function LoginPage() {
           </div>
           {error && <p className="text-sm text-danger bg-danger/10 rounded-lg px-3 py-2">{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm disabled:opacity-60">
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Unlocking…" : "Unlock"}
           </button>
         </form>
-
         <p className="text-center text-sm text-muted mt-6">
-          No account? <Link href="/auth/signup" className="text-accent hover:underline">Create one</Link>
-        </p>
-        <p className="text-center text-xs text-muted mt-3">
-          <Link href="/research" className="hover:text-accent">Browse research</Link>
-          {" · "}
-          <Link href="/picks" className="hover:text-accent">Public picks</Link>
+          No key yet? <Link href="/auth/signup" className="text-accent hover:underline">Create an account</Link>
         </p>
       </div>
     </div>
