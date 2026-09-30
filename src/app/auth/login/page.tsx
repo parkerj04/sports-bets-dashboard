@@ -19,9 +19,15 @@ export default function LoginPage() {
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
+      return;
+    }
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    setLoading(false);
+    if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+      router.push("/auth/mfa");
       return;
     }
     router.push("/dashboard");
@@ -42,7 +48,10 @@ export default function LoginPage() {
             <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required autoComplete="email" />
           </div>
           <div>
-            <label className="block text-sm text-muted mb-1.5">Password</label>
+            <div className="flex justify-between mb-1.5">
+              <label className="text-sm text-muted">Password</label>
+              <Link href="/auth/forgot" className="text-xs text-accent hover:underline">Forgot password?</Link>
+            </div>
             <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" />
           </div>
           {error && <p className="text-sm text-danger bg-danger/10 rounded-lg px-3 py-2">{error}</p>}
