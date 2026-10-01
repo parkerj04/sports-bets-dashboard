@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string; x?: number | null; coverage?: string; concept?: string };
 
 const COLORS = ["#e23b3b", "#2f6fed", "#f08a24", "#7a4de0", "#1f9d57", "#1aa7c7", "#d4b24a", "#d4537e"];
@@ -17,7 +21,10 @@ const SKIN: Record<string, { end: string; ink: string }> = {
 };
 
 export function Stadium({ venue, home, away, name, rec, plays }: { venue?: string; home: string; away: string; name: string; rec: number; plays: Play[] }) {
+  const [open, setOpen] = useState(0);
+  useEffect(() => setOpen(0), [name, home, away]);
   const dots = plays.map((p, idx) => ({ ...p, n: idx + 1 })).filter((p) => p.x != null && p.loc);
+  const play = plays[open];
   const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${home.toLowerCase()}.png`;
   const awaySkin = SKIN[away] || { end: "#111", ink: "#ffb612" };
   const homeSkin = SKIN[home] || { end: "#111", ink: "#ff3c00" };
@@ -29,7 +36,7 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
         <img src={logo} alt={home} className="h-14 w-14 rounded-full bg-white object-contain p-1" />
         <div>
           <div className="text-xl font-extrabold leading-none" style={{ color: homeSkin.ink }}>{name || "Receiver"} receptions <span className="text-white">— 2026</span></div>
-          <div className="mt-1 text-sm text-white/80">End-of-play locations for {dots.length} of {rec} catches · {venue || `${NAME[home] || home} home field`}</div>
+          <div className="mt-1 text-sm text-white/80">Tap a dot. {dots.length} of {rec} catches · {venue || `${NAME[home] || home} home field`}</div>
         </div>
       </div>
       <div className="h-1.5" style={{ background: homeSkin.ink }} />
@@ -61,25 +68,30 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
           const lane = p.loc === "left" ? 60 : p.loc === "right" ? 186 : 123;
           const y = lane + ((i % 3) - 1) * 8;
           const x = left + (Number(p.x) / 100) * width;
+          const on = open === i;
           return (
-            <g key={p.n}>
-              <circle cx={x} cy={y} r="12" fill={COLORS[(p.n - 1) % COLORS.length]} stroke="#fff" strokeWidth="1.6" />
+            <g key={p.n} onClick={() => setOpen(i)} style={{ cursor: "pointer" }}>
+              <circle cx={x} cy={y} r={on ? 16 : 12} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={on ? 3 : 1.6} />
               <text x={x} y={y + 4} textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">{p.n}</text>
             </g>
           );
         })}
       </svg>
-      <div className="bg-white text-[#1c1c1c]">
-        {plays.map((p, i) => (
-          <div key={i} className="flex gap-3 px-3 py-2.5" style={{ background: i % 2 ? "#f3f4f6" : "#fff" }}>
-            <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[i % COLORS.length] }}>{i + 1}</span>
-            <span className="text-sm">
-              <span className="block font-semibold">Week {p.week} vs {p.def} — Q{p.qtr || "?"}, {p.time || ""} — {ORD[Number(p.down)] || "?"} & {p.togo || "?"} — {p.yards ?? "?"} yards — {p.from || "?"} to {p.to || "end spot not in the play text"}</span>
-              <span className="block text-[#4b5563]">Likely coverage: {(p.coverage || "estimate unavailable").replace("estimate: ", "")} | Likely concept: {(p.concept || "estimate unavailable").replace("estimate: ", "")}</span>
-            </span>
+      {play && (
+        <div className="m-3 rounded-lg bg-white p-3 text-[#1c1c1c]">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[open % COLORS.length] }}>{open + 1}</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setOpen((n) => Math.max(0, n - 1))} className="rounded border px-2 py-1 text-xs">Prev</button>
+              <button type="button" onClick={() => setOpen((n) => Math.min(plays.length - 1, n + 1))} className="rounded border px-2 py-1 text-xs">Next</button>
+            </div>
           </div>
-        ))}
-      </div>
+          <p className="mt-2 text-sm font-semibold">Week {play.week} vs {play.def} — Q{play.qtr || "?"}, {play.time || ""} — {ORD[Number(play.down)] || "?"} & {play.togo || "?"} — {play.yards ?? "?"} yards</p>
+          <p className="text-sm">{play.from || "?"} to {play.to || "end spot not in the play text"}</p>
+          <p className="mt-1 text-sm text-[#4b5563]">Likely coverage: {(play.coverage || "estimate unavailable").replace("estimate: ", "")}</p>
+          <p className="text-sm text-[#4b5563]">Likely concept: {(play.concept || "estimate unavailable").replace("estimate: ", "")}</p>
+        </div>
+      )}
     </div>
   );
 }
