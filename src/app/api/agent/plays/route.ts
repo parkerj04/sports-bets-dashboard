@@ -5,9 +5,13 @@ export const dynamic = "force-dynamic";
 
 type Play = { id: string; game: string; away: string; home: string; pick: string; score: number; why: string };
 
+function serviceKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+}
+
 async function live(): Promise<Play[] | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = serviceKey();
   if (!url || !key) return null;
   const res = await fetch(`${url}/rest/v1/agent_plays?select=id,game,away,home,pick,score,why&order=score.desc`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
@@ -33,8 +37,14 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body?.pick || !body?.why) return NextResponse.json({ error: "pick and why are required" }, { status: 400 });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !service) return NextResponse.json({ error: "Supabase service key is not set." }, { status: 501 });
+  const service = serviceKey();
+  if (!url || !service) {
+    return NextResponse.json({
+      error: "Supabase service key is not set on this deploy. Add SUPABASE_SERVICE_ROLE_KEY for Production, then redeploy.",
+      hasUrl: Boolean(url),
+      hasService: Boolean(service),
+    }, { status: 501 });
+  }
   const res = await fetch(`${url}/rest/v1/agent_plays`, {
     method: "POST",
     headers: { apikey: service, Authorization: `Bearer ${service}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
