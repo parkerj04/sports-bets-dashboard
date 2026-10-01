@@ -1,45 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Side = { zonePct: number; manPct: number; snaps: number } | null;
 type Player = { name: string; team: string; tgt: number; zoneTgt: number; manTgt: number; zonePct: number; compPct: number };
 type Spot = { loc: string; length: string; n: number };
-type Catcher = { name: string; team: string; rec: number; yards: number; td: number; spots: Spot[]; recent: { week: string; def: string; loc: string; length: string; air: number | null; yards: number | null; td: boolean; desc: string }[] };
+type Play = { week: string; def: string; loc: string; length: string; air: number | null; yards: number | null; td: boolean; desc: string };
+type Catcher = { name: string; team: string; rec: number; yards: number; td: number; spots: Spot[]; recent: Play[] };
 
 const X: Record<string, number> = { left: 28, middle: 50, right: 72 };
 const Y: Record<string, number> = { short: 56, deep: 28 };
 
 export function CoverageSplit({ away, home }: { away: string; home: string }) {
   const [data, setData] = useState<{ source: string; liveSource: string; away: Side; home: Side; players: Player[]; catches: Catcher[] } | null>(null);
+  const [side, setSide] = useState(away);
   const [picked, setPicked] = useState("");
   useEffect(() => {
     if (!away || !home) return;
     fetch(`/api/research/nfl/coverage?away=${away}&home=${home}`)
       .then((r) => r.json())
-      .then((d) => { setData(d); setPicked(d.catches?.[0]?.name || ""); })
+      .then((d) => {
+        setData(d);
+        const first = (d.catches || []).find((p: Catcher) => p.team === away) || d.catches?.[0];
+        setPicked(first?.name || "");
+        setSide(first?.team || away);
+      })
       .catch(() => setData(null));
   }, [away, home]);
-  if (!data) return null;
+  const list = useMemo(() => (data?.catches || []).filter((p) => p.team === side), [data, side]);
+  const star = useMemo(() => [...list].sort((a, b) => b.rec - a.rec)[0]?.name, [list]);
+  if (!data) return <p className="text-xs text-muted">Loading 2026 catches…</p>;
+  const active = list.find((p) => p.name === picked) || list[0];
+  const opp = side === away ? home : away;
+  const vs = (active?.recent || []).filter((p) => p.def === opp);
   const heavy = (s: Side) => (s && s.zonePct >= 65 ? "zone-heavy" : s && s.zonePct <= 50 ? "man-leaning" : "mixed");
-  const active = data.catches.find((p) => p.name === picked);
   return (
     <div className="card p-4 space-y-3">
-      <h3 className="font-semibold text-sm">2026 catches</h3>
-      <p className="text-[11px] text-muted">{data.liveSource}</p>
-      <div className="flex flex-wrap gap-2">
-        {data.catches.map((p) => (
-          <button key={p.team + p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${picked === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>
-            {p.name} {p.rec}
-          </button>
-        ))}
+      <h3 className="font-semibold text-sm">Pick a receiver, see the 2026 catches</h3>
+      <p className="text-[11px] text-muted">{data.liveSource} Refreshes from the file after games. Star is the most catches on this side.</p>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => { setSide(away); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === away ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{away}</button>
+        <button type="button" onClick={() => { setSide(home); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === home ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{home}</button>
       </div>
-      <Field name={picked} spots={active?.spots || []} />
+      <div className="grid sm:grid-cols-2 gap-4 items-start">
+        <div className="flex flex-wrap gap-2">
+          {list.map((p) => (
+            <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>
+              {p.name === star ? "★ " : ""}{p.name} {p.rec}
+            </button>
+          ))}
+          {list.length === 0 && <p className="text-xs text-muted">No 2026 catches for {side} yet.</p>}
+        </div>
+        <Field name={active?.name || ""} spots={active?.spots || []} />
+      </div>
       {active && (
-        <div className="text-xs space-y-2">
-          <div className="font-medium">{active.name} · {active.rec} catches · {active.yards} yards · {active.td} TD</div>
+        <div className="text-xs space-y-2 border-t border-card-border pt-3">
+          <div className="font-medium">{active.name} vs {opp} · {active.rec} catches, {active.yards} yards, {active.td} TD this year</div>
+          <div className="text-muted uppercase tracking-wide">Catches vs this defense</div>
+          {vs.length === 0 && <p className="text-muted">No 2026 catch vs {opp} in the file. The field is the rest of his season, not a made-up matchup.</p>}
+          {vs.map((c, i) => (
+            <p key={`v${i}`} className="text-muted">Week {c.week}: {c.length} {c.loc}{c.air != null ? `, ${c.air} air` : ""}, {c.yards} yards{c.td ? ", TD" : ""}. {c.desc}</p>
+          ))}
+          <div className="text-muted uppercase tracking-wide pt-1">Last located catches</div>
           {active.recent.map((c, i) => (
-            <p key={i} className="text-muted">Week {c.week} vs {c.def}: {c.length} {c.loc}{c.air != null ? `, ${c.air} air yards` : ""}, {c.yards} yards{c.td ? ", TD" : ""}. {c.desc}</p>
+            <p key={i} className="text-muted">Week {c.week} vs {c.def}: {c.length} {c.loc}{c.air != null ? `, ${c.air} air` : ""}, {c.yards} yards{c.td ? ", TD" : ""}. {c.desc}</p>
           ))}
         </div>
       )}
@@ -49,19 +73,6 @@ export function CoverageSplit({ away, home }: { away: string; home: string }) {
         <SideCard name={away} side={data.away} tag={heavy(data.away)} />
         <SideCard name={home} side={data.home} tag={heavy(data.home)} />
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="text-muted"><tr className="text-left"><th className="pb-2">2025 target</th><th>Tgt</th><th>Zone</th><th>Man</th><th>Zone%</th><th>Catch%</th></tr></thead>
-          <tbody>
-            {data.players.map((p) => (
-              <tr key={p.team + p.name} className="border-t border-card-border font-mono">
-                <td className="py-1.5 font-sans">{p.name} <span className="text-muted">{p.team}</span></td>
-                <td>{p.tgt}</td><td>{p.zoneTgt}</td><td>{p.manTgt}</td><td>{p.zonePct}</td><td>{p.compPct}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
@@ -70,7 +81,7 @@ function Field({ name, spots }: { name: string; spots: Spot[] }) {
   const drawn = spots.filter((s) => X[s.loc] && Y[s.length]);
   return (
     <div>
-      <div className="text-xs text-muted mb-1">{name || "Pick a name"} · 2026 location from the play</div>
+      <div className="text-xs text-muted mb-1">{name || "Pick a name"} · 2026</div>
       <svg viewBox="0 0 100 70" className="w-full rounded-lg bg-[#16331f] border border-card-border">
         <rect x="4" y="4" width="92" height="62" fill="none" stroke="#d7d2c8" strokeWidth="0.6" />
         <line x1="50" y1="4" x2="50" y2="66" stroke="#d7d2c8" strokeWidth="0.4" />
@@ -84,7 +95,7 @@ function Field({ name, spots }: { name: string; spots: Spot[] }) {
           </g>
         ))}
       </svg>
-      <div className="text-[11px] text-muted mt-1">{drawn.map((s) => `${s.n} ${s.length} ${s.loc}`).join(" · ") || "No located catch for this name."}</div>
+      <div className="text-[11px] text-muted mt-1">{drawn.map((s) => `${s.n} ${s.length} ${s.loc}`).join(" · ") || "No located catch."}</div>
     </div>
   );
 }
