@@ -22,26 +22,31 @@ function Inner() {
   if (!game) return <p className="text-muted text-center py-16">Loading college lab…</p>;
   const yards = lab?.stats.find((s) => /total yards/i.test(s.label));
   const desk = footballRegistry({
-    away: game.away,
-    home: game.home,
-    awayRecord: game.awayRecord,
-    homeRecord: game.homeRecord,
-    mlAway: game.mlAway,
-    mlHome: game.mlHome,
-    awayQb: game.awayQb,
-    homeQb: game.homeQb,
-    awayQbLine: game.awayQbLine,
-    homeQbLine: game.homeQbLine,
-    awayYards: yards?.away,
-    homeYards: yards?.home,
-    predAway: lab?.predAway,
-    predHome: lab?.predHome,
+    away: game.away, home: game.home, awayRecord: game.awayRecord, homeRecord: game.homeRecord,
+    mlAway: game.mlAway, mlHome: game.mlHome, awayQb: game.awayQb, homeQb: game.homeQb,
+    awayQbLine: game.awayQbLine, homeQbLine: game.homeQbLine, awayYards: yards?.away, homeYards: yards?.home,
+    predAway: lab?.predAway, predHome: lab?.predHome,
   });
+  const plays = [
+    { rank: 1, name: game.awayQb, team: game.away, line: game.awayQbLine, why: `${game.away} quarterback. Season line is the detail we have. College game logs are not in the free feed, so there is no last-5 player row.` },
+    { rank: 2, name: game.homeQb, team: game.home, line: game.homeQbLine, why: `${game.home} quarterback. Same limit: season line only, no last-5 player log in this feed.` },
+  ];
   return (
     <div className="space-y-4">
       <Link href="/research" className="text-xs text-muted">← CFB slate</Link>
       <h1 className="text-2xl font-bold">{game.away} <span className="text-muted">@</span> {game.home}</h1>
       <p className="text-sm text-muted">{game.awayConf} vs {game.homeConf} · {game.spread} · O/U {game.total} · ML {game.mlAway}/{game.mlHome}</p>
+      <section className="card p-4 space-y-3">
+        <h3 className="font-semibold text-sm">Favorite plays in this game</h3>
+        <p className="text-[11px] text-muted">Ranked by the quarterback, because that is what this feed can support. Not a book line.</p>
+        {plays.map((p) => (
+          <div key={p.name} className="border-t border-card-border pt-2 text-sm">
+            <div className="font-semibold">{p.rank}. {p.name} · {p.team}</div>
+            <div className="font-mono text-xs">{p.line}</div>
+            <p className="text-xs mt-1">{p.why}</p>
+          </div>
+        ))}
+      </section>
       <div className="grid sm:grid-cols-2 gap-3">
         <Qb team={game.away} conf={game.awayConf} record={game.awayRecord} name={game.awayQb} line={game.awayQbLine} />
         <Qb team={game.home} conf={game.homeConf} record={game.homeRecord} name={game.homeQb} line={game.homeQbLine} />
