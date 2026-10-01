@@ -10,14 +10,27 @@ const NAME: Record<string, string> = {
   PIT: "STEELERS", CLE: "BROWNS", BAL: "RAVENS", CIN: "BENGALS", BUF: "BILLS", MIA: "DOLPHINS",
   NE: "PATRIOTS", NYJ: "JETS", HOU: "TEXANS", IND: "COLTS", JAX: "JAGUARS", TEN: "TITANS",
   DEN: "BRONCOS", KC: "CHIEFS", LV: "RAIDERS", LAC: "CHARGERS", DAL: "COWBOYS", NYG: "GIANTS",
-  PHI: "EAGLES", WAS: "COMMANDERS", CHI: "BEARS", DET: "LIONS", GB: "PACKERS", MIN: "VIKINGS",
-  ATL: "FALCONS", CAR: "PANTHERS", NO: "SAINTS", TB: "BUCS", ARI: "CARDINALS", LA: "RAMS",
+  PHI: "EAGLES", WAS: "COMMANDERS", WSH: "COMMANDERS", CHI: "BEARS", DET: "LIONS", GB: "PACKERS", MIN: "VIKINGS",
+  ATL: "FALCONS", CAR: "PANTHERS", NO: "SAINTS", TB: "BUCS", ARI: "CARDINALS", LAR: "RAMS", LA: "RAMS",
   SF: "49ERS", SEA: "SEAHAWKS",
 };
 const SKIN: Record<string, { end: string; ink: string }> = {
   PIT: { end: "#101010", ink: "#ffb612" }, CLE: { end: "#311d00", ink: "#ff3c00" },
-  BAL: { end: "#241773", ink: "#c60c30" }, CIN: { end: "#111", ink: "#fb4f14" },
-  DAL: { end: "#041e42", ink: "#b0b7bc" }, PHI: { end: "#004c54", ink: "#a5acaf" },
+  BAL: { end: "#241773", ink: "#9e7c0c" }, CIN: { end: "#111111", ink: "#fb4f14" },
+  BUF: { end: "#00338d", ink: "#c60c30" }, MIA: { end: "#008e97", ink: "#fc4c02" },
+  NE: { end: "#002244", ink: "#c60c30" }, NYJ: { end: "#125740", ink: "#ffffff" },
+  HOU: { end: "#03202f", ink: "#a71930" }, IND: { end: "#002c5f", ink: "#ffffff" },
+  JAX: { end: "#006778", ink: "#d7a22a" }, TEN: { end: "#0c2340", ink: "#4b92db" },
+  DEN: { end: "#002244", ink: "#fb4f14" }, KC: { end: "#e31837", ink: "#ffb81c" },
+  LV: { end: "#000000", ink: "#a5acaf" }, LAC: { end: "#002a5e", ink: "#ffc20e" },
+  DAL: { end: "#041e42", ink: "#869397" }, NYG: { end: "#0b2265", ink: "#a71930" },
+  PHI: { end: "#004c54", ink: "#a5acaf" }, WAS: { end: "#5a1414", ink: "#ffb612" }, WSH: { end: "#5a1414", ink: "#ffb612" },
+  CHI: { end: "#0b162a", ink: "#c83803" }, DET: { end: "#0076b6", ink: "#b0b7bc" },
+  GB: { end: "#203731", ink: "#ffb612" }, MIN: { end: "#4f2683", ink: "#ffc62f" },
+  ATL: { end: "#a71930", ink: "#000000" }, CAR: { end: "#0085ca", ink: "#101820" },
+  NO: { end: "#101820", ink: "#d3bc8d" }, TB: { end: "#d50a0a", ink: "#ff7900" },
+  ARI: { end: "#97233f", ink: "#ffb612" }, LA: { end: "#003594", ink: "#ffd100" }, LAR: { end: "#003594", ink: "#ffd100" },
+  SF: { end: "#aa0000", ink: "#b3995d" }, SEA: { end: "#002244", ink: "#69be28" },
 };
 
 function Post({ edge, dir }: { edge: number; dir: -1 | 1 }) {
@@ -37,11 +50,13 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
   const [open, setOpen] = useState(0);
   useEffect(() => setOpen(0), [name, home, away]);
   const club = (team || away || "").toUpperCase();
+  const homeKey = home.toUpperCase();
+  const awayKey = away.toUpperCase();
   const play = plays[open];
   const playerLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${club.toLowerCase()}.png`;
-  const homeLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${home.toLowerCase()}.png`;
-  const awaySkin = SKIN[away] || { end: "#111", ink: "#ffb612" };
-  const homeSkin = SKIN[home] || { end: "#111", ink: "#ff3c00" };
+  const homeLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${homeKey.toLowerCase()}.png`;
+  const awaySkin = SKIN[awayKey] || { end: "#111", ink: "#ffffff" };
+  const homeSkin = SKIN[homeKey] || { end: "#111", ink: "#ffffff" };
   const clubSkin = SKIN[club] || awaySkin;
   const fieldX = 110;
   const fieldW = 780;
@@ -51,15 +66,15 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
         <img src={playerLogo} alt={club} className="h-14 w-14 rounded-full bg-white object-contain p-1" />
         <div>
           <div className="text-xl font-extrabold leading-none" style={{ color: clubSkin.ink }}>{name || "Receiver"} · {NAME[club] || club} <span className="text-white">— 2026</span></div>
-          <div className="mt-1 text-sm text-white/80">Tap a dot. {plays.length} of {rec} catches · {venue || `${NAME[home] || home} home field`}</div>
+          <div className="mt-1 text-sm text-white/80">{NAME[awayKey] || away} at {NAME[homeKey] || home} · {venue || "home field"}</div>
         </div>
       </div>
       <div className="h-1.5" style={{ background: homeSkin.ink }} />
       <svg viewBox="0 0 1040 280" className="w-full bg-[#1f7a34]">
         <rect x="40" y="18" width="70" height="210" fill={awaySkin.end} stroke="#fff" strokeWidth="2" />
         <rect x="890" y="18" width="70" height="210" fill={homeSkin.end} stroke="#fff" strokeWidth="2" />
-        <text x="75" y="126" fill={awaySkin.ink} fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1.5" transform="rotate(-90 75 126)">{NAME[away] || away}</text>
-        <text x="925" y="126" fill={homeSkin.ink} fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1.5" transform="rotate(90 925 126)">{NAME[home] || home}</text>
+        <text x="75" y="126" fill={awaySkin.ink} fontSize="11" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(-90 75 126)">{NAME[awayKey] || away}</text>
+        <text x="925" y="126" fill={homeSkin.ink} fontSize="11" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(90 925 126)">{NAME[homeKey] || home}</text>
         <rect x={fieldX} y="18" width={fieldW} height="210" fill="#21863c" stroke="#fff" strokeWidth="2" />
         {Array.from({ length: 21 }, (_, i) => fieldX + (i / 20) * fieldW).map((x, i) => (
           <line key={i} x1={x} y1="18" x2={x} y2="228" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.5 : 0.7} />
