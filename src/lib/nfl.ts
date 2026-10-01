@@ -22,34 +22,25 @@ export interface NflGame {
 }
 
 import { impliedTotals } from "./ticket";
-
-function winPct(rec: string) {
-  const m = rec.match(/(\d+)\s*-\s*(\d+)/);
-  if (!m) return 0.5;
-  const w = Number(m[1]);
-  const l = Number(m[2]);
-  return w + l === 0 ? 0.5 : w / (w + l);
-}
+import { footballRegistry } from "./football-desk";
 
 function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanScore">): NflGame {
-  const aw = winPct(g.awayRecord);
-  const hm = winPct(g.homeRecord);
   const total = typeof g.total === "number" ? g.total : parseFloat(String(g.total)) || 44;
-  const gap = hm - aw;
-  let leanML = hm >= aw ? `${g.home} ML` : `${g.away} ML`;
-  if (Math.abs(gap) < 0.08) leanML = `Lean home ${g.home} (small edge)`;
-  const leanTotal = total >= 46.5 ? "Under" : total <= 41.5 ? "Over" : hm + aw > 1.15 ? "Over" : "Under";
-  const leanScore = Math.min(72, Math.round(48 + Math.abs(gap) * 40 + Math.min(8, Math.abs(total - 44))));
+  const desk = footballRegistry({
+    away: g.away,
+    home: g.home,
+    awayRecord: g.awayRecord,
+    homeRecord: g.homeRecord,
+    mlAway: g.mlAway,
+    mlHome: g.mlHome,
+  });
+  const leanTotal = total >= 47.5 ? "Under" : total <= 41 ? "Over" : "No total lean";
   const imp = impliedTotals(g.total, g.spread, g.home, g.away);
   const leanWhy =
     `${g.away} ${g.awayRecord} at ${g.home} ${g.homeRecord}, ${g.venue || "site TBD"}. Posted ${g.spread}, total ${total}, ML ${g.mlAway || "—"}/${g.mlHome || "—"}. ` +
     (imp ? `Implied points ${g.away} ${imp.awayImp} / ${g.home} ${imp.homeImp}. ` : "") +
-    (Math.abs(gap) >= 0.15
-      ? `Record gap is real (${g.awayRecord} vs ${g.homeRecord}), so the ML lean is ${leanML}.`
-      : `Records are close (${g.awayRecord} vs ${g.homeRecord}). ML lean ${leanML} is a home/record tie-break, not a mismatch.`) +
-    ` Total lean ${leanTotal} because the number sits at ${total}. ` +
-    `Case against: this slate card does not settle inactives. Open the game lab ticket desk before a unit. Do not treat ${leanScore} as an 80.`;
-  return { ...g, leanML, leanTotal, leanWhy, leanScore };
+    `${desk.why} Total note: ${leanTotal} at ${total}, and that is a number read, not a play. Open the game lab before a unit. Injuries, QB status, and last 5 are not on this slate card.`;
+  return { ...g, leanML: desk.pick, leanTotal, leanWhy, leanScore: desk.score };
 }
 
 export async function getNflWeek(): Promise<{ week: number; games: NflGame[] }> {
