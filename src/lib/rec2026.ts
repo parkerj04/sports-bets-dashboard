@@ -3,26 +3,12 @@ import zlib from "zlib";
 const URL = "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz";
 
 export type Catch = {
-  week: string;
-  team: string;
-  def: string;
-  name: string;
-  loc: string;
-  length: string;
-  air: number | null;
-  yards: number | null;
-  td: boolean;
-  desc: string;
-  qtr: string;
-  time: string;
-  from: string;
-  to: string;
-  x: number | null;
+  week: string; team: string; def: string; name: string; loc: string; length: string;
+  air: number | null; yards: number | null; yac: number | null; td: boolean; desc: string;
+  qtr: string; time: string; down: string; togo: string; from: string; to: string; x: number | null; concept: string;
 };
 
-function col(header: string[], name: string) {
-  return header.indexOf(name);
-}
+function col(header: string[], name: string) { return header.indexOf(name); }
 
 function endSpot(desc: string, team: string, def: string) {
   const m = desc.match(/\b(?:to|at|ob at)\s+([A-Z]{2,3})\s+(\d{1,2})\b/);
@@ -33,7 +19,14 @@ function endSpot(desc: string, team: string, def: string) {
   return { to: `${side} ${yard}`, x };
 }
 
-export async function catches2026(teams: string[]): Promise<{ source: string; receptions: number; players: { name: string; team: string; rec: number; yards: number; td: number; spots: { loc: string; length: string; n: number }[]; recent: Catch[] }[] }> {
+function concept(loc: string, length: string, air: number | null, yac: number | null) {
+  const lane = loc || "unknown side";
+  const depth = length === "deep" ? "deep" : air != null && air <= 3 ? "quick" : "short";
+  const after = yac != null && yac >= 10 ? ", with yards after the catch" : "";
+  return `${depth} ${lane}${after}. Read from location and air yards, not film.`;
+}
+
+export async function catches2026(teams: string[]) {
   const res = await fetch(URL, { next: { revalidate: 3600 } });
   if (!res.ok) return { source: "2026 play-by-play file did not load.", receptions: 0, players: [] };
   const text = zlib.gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8");
@@ -43,8 +36,9 @@ export async function catches2026(teams: string[]): Promise<{ source: string; re
     week: col(header, "week"), team: col(header, "posteam"), def: col(header, "defteam"),
     name: col(header, "receiver_player_name"), complete: col(header, "complete_pass"),
     loc: col(header, "pass_location"), length: col(header, "pass_length"),
-    air: col(header, "air_yards"), yards: col(header, "yards_gained"), td: col(header, "touchdown"),
-    desc: col(header, "desc"), qtr: col(header, "qtr"), time: col(header, "time"), yrdln: col(header, "yrdln"),
+    air: col(header, "air_yards"), yards: col(header, "yards_gained"), yac: col(header, "yards_after_catch"),
+    td: col(header, "touchdown"), desc: col(header, "desc"), qtr: col(header, "qtr"),
+    time: col(header, "time"), yrdln: col(header, "yrdln"), down: col(header, "down"), togo: col(header, "ydstogo"),
   };
   const want = new Set(teams.map((t) => t.toUpperCase()));
   const grouped = new Map<string, Catch[]>();
@@ -64,37 +58,33 @@ export async function catches2026(teams: string[]): Promise<{ source: string; re
     const spot = endSpot(desc, team, cells[i.def]);
     const air = Number(cells[i.air]);
     const yards = Number(cells[i.yards]);
+    const yac = Number(cells[i.yac]);
+    const loc = cells[i.loc] || "";
+    const length = cells[i.length] || "";
     const play: Catch = {
-      week: cells[i.week], team, def: cells[i.def], name,
-      loc: cells[i.loc] || "", length: cells[i.length] || "",
+      week: cells[i.week], team, def: cells[i.def], name, loc, length,
       air: Number.isFinite(air) ? air : null,
       yards: Number.isFinite(yards) ? yards : null,
-      td: cells[i.td] === "1",
-      desc: desc.slice(0, 160),
-      qtr: cells[i.qtr], time: cells[i.time], from: cells[i.yrdln], to: spot.to, x: spot.x,
+      yac: Number.isFinite(yac) ? yac : null,
+      td: cells[i.td] === "1", desc: desc.slice(0, 160),
+      qtr: cells[i.qtr], time: cells[i.time], down: cells[i.down], togo: cells[i.togo],
+      from: cells[i.yrdln], to: spot.to, x: spot.x,
+      concept: concept(loc, length, Number.isFinite(air) ? air : null, Number.isFinite(yac) ? yac : null),
     };
     const key = `${team}|${name}`;
     const arr = grouped.get(key) || [];
     arr.push(play);
     grouped.set(key, arr);
   }
-  const players = Array.from(grouped.entries()).map(([, plays]) => {
-    const spots = new Map<string, number>();
-    for (const p of plays) {
-      if (!p.loc || !p.length) continue;
-      const k = `${p.loc}|${p.length}`;
-      spots.set(k, (spots.get(k) || 0) + 1);
-    }
-    return {
-      name: plays[0].name, team: plays[0].team, rec: plays.length,
-      yards: Math.round(plays.reduce((s, p) => s + (p.yards || 0), 0)),
-      td: plays.filter((p) => p.td).length,
-      spots: Array.from(spots.entries()).map(([k, n]) => { const [loc, length] = k.split("|"); return { loc, length, n }; }).sort((a, b) => b.n - a.n),
-      recent: plays.slice(),
-    };
-  }).sort((a, b) => b.rec - a.rec);
+  const players = Array.from(grouped.entries()).map(([, plays]) => ({
+    name: plays[0].name, team: plays[0].team, rec: plays.length,
+    yards: Math.round(plays.reduce((s, p) => s + (p.yards || 0), 0)),
+    td: plays.filter((p) => p.td).length,
+    spots: [],
+    recent: plays.slice(),
+  })).sort((a, b) => b.rec - a.rec);
   return {
-    source: `nflverse 2026 play-by-play. ${receptions} completed passes, weeks ${Array.from(weeks).sort((a, b) => Number(a) - Number(b)).join(", ")}. Dot is the end spot in the play description.`,
+    source: `nflverse 2026 play-by-play. ${receptions} completed passes, weeks ${Array.from(weeks).sort((a, b) => Number(a) - Number(b)).join(", ")}. Down and distance are from the play. Coverage is not charted in this file.`,
     receptions, players,
   };
 }
