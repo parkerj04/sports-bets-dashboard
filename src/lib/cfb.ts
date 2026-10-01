@@ -21,6 +21,8 @@ export type CfbGame = {
   score: number;
 };
 
+import { footballRegistry } from "./football-desk";
+
 const POWER: Record<string, string> = { "1": "ACC", "4": "Big 12", "5": "Big Ten", "8": "SEC" };
 
 function rec(t: { records?: { type: string; summary: string }[] }) {
@@ -30,12 +32,6 @@ function qb(t: { leaders?: { name: string; leaders?: { displayValue: string; ath
   const block = t.leaders?.find((l) => l.name === "passingLeader");
   const row = block?.leaders?.[0];
   return { name: row?.athlete?.displayName || "QB TBD", line: row?.displayValue || "no season line" };
-}
-function wins(record: string) {
-  const m = record.match(/(\d+)\s*-\s*(\d+)/);
-  if (!m) return 0.5;
-  const w = Number(m[1]); const l = Number(m[2]);
-  return w + l === 0 ? 0.5 : w / (w + l);
 }
 
 export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[] }> {
@@ -54,9 +50,18 @@ export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[] }> 
     if (!awayPower && !homePower) continue;
     const odds = c.odds?.[0];
     const aq = qb(away); const hq = qb(home);
-    const gap = wins(rec(home)) - wins(rec(away));
-    const lean = gap >= 0 ? `${home.team.abbreviation} side, QB ${hq.name}` : `${away.team.abbreviation} side, QB ${aq.name}`;
-    const thin = aq.name === "QB TBD" || hq.name === "QB TBD" || aq.line === "no season line" || hq.line === "no season line";
+    const desk = footballRegistry({
+      away: away.team.displayName,
+      home: home.team.displayName,
+      awayRecord: rec(away),
+      homeRecord: rec(home),
+      mlAway: odds?.moneyline?.away?.close?.odds || "",
+      mlHome: odds?.moneyline?.home?.close?.odds || "",
+      awayQb: aq.name,
+      homeQb: hq.name,
+      awayQbLine: aq.line,
+      homeQbLine: hq.line,
+    });
     games.push({
       id: String(e.id),
       away: away.team.displayName,
@@ -75,9 +80,9 @@ export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[] }> 
       homeQb: hq.name,
       awayQbLine: aq.line,
       homeQbLine: hq.line,
-      lean,
-      why: `${away.team.displayName} ${rec(away)} (${awayPower || "other"}) at ${home.team.displayName} ${rec(home)} (${homePower || "other"}). ${aq.name} ${aq.line} vs ${hq.name} ${hq.line}. Lean ${lean}. Posted ${odds?.details || "NL"}, total ${odds?.overUnder ?? "NL"}. Case against: ${thin ? "starter line is incomplete — confirm the QB." : "season passing line is not opponent-adjusted."}`,
-      score: Math.min(72, Math.round(48 + Math.abs(gap) * 30) - (thin ? 8 : 0)),
+      lean: desk.pick,
+      why: `${away.team.displayName} ${rec(away)} (${awayPower || "other"}) at ${home.team.displayName} ${rec(home)} (${homePower || "other"}). ${aq.name} ${aq.line} vs ${hq.name} ${hq.line}. Posted ${odds?.details || "NL"}, total ${odds?.overUnder ?? "NL"}. ${desk.why}`,
+      score: desk.score,
     });
   }
   return { week: data.week?.number || 0, games };
