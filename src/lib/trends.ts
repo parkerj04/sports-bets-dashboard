@@ -1,10 +1,11 @@
 import zlib from "zlib";
 
 const URL = "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz";
+const FILE: Record<string, string> = { WSH: "WAS", LAR: "LA" };
 
 export type Trend = {
   name: string; team: string; market: string; line: number; last4: string; last5: string; last10: string;
-  streak: number; rate: number;
+  last5Values: number[]; streak: number; rate: number; why: string;
 };
 
 function col(header: string[], name: string) { return header.indexOf(name); }
@@ -24,10 +25,11 @@ function hit(values: number[], line: number) {
   for (let i = values.length - 1; i >= 0; i--) { if (values[i] > line) streak += 1; else break; }
   const sample = last.slice(-5);
   const rate = sample.length ? Math.round(100 * sample.filter((v) => v > line).length / sample.length) : 0;
-  return { last4: n(4), last5: n(5), last10: n(10), streak, rate };
+  return { last4: n(4), last5: n(5), last10: n(10), last5Values: sample, streak, rate };
 }
 
-export async function nflTrends(): Promise<Trend[]> {
+export async function nflTrends(teams?: string[]): Promise<Trend[]> {
+  const want = new Set((teams || []).map((t) => FILE[t.toUpperCase()] || t.toUpperCase()));
   const res = await fetch(URL, { next: { revalidate: 3600 } });
   if (!res.ok) return [];
   const text = zlib.gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8");
@@ -42,6 +44,7 @@ export async function nflTrends(): Promise<Trend[]> {
   const weeks = new Map<string, { team: string; market: string; name: string; week: string; n: number }>();
   const add = (market: string, name: string, team: string, week: string, n: number) => {
     if (!name || !team || !week) return;
+    if (want.size && !want.has(team)) return;
     const key = `${market}|${team}|${name}|${week}`;
     const row = weeks.get(key) || { team, market, name, week, n: 0 };
     row.n += n; weeks.set(key, row);
@@ -63,13 +66,16 @@ export async function nflTrends(): Promise<Trend[]> {
   }
   const out: Trend[] = [];
   for (const [key, values] of grouped) {
-    if (values.length < 4) continue;
+    if (values.length < 3) continue;
     const sorted = [...values].sort((a, b) => a - b);
     const line = sorted[Math.floor(sorted.length / 2)];
     const h = hit(values, line);
-    if (h.rate < 80) continue;
+    if (h.rate < (want.size ? 60 : 80)) continue;
     const m = meta.get(key)!;
-    out.push({ name: m.name, team: m.team, market: m.market, line, ...h });
+    out.push({
+      name: m.name, team: m.team, market: m.market, line, ...h,
+      why: `${h.last5} of the last 5 cleared his own median of ${line}. ${h.streak ? `${h.streak} straight.` : "Streak is broken."} Median is not a book line.`,
+    });
   }
-  return out.sort((a, b) => b.rate - a.rate || b.streak - a.streak).slice(0, 12);
+  return out.sort((a, b) => b.rate - a.rate || b.streak - a.streak).slice(0, want.size ? 6 : 12);
 }
