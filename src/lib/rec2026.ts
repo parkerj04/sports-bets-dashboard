@@ -13,10 +13,24 @@ export type Catch = {
   yards: number | null;
   td: boolean;
   desc: string;
+  qtr: string;
+  time: string;
+  from: string;
+  to: string;
+  x: number | null;
 };
 
 function col(header: string[], name: string) {
   return header.indexOf(name);
+}
+
+function endSpot(desc: string, team: string, def: string) {
+  const m = desc.match(/\b(?:to|at|ob at)\s+([A-Z]{2,3})\s+(\d{1,2})\b/);
+  if (!m) return { to: "", x: null as number | null };
+  const side = m[1];
+  const yard = Number(m[2]);
+  const x = side === team ? yard : side === def ? 100 - yard : null;
+  return { to: `${side} ${yard}`, x };
 }
 
 export async function catches2026(teams: string[]): Promise<{ source: string; receptions: number; players: { name: string; team: string; rec: number; yards: number; td: number; spots: { loc: string; length: string; n: number }[]; recent: Catch[] }[] }> {
@@ -26,17 +40,11 @@ export async function catches2026(teams: string[]): Promise<{ source: string; re
   const lines = text.split("\n");
   const header = lines[0].split(",");
   const i = {
-    week: col(header, "week"),
-    team: col(header, "posteam"),
-    def: col(header, "defteam"),
-    name: col(header, "receiver_player_name"),
-    complete: col(header, "complete_pass"),
-    loc: col(header, "pass_location"),
-    length: col(header, "pass_length"),
-    air: col(header, "air_yards"),
-    yards: col(header, "yards_gained"),
-    td: col(header, "touchdown"),
-    desc: col(header, "desc"),
+    week: col(header, "week"), team: col(header, "posteam"), def: col(header, "defteam"),
+    name: col(header, "receiver_player_name"), complete: col(header, "complete_pass"),
+    loc: col(header, "pass_location"), length: col(header, "pass_length"),
+    air: col(header, "air_yards"), yards: col(header, "yards_gained"), td: col(header, "touchdown"),
+    desc: col(header, "desc"), qtr: col(header, "qtr"), time: col(header, "time"), yrdln: col(header, "yrdln"),
   };
   const want = new Set(teams.map((t) => t.toUpperCase()));
   const grouped = new Map<string, Catch[]>();
@@ -52,19 +60,18 @@ export async function catches2026(teams: string[]): Promise<{ source: string; re
     if (!want.has(team)) continue;
     const name = cells[i.name];
     if (!name) continue;
+    const desc = cells[i.desc] || "";
+    const spot = endSpot(desc, team, cells[i.def]);
     const air = Number(cells[i.air]);
     const yards = Number(cells[i.yards]);
     const play: Catch = {
-      week: cells[i.week],
-      team,
-      def: cells[i.def],
-      name,
-      loc: cells[i.loc] || "",
-      length: cells[i.length] || "",
+      week: cells[i.week], team, def: cells[i.def], name,
+      loc: cells[i.loc] || "", length: cells[i.length] || "",
       air: Number.isFinite(air) ? air : null,
       yards: Number.isFinite(yards) ? yards : null,
       td: cells[i.td] === "1",
-      desc: (cells[i.desc] || "").slice(0, 160),
+      desc: desc.slice(0, 160),
+      qtr: cells[i.qtr], time: cells[i.time], from: cells[i.yrdln], to: spot.to, x: spot.x,
     };
     const key = `${team}|${name}`;
     const arr = grouped.get(key) || [];
@@ -79,23 +86,16 @@ export async function catches2026(teams: string[]): Promise<{ source: string; re
       spots.set(k, (spots.get(k) || 0) + 1);
     }
     return {
-      name: plays[0].name,
-      team: plays[0].team,
-      rec: plays.length,
+      name: plays[0].name, team: plays[0].team, rec: plays.length,
       yards: Math.round(plays.reduce((s, p) => s + (p.yards || 0), 0)),
       td: plays.filter((p) => p.td).length,
-      spots: Array.from(spots.entries()).map(([k, n]) => {
-        const [loc, length] = k.split("|");
-        return { loc, length, n };
-      }).sort((a, b) => b.n - a.n),
-      recent: plays.slice().reverse(),
+      spots: Array.from(spots.entries()).map(([k, n]) => { const [loc, length] = k.split("|"); return { loc, length, n }; }).sort((a, b) => b.n - a.n),
+      recent: plays.slice(),
     };
   }).sort((a, b) => b.rec - a.rec);
-  const weekList = Array.from(weeks).sort((a, b) => Number(a) - Number(b)).join(", ");
   return {
-    source: `nflverse 2026 play-by-play. ${receptions} completed passes, weeks ${weekList}. A dot is only drawn when that play has a left, middle, or right location.`,
-    receptions,
-    players,
+    source: `nflverse 2026 play-by-play. ${receptions} completed passes, weeks ${Array.from(weeks).sort((a, b) => Number(a) - Number(b)).join(", ")}. Dot is the end spot in the play description.`,
+    receptions, players,
   };
 }
 
@@ -104,7 +104,7 @@ function split(line: string) {
   let cur = "";
   let q = false;
   for (const ch of line) {
-    if (ch === '"') { q = !q; continue; }
+    if (ch === "\"") { q = !q; continue; }
     if (ch === "," && !q) { out.push(cur); cur = ""; continue; }
     cur += ch;
   }
