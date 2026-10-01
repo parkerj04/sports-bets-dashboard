@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import coverage from "@/data/nfl-coverage.json";
-import spots from "@/data/target-spots.json";
+import { catches2026 } from "@/lib/rec2026";
 
 export const dynamic = "force-dynamic";
-
-const GONE = new Set(["C.Austin", "J.Smith", "Calvin Austin", "Jonnu Smith"]);
 
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
@@ -12,15 +10,14 @@ export async function GET(request: Request) {
   const home = (q.get("home") || "").toUpperCase();
   const teams = coverage.teams as Record<string, { zonePct: number; manPct: number; snaps: number }>;
   const players = (coverage.players as { name: string; team: string; tgt: number; zoneTgt: number; manTgt: number; zonePct: number; compPct: number }[])
-    .filter((p) => (p.team === away || p.team === home) && !GONE.has(p.name));
-  const maps = (spots.players as { name: string; team: string; spots: { x: number; y: number; n: number; tag: string }[] }[])
     .filter((p) => p.team === away || p.team === home);
+  const live = await catches2026([away, home]);
   return NextResponse.json({
-    source: "Coverage file is the last full charted season. 2026 games already played are not in that FTN extract.",
-    note: spots.source,
+    source: "2025 FTN chart via nflverse. Kept for the zone and man table only.",
+    liveSource: live.source,
     away: teams[away] || null,
     home: teams[home] || null,
     players,
-    spots: maps,
+    catches: live.players,
   });
 }
