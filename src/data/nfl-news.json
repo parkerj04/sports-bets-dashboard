@@ -4,7 +4,23 @@
     "teams": ["Pittsburgh Steelers", "Dallas Cowboys"],
     "date": "2026-10-01",
     "headline": "Steelers traded Joey Porter Jr. to the Cowboys",
-    "detail": "Dallas sent a 2028 second-round pick and a 2027 sixth-round pick. Porter was already ruled out for Pittsburgh's Thursday game at Cleveland, listed not injury related / conditioning / back. He had not played in the first three weeks. Pittsburgh's corner group without him is Jalen Ramsey, Jamel Dean, Asante Samuel Jr., Brandin Echols, and Daylen Everette. Dallas corner Cobie Durant is dealing with a hamstring and did not practice Wednesday. Porter is not an automatic Week 4 starter in Dallas.",
-    "desk": "Do not count Porter as a Steelers corner. Do not count him as an active Cowboy until he is on the Dallas injury or inactive list. Tonight's Steelers card was already without him."
+    "detail": "Dallas sent a 2028 second-round pick and a 2027 sixth-round pick. Porter was already ruled out for Pittsburgh's Thursday game at Cleveland.",
+    "desk": "Do not count Porter as a Steelers corner. Do not count him as an active Cowboy until the Dallas feed lists him."
+  },
+  {
+    "id": "austin-acl-2026",
+    "teams": ["Pittsburgh Steelers"],
+    "date": "2026-08-26",
+    "headline": "Calvin Austin III torn ACL, out for 2026",
+    "detail": "Austin is not on the 2026 target chart. He caught the division-clinching touchdown in January, then tore his ACL and will miss the season.",
+    "desk": "Do not chart Austin targets. He is not a Steelers receiver this year."
+  },
+  {
+    "id": "jonnu-released-2026-03-05",
+    "teams": ["Pittsburgh Steelers"],
+    "date": "2026-03-05",
+    "headline": "Steelers released Jonnu Smith",
+    "detail": "Pittsburgh released Smith on March 5. Freiermuth and Washington are the tight ends still under contract.",
+    "desk": "Do not chart Smith targets. He is not on the Steelers."
   }
 ]
