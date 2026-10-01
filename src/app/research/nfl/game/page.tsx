@@ -10,6 +10,7 @@ import { CoverageSplit } from "@/components/CoverageSplit";
 import { Scheme2026 } from "@/components/Scheme2026";
 import { TicketDesk } from "@/components/TicketDesk";
 import { footballRegistry } from "@/lib/football-desk";
+import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 
 function Inner() {
@@ -38,6 +39,7 @@ function Inner() {
   const homeInj = lab.injuries.filter((i) => i.team === lab.home);
   const out = (rows: typeof awayInj) => rows.filter((r) => /out|doubt/i.test(r.status)).map((r) => `${r.name} ${r.status}`);
   const yards = lab.stats.find((s) => /total yards/i.test(s.label));
+  const notes = newsFor(lab.away, lab.home);
   const desk = footballRegistry({
     away: lab.away,
     home: lab.home,
@@ -62,6 +64,14 @@ function Inner() {
         <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
+      {notes.map((n) => (
+        <div key={n.id} className="card p-4 text-sm">
+          <div className="text-xs text-muted uppercase">Roster news · {n.date}</div>
+          <div className="font-semibold mt-1">{n.headline}</div>
+          <p className="text-muted mt-1">{n.detail}</p>
+          <p className="mt-2">{n.desk}</p>
+        </div>
+      ))}
       {ticket && <TicketDesk ticket={ticket} />}
       <div className="card p-4 space-y-1">
         <div className="text-xs text-muted uppercase">Researched side</div>
@@ -69,7 +79,7 @@ function Inner() {
           <div className="font-semibold">{desk.pick}</div>
           <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
         </div>
-        <p className="text-sm">{desk.why}</p>
+        <p className="text-sm">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
