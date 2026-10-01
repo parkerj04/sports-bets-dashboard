@@ -2,39 +2,55 @@ type Play = { week: string; def: string; loc: string; yards: number | null; qtr?
 
 const COLORS = ["#e23b3b", "#2f6fed", "#f08a24", "#7a4de0", "#1f9d57", "#1aa7c7", "#d4b24a", "#d4537e"];
 const ORD = ["", "1st", "2nd", "3rd", "4th"];
+const SKIN: Record<string, { end: string; mark: string; trim: string }> = {
+  CLE: { end: "#311d00", mark: "#ff3c00", trim: "#ff3c00" },
+  PIT: { end: "#101010", mark: "#ffb612", trim: "#ffb612" },
+  BAL: { end: "#241773", mark: "#9e7c0c", trim: "#9e7c0c" },
+  CIN: { end: "#101010", mark: "#fb4f14", trim: "#fb4f14" },
+  DAL: { end: "#041e42", mark: "#869397", trim: "#b0b7bc" },
+  PHI: { end: "#004c54", mark: "#a5acaf", trim: "#a5acaf" },
+  NYG: { end: "#0b2265", mark: "#a71930", trim: "#a71930" },
+  WAS: { end: "#5a1414", mark: "#ffb612", trim: "#ffb612" },
+};
 
 export function Stadium({ venue, home, away, name, rec, plays }: { venue?: string; home: string; away: string; name: string; rec: number; plays: Play[] }) {
+  const skin = SKIN[home] || { end: "#111", mark: "#f4f1ea", trim: "#ffb612" };
   const dots = plays.map((p, idx) => ({ ...p, n: idx + 1 })).filter((p) => p.x != null && p.loc);
+  const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${home.toLowerCase()}.png`;
   return (
     <div className="space-y-2">
-      <div className="border-b-4 border-[#ffb612] pb-2">
+      <div className="border-b-4 pb-2" style={{ borderColor: skin.trim }}>
         <div className="text-lg font-bold">{name || "Receiver"} receptions <span className="text-muted font-semibold">2026</span></div>
-        <p className="text-xs text-muted">End-of-play locations for {dots.length} of {rec} catches · {venue || "this venue"}</p>
+        <p className="text-xs text-muted">End-of-play locations for {dots.length} of {rec} catches · {venue || `${home} stadium`}</p>
       </div>
-      <svg viewBox="0 0 640 250" className="w-full rounded-md bg-[#1e7a3a]">
-        <rect x="18" y="18" width="46" height="196" fill="#111" stroke="#fff" strokeWidth="2" />
-        <rect x="576" y="18" width="46" height="196" fill="#111" stroke="#fff" strokeWidth="2" />
-        <text x="41" y="122" fill="#ffb612" fontSize="13" fontWeight="700" textAnchor="middle" transform="rotate(-90 41 122)">{away}</text>
-        <text x="599" y="122" fill="#fff" fontSize="11" fontWeight="700" textAnchor="middle" transform="rotate(90 599 122)">{home}</text>
-        <rect x="64" y="18" width="512" height="196" fill="none" stroke="#fff" strokeWidth="2" />
+      <svg viewBox="0 0 640 260" className="w-full rounded-md bg-[#1e7a3a]">
+        <rect width="640" height="250" fill="#121316" />
+        <rect x="8" y="8" width="624" height="4" fill={skin.trim} />
+        <rect x="18" y="22" width="46" height="196" fill={skin.end} stroke="#fff" strokeWidth="2" />
+        <rect x="576" y="22" width="46" height="196" fill={skin.end} stroke="#fff" strokeWidth="2" />
+        <text x="41" y="126" fill={skin.mark} fontSize="12" fontWeight="700" textAnchor="middle" transform="rotate(-90 41 126)">{away}</text>
+        <text x="599" y="126" fill={skin.mark} fontSize="12" fontWeight="700" textAnchor="middle" transform="rotate(90 599 126)">{home}</text>
+        <rect x="64" y="22" width="512" height="196" fill="#1e7a3a" stroke="#fff" strokeWidth="2" />
         {Array.from({ length: 21 }, (_, i) => 64 + i * 25.6).map((x, i) => (
-          <line key={i} x1={x} y1="18" x2={x} y2="214" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.4 : 0.6} opacity={i % 2 === 0 ? 0.95 : 0.55} />
+          <line key={i} x1={x} y1="22" x2={x} y2="218" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.4 : 0.6} opacity={i % 2 === 0 ? 0.95 : 0.55} />
         ))}
         {Array.from({ length: 11 }, (_, i) => (
-          <text key={i} x={64 + i * 51.2} y="236" fill="#f4f1ea" fontSize="11" textAnchor="middle">{i * 10}</text>
+          <text key={i} x={64 + i * 51.2} y="242" fill="#f4f1ea" fontSize="11" textAnchor="middle">{i * 10}</text>
         ))}
-        <line x1="64" y1="78" x2="576" y2="78" stroke="#fff" strokeWidth="0.7" opacity="0.7" />
-        <line x1="64" y1="154" x2="576" y2="154" stroke="#fff" strokeWidth="0.7" opacity="0.7" />
+        <line x1="64" y1="82" x2="576" y2="82" stroke="#fff" strokeWidth="0.7" opacity="0.7" />
+        <line x1="64" y1="158" x2="576" y2="158" stroke="#fff" strokeWidth="0.7" opacity="0.7" />
         {Array.from({ length: 20 }, (_, i) => 76 + i * 25.6).map((x) => (
           <g key={x}>
-            <line x1={x} y1="70" x2={x} y2="86" stroke="#fff" strokeWidth="0.8" />
-            <line x1={x} y1="146" x2={x} y2="162" stroke="#fff" strokeWidth="0.8" />
+            <line x1={x} y1="74" x2={x} y2="90" stroke="#fff" strokeWidth="0.8" />
+            <line x1={x} y1="150" x2={x} y2="166" stroke="#fff" strokeWidth="0.8" />
           </g>
         ))}
-        <path d="M18 78 v-16 h-8 M18 154 v16 h-8 M622 78 v-16 h8 M622 154 v16 h8" fill="none" stroke="#f4d27a" strokeWidth="3" />
-        <text x="320" y="122" fill="#fff" fontSize="18" opacity="0.18" textAnchor="middle">{away}</text>
+        <path d="M18 82 v-16 h-8 M18 158 v16 h-8 M622 82 v-16 h8 M622 158 v16 h8" fill="none" stroke="#f4d27a" strokeWidth="3" />
+        <circle cx="320" cy="120" r="28" fill="#0e0e0c" opacity="0.35" />
+        <image href={logo} x="296" y="96" width="48" height="48" />
+        <text x="320" y="16" fill="#f4f1ea" fontSize="10" textAnchor="middle">{(venue || `${home} home field`).slice(0, 42)}</text>
         {dots.map((p, i) => {
-          const lane = p.loc === "left" ? 58 : p.loc === "right" ? 174 : 116;
+          const lane = p.loc === "left" ? 62 : p.loc === "right" ? 178 : 120;
           const y = lane + ((i % 3) - 1) * 8;
           const x = 64 + (Number(p.x) / 100) * 512;
           return (
