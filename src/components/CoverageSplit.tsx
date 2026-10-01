@@ -12,6 +12,16 @@ function scoreWeight(p: Catcher) {
   return p.td * 10 + endZone * 2 + p.yards / 100;
 }
 
+function matchup(p: Catcher, opp: string, def: Side) {
+  const vs = (p.recent || []).filter((c) => c.def === opp);
+  const vsYards = vs.reduce((s, c) => s + (c.yards || 0), 0);
+  const short = (p.recent || []).filter((c) => c.length !== "deep").length;
+  const deep = (p.recent || []).filter((c) => c.length === "deep").length;
+  const zone = def?.zonePct ?? 55;
+  const fit = zone >= 60 ? short * 4 : deep * 6;
+  return vsYards * 3 + p.yards + fit;
+}
+
 export function CoverageSplit({ away, home, venue }: { away: string; home: string; venue?: string }) {
   const [data, setData] = useState<{ source: string; liveSource: string; away: Side; home: Side; catches: Catcher[] } | null>(null);
   const [side, setSide] = useState(away);
@@ -29,18 +39,20 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
       .catch(() => setData(null));
   }, [away, home]);
   const list = useMemo(() => (data?.catches || []).filter((p) => p.team === side), [data, side]);
-  const plus = useMemo(() => [...list].sort((a, b) => b.yards - a.yards)[0], [list]);
+  const opp = side === away ? home : away;
+  const def = side === away ? data?.home : data?.away;
+  const plus = useMemo(() => [...list].sort((a, b) => matchup(b, opp, def || null) - matchup(a, opp, def || null))[0], [list, opp, def]);
   const star = useMemo(() => [...list].sort((a, b) => scoreWeight(b) - scoreWeight(a))[0], [list]);
+  const plusVs = (plus?.recent || []).filter((c) => c.def === opp);
   if (!data) return <p className="text-xs text-muted">Loading 2026 catches…</p>;
   const active = list.find((p) => p.name === picked) || list[0];
-  const opp = side === away ? home : away;
   const vs = (active?.recent || []).filter((p) => p.def === opp);
   const heavy = (s: Side) => (s && s.zonePct >= 65 ? "zone-heavy" : s && s.zonePct <= 50 ? "man-leaning" : "mixed");
   return (
     <div className="card p-4 space-y-3">
       <h3 className="font-semibold text-sm">Pick a receiver, see the 2026 catches</h3>
-      <p className="text-[11px] text-muted">+ is the receiving-yards lean. ★ is the score lean. Both are from 2026 catches, not a projection model.</p>
-      {plus && <p className="text-xs">+ {plus.name} leads this side in yards, {plus.yards} on {plus.rec} catches.</p>}
+      <p className="text-[11px] text-muted">+ is the best receiving-yards matchup against this defense. ★ is the score lean.</p>
+      {plus && <p className="text-xs">+ {plus.name} vs {opp}. {plusVs.reduce((s, c) => s + (c.yards || 0), 0)} yards on {plusVs.length} catches against them, {plus.yards} on the year. {def ? `${opp} is ${heavy(def)}.` : "No 2025 coverage chart for this defense."}</p>}
       {star && <p className="text-xs">★ {star.name} is the score lean, {star.td} TD and the most end-zone or scoring catches.</p>}
       <div className="flex gap-2">
         <button type="button" onClick={() => { setSide(away); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === away ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{away}</button>
