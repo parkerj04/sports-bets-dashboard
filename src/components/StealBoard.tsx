@@ -6,13 +6,14 @@ import { isPlayable } from "@/lib/edges";
 import { SlipCheck } from "@/components/SlipTray";
 
 export function StealBoard({ edges }: { edges: Edge[] }) {
-  if (!edges.length) return null;
-  const live = edges.filter(isPlayable);
-  const watch = edges.filter((e) => !isPlayable(e));
+  const shown = edges.slice(0, 2);
+  if (!shown.length) return null;
+  const live = shown.filter(isPlayable);
+  const watch = shown.filter((e) => !isPlayable(e));
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-semibold text-muted uppercase tracking-wide">Stolen bases</h2>
-      <p className="text-xs text-muted">Season SB/CS plus the opposing catcher's throw-out rate. Playable only if volume and success both clear and the catcher is not a high-CS% arm.</p>
+      <p className="text-xs text-muted">Top one or two runners in this game only. Ranked by SB volume, success, sprint speed, pitcher hold, and catcher arm. Everyone else is left off.</p>
       {live.map((e, i) => <Card key={i} e={e} live />)}
       {watch.map((e, i) => <Card key={`w${i}`} e={e} live={false} />)}
     </section>
