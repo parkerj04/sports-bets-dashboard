@@ -131,7 +131,7 @@ export async function getTeamRunners(teamId: number, teamName: string): Promise<
     });
   }
   out.sort((a, b) => b.sb - a.sb || b.success - a.success);
-  return out.slice(0, 8);
+  return out.slice(0, 4);
 }
 
 export async function getTeamCatcher(teamId: number): Promise<CatcherArm | null> {
@@ -224,7 +224,7 @@ export function stealCards(
       : `No Savant sprint row posted (under the competitive-run cutoff or not tracked).`;
     const holdLine = holdReady
       ? `${hold!.name} hold line: ${hold!.sb} SB allowed, ${hold!.cs} CS, ${hold!.pk} pickoffs.`
-      : `${hold?.name || "Starter"} hold line not loaded.`
+      : `${hold?.name || "Starter"} hold line not loaded.`;
     const armLine =
       catcher?.csPct != null
         ? `${catcher.name} has thrown out ${catcher.cs} runners at ${catcher.csPct}% CS.`
@@ -251,7 +251,7 @@ export function stealCards(
       },
     });
   }
-  return edges.sort((a, b) => b.edgeScore - a.edgeScore).slice(0, 6);
+  return edges.sort((a, b) => b.edgeScore - a.edgeScore).slice(0, 2);
 }
 
 export async function stealDesk(opts: {
@@ -278,5 +278,7 @@ export async function stealDesk(opts: {
   return [
     ...stealCards(awayRun, awayHold, homeC, sprint, opts.game, opts.gamePk),
     ...stealCards(homeRun, homeHold, awayC, sprint, opts.game, opts.gamePk),
-  ].sort((a, b) => b.edgeScore - a.edgeScore);
+  ]
+    .sort((a, b) => b.edgeScore - a.edgeScore)
+    .slice(0, 2);
 }
