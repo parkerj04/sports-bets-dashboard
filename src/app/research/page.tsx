@@ -10,6 +10,7 @@ import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
 import { SlipTray } from "@/components/SlipTray";
+import { TrendBoard } from "@/components/TrendBoard";
 import { scoreTone } from "@/lib/score-color";
 
 type Sport = "MLB" | "NFL" | "CFB";
@@ -85,6 +86,7 @@ export default function ResearchPage() {
                 </Link>
               ))}
             </section>
+            <TrendBoard />
             <SportPicks sport="NFL" />
             <PropBoards sport="NFL" />
           </>
