@@ -10,9 +10,10 @@ import type { Ticket } from "@/lib/ticket";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
 import { StealBoard } from "@/components/StealBoard";
-import { SlipTray } from "@/components/SlipTray";
+import { SlipCheck, SlipTray } from "@/components/SlipTray";
 import { TicketDesk } from "@/components/TicketDesk";
 import { scoreTone } from "@/lib/score-color";
+import { isPlayable } from "@/lib/edges";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
   if (!p) {
@@ -137,6 +138,31 @@ function BatterTable({ title, rows }: { title: string; rows: BatterLine[] }) {
   );
 }
 
+function PlayCard({ e, live }: { e: Edge; live: boolean }) {
+  return (
+    <div className="card p-4 space-y-2">
+      <div className="flex justify-between gap-3">
+        <div>
+          <div className="text-xs text-muted uppercase">{e.market}{live ? "" : " · research only"}</div>
+          <div className="font-semibold">{e.pick}</div>
+        </div>
+        <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
+      </div>
+      <p className="text-sm">{e.reasoning}</p>
+      <SlipCheck item={{
+        id: `${e.gamePk}-${e.market}-${e.pick}`,
+        sport: "MLB",
+        game: e.game,
+        market: e.market,
+        pick: e.pick,
+        score: e.edgeScore,
+        why: e.reasoning,
+        playable: live,
+      }} />
+    </div>
+  );
+}
+
 function GameInner() {
   const params = useSearchParams();
   const id = params.get("id");
@@ -172,6 +198,8 @@ function GameInner() {
   if (error || !data) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
   const { game } = data;
   const otherPlays = (data.edges || []).filter((e) => e.market !== "Stolen Bases");
+  const live = otherPlays.filter(isPlayable);
+  const watch = otherPlays.filter((e) => !isPlayable(e));
 
   return (
     <div className="space-y-6 pb-24">
@@ -217,22 +245,12 @@ function GameInner() {
         </div>
       )}
       <HitterForm rows={data.form || []} />
-      <section>
-        <h2 className="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Plays for this game</h2>
-        <div className="space-y-3">
-          {otherPlays.map((e, i) => (
-            <div key={i} className="card p-4 space-y-2">
-              <div className="flex justify-between gap-3">
-                <div>
-                  <div className="text-xs text-muted uppercase">{e.market}</div>
-                  <div className="font-semibold">{e.pick}</div>
-                </div>
-                <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
-              </div>
-              <p className="text-sm">{e.reasoning}</p>
-            </div>
-          ))}
-        </div>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-good">Playable</h2>
+        {live.map((e, i) => <PlayCard key={`l${i}`} e={e} live />)}
+        {!live.length && <p className="text-xs text-muted">Nothing cleared the bar in this game.</p>}
+        <h2 className="text-sm font-semibold text-danger pt-2">Research only</h2>
+        {watch.map((e, i) => <PlayCard key={`w${i}`} e={e} live={false} />)}
       </section>
       <BatterTable title={`${game.awayTeam} hitters`} rows={data.awayHitters} />
       <BatterTable title={`${game.homeTeam} hitters`} rows={data.homeHitters} />
