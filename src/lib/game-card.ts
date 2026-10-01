@@ -3,6 +3,7 @@ import { getPitcherLogs, projectKs } from "./propdesk";
 import { grade } from "./confidence";
 import { lessonLine } from "./calibrate";
 import type { StartLog } from "./propdesk";
+import type { MlbLine } from "./mlb-odds";
 
 function lastVs(logs: StartLog[], abbr?: string) {
   if (!abbr) return null;
@@ -14,12 +15,18 @@ function logLine(logs: StartLog[]) {
   return logs.map((x) => `${x.date.slice(5) || "?"} vs ${x.opp} ${x.ip} IP ${x.k}K ${x.h}H ${x.bb}BB ${x.er}ER`).join("; ");
 }
 
+function priceOf(raw?: string) {
+  const n = parseFloat(String(raw || "").replace("+", ""));
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function alwaysCard(
   g: GameMatchup,
   homeP: PitcherStats | null,
   awayP: PitcherStats | null,
   homeT: TeamKStats | null,
-  awayT: TeamKStats | null
+  awayT: TeamKStats | null,
+  line?: MlbLine | null
 ): Promise<Edge[]> {
   const game = `${g.awayTeam} @ ${g.homeTeam}`;
   const edges: Edge[] = [];
@@ -65,20 +72,37 @@ export async function alwaysCard(
   const ace = (home?.score || 0) >= (away?.score || 0) ? home : away;
   const dog = ace === home ? away : home;
   if (ace?.p) {
-    const against =
-      ace.flags.length > 0
-        ? `Case against: ${ace.flags.join("; ")}. That is why this is not an 80.`
-        : dog?.p
-          ? `Case against: ${dog.p.name} is not a soft arm (${dog.p.era} ERA, ${dog.p.k9} K/9). One wild-card start is a small sample.`
-          : "Case against: starter still has to throw the game.";
+    const sideHome = ace === home;
+    const oppEra = dog?.p?.era ?? 9;
+    const eraGap = oppEra - ace.p.era;
+    const posted = sideHome ? line?.mlHome : line?.mlAway;
+    const price = priceOf(posted);
+    const mlFlags = [...ace.flags];
+    if (oppEra < 4) mlFlags.push(`other starter ERA ${oppEra} is not a soft arm`);
+    if (eraGap < 1.25) mlFlags.push(`ERA gap only ${eraGap.toFixed(2)}`);
+    if (price != null && price > 0) mlFlags.push(`posted ${posted}, market does not agree`);
+    const ml = grade(
+      [
+        eraGap >= 1.25 ? `ERA gap ${eraGap.toFixed(2)}` : "",
+        oppEra >= 4.2 ? `other arm ERA ${oppEra}` : "",
+        price != null && price < 0 ? `posted favorite ${posted}` : "",
+      ].filter(Boolean),
+      mlFlags
+    );
+    let score = ml.score;
+    if (oppEra < 4 || eraGap < 1.25 || (price != null && price > 0)) score = Math.min(score, 58);
+    else score = Math.min(score, 74);
+    const against = mlFlags.length
+      ? `Case against: ${mlFlags.join("; ")}. That is why this is not a 70.`
+      : `Case against: one starter line is not a side.`;
     edges.push({
       gamePk: g.gamePk,
       game,
       market: "Moneyline",
-      pick: `${ace === home ? g.homeTeam : g.awayTeam} ML`,
-      edgeScore: ace.score,
+      pick: `${sideHome ? g.homeTeam : g.awayTeam} ML`,
+      edgeScore: score,
       pitcher: ace.p.name,
-      reasoning: `${ace.p.name} (${ace.p.era} ERA, ${ace.p.k9} K/9, ${ace.p.whip} WHIP, AVG against ${ace.p.avgAgainst.toFixed(3)}) vs ${dog?.p?.name || "TBD"}${dog?.p ? ` (${dog.p.era} ERA, ${dog.p.k9} K/9, ${dog.p.whip} WHIP)` : ""}. ${ace.p.name} last 5: ${logLine(ace.logs)}. ${against} Score ${ace.score} from ${ace.confirms.length} confirm${ace.confirms.length === 1 ? "" : "s"}${ace.confirms.length ? ` (${ace.confirms.join(", ")})` : ""}.`,
+      reasoning: `${ace.p.name} (${ace.p.era} ERA, ${ace.p.k9} K/9, ${ace.p.whip} WHIP) vs ${dog?.p?.name || "TBD"}${dog?.p ? ` (${dog.p.era} ERA, ${dog.p.k9} K/9)` : ""}. Posted ML ${line?.mlAway || "—"}/${line?.mlHome || "—"}. ${against} ${lessonLine("Moneyline")} Score ${score}.`,
       stats: { "L5 hit rate": ace.logs.map((x) => `${x.k}K/${x.h}H/${x.bb}BB`).join(" · ") || "—" },
     });
   }
@@ -114,9 +138,9 @@ export async function alwaysCard(
       game,
       market: "Pitcher Ks",
       pick: `${kSide.p.name} strikeouts (proj ${kSide.proj})`,
-      edgeScore: Math.min(kSide.score, 72),
+      edgeScore: Math.min(kSide.score, 66),
       pitcher: kSide.p.name,
-      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. ${lessonLine("Pitcher Ks")} Score ${Math.min(kSide.score, 72)}.`,
+      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. ${lessonLine("Pitcher Ks")} Score ${Math.min(kSide.score, 66)}.`,
       stats: {
         "L5 hit rate": kSide.logs.length
           ? `${kSide.overProj}/${kSide.logs.length} starts at or above ${Math.floor(kSide.proj)} K · ${kSide.logs.map((x) => `${x.k}K/${x.h}H`).join("-")}`
