@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Stadium } from "@/components/Stadium";
 
 type Side = { zonePct: number; manPct: number; snaps: number } | null;
-type Spot = { loc: string; length: string; n: number };
-type Play = { week: string; def: string; loc: string; length: string; air: number | null; yards: number | null; td: boolean; desc: string };
-type Catcher = { name: string; team: string; rec: number; yards: number; td: number; spots: Spot[]; recent: Play[] };
+type Play = { week: string; def: string; loc: string; length: string; air: number | null; yards: number | null; td: boolean; desc: string; qtr?: string; time?: string; from?: string; to?: string; x?: number | null };
+type Catcher = { name: string; team: string; rec: number; yards: number; td: number; recent: Play[] };
 
 export function CoverageSplit({ away, home, venue }: { away: string; home: string; venue?: string }) {
   const [data, setData] = useState<{ source: string; liveSource: string; away: Side; home: Side; catches: Catcher[] } | null>(null);
@@ -30,13 +29,11 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
   const active = list.find((p) => p.name === picked) || list[0];
   const opp = side === away ? home : away;
   const vs = (active?.recent || []).filter((p) => p.def === opp);
-  const last = (active?.recent || []).slice(0, 4);
   const heavy = (s: Side) => (s && s.zonePct >= 65 ? "zone-heavy" : s && s.zonePct <= 50 ? "man-leaning" : "mixed");
   return (
     <div className="card p-4 space-y-3">
       <h3 className="font-semibold text-sm">Pick a receiver, see the 2026 catches</h3>
-      <p className="text-[11px] text-muted">{data.liveSource} Field is {venue || "this game's venue"}.</p>
-      <Stadium venue={venue} home={home} away={away} name={active?.name || ""} spots={active?.spots || []} />
+      <p className="text-[11px] text-muted">{data.liveSource}</p>
       <div className="flex gap-2">
         <button type="button" onClick={() => { setSide(away); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === away ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{away}</button>
         <button type="button" onClick={() => { setSide(home); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === home ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{home}</button>
@@ -47,21 +44,10 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
             {p.name === star ? "★ " : ""}{p.name} {p.rec}
           </button>
         ))}
-        {list.length === 0 && <p className="text-xs text-muted">No 2026 catches for {side} yet.</p>}
       </div>
+      <Stadium venue={venue} home={home} away={away} name={active?.name || ""} rec={active?.rec || 0} plays={active?.recent || []} />
       {active && (
-        <div className="text-xs space-y-2 border-t border-card-border pt-3">
-          <div className="font-medium">{active.name} vs {opp} · {active.rec} catches, {active.yards} yards, {active.td} TD this year</div>
-          <div className="text-muted uppercase tracking-wide">Catches vs this defense</div>
-          {vs.length === 0 && <p className="text-muted">No 2026 catch vs {opp} in the file.</p>}
-          {vs.map((c, i) => (
-            <p key={`v${i}`} className="text-muted">Week {c.week}: {c.length} {c.loc}{c.air != null ? `, ${c.air} air` : ""}, {c.yards} yards{c.td ? ", TD" : ""}. {c.desc}</p>
-          ))}
-          <div className="text-muted uppercase tracking-wide pt-1">Latest catches</div>
-          {last.map((c, i) => (
-            <p key={i} className="text-muted">Week {c.week} vs {c.def}: {c.length} {c.loc}{c.air != null ? `, ${c.air} air` : ""}, {c.yards} yards{c.td ? ", TD" : ""}. {c.desc}</p>
-          ))}
-        </div>
+        <p className="text-xs text-muted">{vs.length} of these were vs {opp}.</p>
       )}
       <h3 className="font-semibold text-sm pt-2">2025 coverage splits</h3>
       <p className="text-[11px] text-muted">{data.source}</p>
