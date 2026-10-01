@@ -10,64 +10,57 @@ const NAME: Record<string, string> = {
   ATL: "FALCONS", CAR: "PANTHERS", NO: "SAINTS", TB: "BUCS", ARI: "CARDINALS", LA: "RAMS",
   SF: "49ERS", SEA: "SEAHAWKS",
 };
-const SKIN: Record<string, { end: string; ink: string; trim: string }> = {
-  CLE: { end: "#311d00", ink: "#ff3c00", trim: "#ff3c00" },
-  PIT: { end: "#111", ink: "#ffb612", trim: "#ffb612" },
-  BAL: { end: "#241773", ink: "#c60c30", trim: "#9e7c0c" },
-  CIN: { end: "#111", ink: "#fb4f14", trim: "#fb4f14" },
-  DAL: { end: "#041e42", ink: "#869397", trim: "#b0b7bc" },
-};
 
-export function Stadium({ venue, home, away, name, rec, plays }: { venue?: string; home: string; away: string; name: string; rec: number; plays: Play[] }) {
-  const skin = SKIN[home] || { end: "#111", ink: "#ffb612", trim: "#ffb612" };
+export function Stadium({ venue, team, name, rec, plays }: { venue?: string; team: string; name: string; rec: number; plays: Play[] }) {
   const dots = plays.map((p, idx) => ({ ...p, n: idx + 1 })).filter((p) => p.x != null && p.loc);
-  const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${home.toLowerCase()}.png`;
-  const awayName = NAME[away] || away;
-  const homeName = NAME[home] || home;
+  const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${(team || "pit").toLowerCase()}.png`;
+  const club = NAME[team] || team || "TEAM";
+  const left = 78;
+  const width = 760;
   return (
     <div className="overflow-hidden rounded-lg border border-black bg-black text-white">
       <div className="flex items-center gap-3 px-3 py-3">
-        <img src={logo} alt={home} className="h-12 w-12 rounded-full bg-white object-contain p-1" />
+        <img src={logo} alt={club} className="h-14 w-14 rounded-full bg-white object-contain p-1" />
         <div>
-          <div className="text-xl font-extrabold leading-none" style={{ color: skin.trim }}>{name || "Receiver"} receptions <span className="text-white">— 2026</span></div>
-          <div className="mt-1 text-sm text-white/80">End-of-play locations for {dots.length} of {rec} catches · {venue || `${homeName} home field`}</div>
+          <div className="text-xl font-extrabold leading-none text-[#ffb612]">{name || "Receiver"} receptions <span className="text-white">— 2026</span></div>
+          <div className="mt-1 text-sm text-white/80">End-of-play locations for {dots.length} of {rec} catches · {venue || "site"}</div>
         </div>
       </div>
-      <div className="h-1.5" style={{ background: skin.trim }} />
-      <svg viewBox="0 0 760 250" className="w-full bg-[#1f7a34]">
-        <rect x="36" y="16" width="58" height="196" fill={skin.end} stroke="#fff" strokeWidth="2" />
-        <rect x="666" y="16" width="58" height="196" fill={skin.end} stroke="#fff" strokeWidth="2" />
-        <text x="65" y="118" fill={skin.ink} fontSize="15" fontWeight="800" textAnchor="middle" letterSpacing="3" transform="rotate(-90 65 118)">{awayName}</text>
-        <text x="695" y="118" fill={skin.ink} fontSize="15" fontWeight="800" textAnchor="middle" letterSpacing="3" transform="rotate(90 695 118)">{homeName}</text>
-        <rect x="94" y="16" width="572" height="196" fill="#1f7a34" stroke="#fff" strokeWidth="2" />
-        {Array.from({ length: 21 }, (_, i) => 94 + i * 28.6).map((x, i) => (
-          <line key={`y${i}`} x1={x} y1="16" x2={x} y2="212" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.6 : 0.7} opacity={i % 2 === 0 ? 1 : 0.7} />
+      <div className="h-1.5 bg-[#ffb612]" />
+      <svg viewBox="0 0 940 280" className="w-full bg-[#1c7a32]">
+        <rect x="28" y="18" width="50" height="214" fill="#111" stroke="#fff" strokeWidth="2" />
+        <rect x="862" y="18" width="50" height="214" fill="#111" stroke="#fff" strokeWidth="2" />
+        <text x="53" y="128" fill="#ffb612" fontSize="16" fontWeight="800" textAnchor="middle" letterSpacing="4" transform="rotate(-90 53 128)">{club}</text>
+        <text x="887" y="128" fill="#fff" fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="2" transform="rotate(90 887 128)">OPPONENT</text>
+        <rect x={left} y="18" width={width} height="214" fill="#1f8a3a" stroke="#fff" strokeWidth="2" />
+        {Array.from({ length: 101 }, (_, i) => left + i * (width / 100)).map((x, i) => (
+          <line key={i} x1={x} y1="18" x2={x} y2="232" stroke="#fff" strokeWidth={i % 5 === 0 ? 1.35 : 0.45} opacity={i % 5 === 0 ? 0.95 : 0.45} />
         ))}
-        {Array.from({ length: 20 }, (_, i) => 108 + i * 28.6).map((x) => (
-          <g key={`h${x}`}>
-            <line x1={x - 4} y1="78" x2={x + 4} y2="78" stroke="#fff" strokeWidth="1.4" />
-            <line x1={x - 4} y1="150" x2={x + 4} y2="150" stroke="#fff" strokeWidth="1.4" />
+        {Array.from({ length: 20 }, (_, i) => left + (i + 0.5) * (width / 20)).map((x) => (
+          <g key={x}>
+            <line x1={x - 5} y1="86" x2={x + 5} y2="86" stroke="#fff" strokeWidth="1.5" />
+            <line x1={x - 5} y1="164" x2={x + 5} y2="164" stroke="#fff" strokeWidth="1.5" />
           </g>
         ))}
         {Array.from({ length: 11 }, (_, i) => (
-          <text key={`n${i}`} x={94 + i * 57.2} y="236" fill="#fff" fontSize="12" fontWeight="700" textAnchor="middle">{i * 10}</text>
+          <text key={i} x={left + i * (width / 10)} y="262" fill="#fff" fontSize="14" fontWeight="700" textAnchor="middle">{i * 10}</text>
         ))}
-        <g stroke="#f4d27a" strokeWidth="3" fill="none">
-          <path d="M18 78 h14 M18 62 v32" />
-          <path d="M18 150 h14 M18 134 v32" />
-          <path d="M742 78 h-14 M742 62 v32" />
-          <path d="M742 150 h-14 M742 134 v32" />
+        <g stroke="#f4d27a" strokeWidth="3.5" fill="none" strokeLinecap="square">
+          <path d="M10 78 h16 M10 78 v-22 M10 78 v22" />
+          <path d="M10 168 h16 M10 168 v-22 M10 168 v22" />
+          <path d="M930 78 h-16 M930 78 v-22 M930 78 v22" />
+          <path d="M930 168 h-16 M930 168 v-22 M930 168 v22" />
         </g>
-        <circle cx="380" cy="114" r="34" fill="#111" opacity="0.28" />
-        <image href={logo} x="354" y="88" width="52" height="52" />
+        <circle cx="458" cy="125" r="36" fill="#111" opacity="0.28" />
+        <image href={logo} x="430" y="97" width="56" height="56" />
         {dots.map((p, i) => {
-          const lane = p.loc === "left" ? 58 : p.loc === "right" ? 170 : 114;
-          const y = lane + ((i % 3) - 1) * 7;
-          const x = 94 + (Number(p.x) / 100) * 572;
+          const lane = p.loc === "left" ? 62 : p.loc === "right" ? 188 : 125;
+          const y = lane + ((i % 3) - 1) * 8;
+          const x = left + (Number(p.x) / 100) * width;
           return (
             <g key={p.n}>
-              <circle cx={x} cy={y} r="12" fill={COLORS[(p.n - 1) % COLORS.length]} stroke="#fff" strokeWidth="1.6" />
-              <text x={x} y={y + 4} textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">{p.n}</text>
+              <circle cx={x} cy={y} r="13" fill={COLORS[(p.n - 1) % COLORS.length]} stroke="#fff" strokeWidth="1.7" />
+              <text x={x} y={y + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">{p.n}</text>
             </g>
           );
         })}
@@ -77,13 +70,13 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
           <div key={i} className="flex gap-3 px-3 py-2.5" style={{ background: i % 2 ? "#f3f4f6" : "#fff" }}>
             <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[i % COLORS.length] }}>{i + 1}</span>
             <span className="text-sm">
-              <span className="block font-semibold">Week {p.week} vs {p.def} — Q{p.qtr || "?"}, {p.time || ""} — {ORD[Number(p.down)] || "?"} & {p.togo || "?"} — {p.yards ?? "?"} yards — {p.from || "?"} to {p.to || "not in the play"}</span>
+              <span className="block font-semibold">Week {p.week} vs {p.def} — Q{p.qtr || "?"}, {p.time || ""} — {ORD[Number(p.down)] || "?"} & {p.togo || "?"} — {p.yards ?? "?"} yards — {p.from || "?"} to {p.to || "end spot not in the play text"}</span>
               <span className="block text-[#4b5563]">Likely coverage: {(p.coverage || "estimate unavailable").replace("estimate: ", "")} | Likely concept: {(p.concept || "estimate unavailable").replace("estimate: ", "")}</span>
             </span>
           </div>
         ))}
       </div>
-      <p className="px-3 py-2 text-[11px] text-white/60">Source: nflverse 2026 play-by-play. Coverage and concept lines are estimates from the play shape, not charted film. Field is {venue || "the home stadium"}.</p>
+      <p className="px-3 py-2 text-[11px] text-white/60">Source: nflverse 2026 play-by-play. Logo and left end zone are {club}, the receiver's team. Coverage and concept are estimates.</p>
     </div>
   );
 }
