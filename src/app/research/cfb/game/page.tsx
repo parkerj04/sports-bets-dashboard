@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { CfbGame } from "@/lib/cfb";
 import type { CfbLab } from "@/lib/cfb-lab";
+import { footballRegistry } from "@/lib/football-desk";
+import { scoreTone } from "@/lib/score-color";
 
 function Inner() {
   const id = useSearchParams().get("id");
@@ -18,6 +20,23 @@ function Inner() {
   }, [id]);
   if (error) return <p className="text-danger text-center py-16">{error}</p>;
   if (!game) return <p className="text-muted text-center py-16">Loading college lab…</p>;
+  const yards = lab?.stats.find((s) => /total yards/i.test(s.label));
+  const desk = footballRegistry({
+    away: game.away,
+    home: game.home,
+    awayRecord: game.awayRecord,
+    homeRecord: game.homeRecord,
+    mlAway: game.mlAway,
+    mlHome: game.mlHome,
+    awayQb: game.awayQb,
+    homeQb: game.homeQb,
+    awayQbLine: game.awayQbLine,
+    homeQbLine: game.homeQbLine,
+    awayYards: yards?.away,
+    homeYards: yards?.home,
+    predAway: lab?.predAway,
+    predHome: lab?.predHome,
+  });
   return (
     <div className="space-y-4">
       <Link href="/research" className="text-xs text-muted">← CFB slate</Link>
@@ -28,9 +47,12 @@ function Inner() {
         <Qb team={game.home} conf={game.homeConf} record={game.homeRecord} name={game.homeQb} line={game.homeQbLine} />
       </div>
       <div className="card p-4">
-        <div className="text-xs text-muted uppercase">QB lean</div>
-        <div className="font-semibold text-accent">{game.lean}</div>
-        <p className="text-sm text-muted mt-2">{game.why}</p>
+        <div className="text-xs text-muted uppercase">QB registry</div>
+        <div className="flex justify-between gap-3">
+          <div className="font-semibold">{desk.pick}</div>
+          <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
+        </div>
+        <p className="text-sm mt-2">{desk.why}</p>
       </div>
       {lab?.predHome && <div className="card p-4 text-sm">ESPN predictor: {game.away} {lab.predAway}% · {game.home} {lab.predHome}%</div>}
       {lab && lab.stats.length > 0 && (
