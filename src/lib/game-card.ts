@@ -20,6 +20,31 @@ function priceOf(raw?: string) {
   return Number.isFinite(n) ? n : null;
 }
 
+type Bats = { hits: number; ab: number; runs: number; avg: number };
+
+async function recentBats(teamId: number): Promise<Bats | null> {
+  const res = await fetch(
+    `https://statsapi.mlb.com/api/v1/teams/${teamId}/stats?stats=gameLog&group=hitting&season=2026&sportId=1`,
+    { next: { revalidate: 1800 } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  const rows = (data.stats?.[0]?.splits || []).slice(-5);
+  if (!rows.length) return null;
+  const hits = rows.reduce((s: number, r: { stat?: { hits?: number } }) => s + (r.stat?.hits || 0), 0);
+  const ab = rows.reduce((s: number, r: { stat?: { atBats?: number } }) => s + (r.stat?.atBats || 0), 0);
+  const runs = rows.reduce((s: number, r: { stat?: { runs?: number } }) => s + (r.stat?.runs || 0), 0);
+  return { hits, ab, runs, avg: ab ? hits / ab : 0 };
+}
+
+function registry(aligns: string[], misses: string[]) {
+  let score = 40 + aligns.length * 7 - misses.length * 6;
+  if (aligns.length >= 4 && misses.length === 0) score += 4;
+  if (aligns.length < 3) score = Math.min(score, 64);
+  if (misses.length >= 2) score = Math.min(score, 62);
+  return Math.max(36, Math.min(78, Math.round(score)));
+}
+
 export async function alwaysCard(
   g: GameMatchup,
   homeP: PitcherStats | null,
@@ -30,9 +55,11 @@ export async function alwaysCard(
 ): Promise<Edge[]> {
   const game = `${g.awayTeam} @ ${g.homeTeam}`;
   const edges: Edge[] = [];
-  const [homeLogs, awayLogs] = await Promise.all([
+  const [homeLogs, awayLogs, homeBats, awayBats] = await Promise.all([
     homeP ? getPitcherLogs(homeP.id) : Promise.resolve([]),
     awayP ? getPitcherLogs(awayP.id) : Promise.resolve([]),
+    recentBats(g.homeId),
+    recentBats(g.awayId),
   ]);
 
   const pack = (
@@ -68,42 +95,49 @@ export async function alwaysCard(
 
   const home = pack(homeP, homeLogs, awayT, g.awayAbbr);
   const away = pack(awayP, awayLogs, homeT, g.homeAbbr);
+  const sides = [
+    { key: "home" as const, team: g.homeTeam, arm: home, bats: homeT, hot: homeBats, price: priceOf(line?.mlHome), raw: line?.mlHome },
+    { key: "away" as const, team: g.awayTeam, arm: away, bats: awayT, hot: awayBats, price: priceOf(line?.mlAway), raw: line?.mlAway },
+  ];
 
-  const ace = (home?.score || 0) >= (away?.score || 0) ? home : away;
-  const dog = ace === home ? away : home;
-  if (ace?.p) {
-    const sideHome = ace === home;
-    const oppEra = dog?.p?.era ?? 9;
-    const eraGap = oppEra - ace.p.era;
-    const posted = sideHome ? line?.mlHome : line?.mlAway;
-    const price = priceOf(posted);
-    const mlFlags = [...ace.flags];
-    if (oppEra < 4) mlFlags.push(`other starter ERA ${oppEra} is not a soft arm`);
-    if (eraGap < 1.25) mlFlags.push(`ERA gap only ${eraGap.toFixed(2)}`);
-    if (price != null && price > 0) mlFlags.push(`posted ${posted}, market does not agree`);
-    const ml = grade(
-      [
-        eraGap >= 1.25 ? `ERA gap ${eraGap.toFixed(2)}` : "",
-        oppEra >= 4.2 ? `other arm ERA ${oppEra}` : "",
-        price != null && price < 0 ? `posted favorite ${posted}` : "",
-      ].filter(Boolean),
-      mlFlags
-    );
-    let score = ml.score;
-    if (oppEra < 4 || eraGap < 1.25 || (price != null && price > 0)) score = Math.min(score, 58);
-    else score = Math.min(score, 74);
-    const against = mlFlags.length
-      ? `Case against: ${mlFlags.join("; ")}. That is why this is not a 70.`
-      : `Case against: one starter line is not a side.`;
+  const ranked = sides
+    .map((s) => {
+      const other = s.key === "home" ? sides[1] : sides[0];
+      const aligns: string[] = [];
+      const misses: string[] = [];
+      if (s.arm?.p && other.arm?.p && s.arm.p.era + 0.4 < other.arm.p.era) aligns.push(`starter ERA ${s.arm.p.era} vs ${other.arm.p.era}`);
+      if (s.arm?.p && s.arm.p.whip > 0 && s.arm.p.whip <= 1.15) aligns.push(`starter WHIP ${s.arm.p.whip}`);
+      if (s.arm && s.arm.flags.length === 0 && s.arm.logs.length >= 3) aligns.push("starter last 5 has no contact or walk flag");
+      if (s.bats && parseFloat(s.bats.ops) >= 0.74) aligns.push(`season OPS ${s.bats.ops}`);
+      if (s.hot && s.hot.ab >= 20 && s.hot.avg >= 0.27) aligns.push(`hot bats ${s.hot.hits}-for-${s.hot.ab} (${s.hot.avg.toFixed(3)}) and ${s.hot.runs} runs over the last 5`);
+      if (s.hot && s.hot.runs >= 25) aligns.push(`last 5 scoring ${s.hot.runs} runs`);
+      if (s.price != null && s.price < 0) aligns.push(`posted favorite ${s.raw}`);
+      if (other.arm?.p && other.arm.p.era < 3.4 && other.arm.flags.length === 0) misses.push(`${other.arm.p.name} is also a live arm (${other.arm.p.era} ERA)`);
+      if (s.hot && s.hot.ab >= 20 && s.hot.avg < 0.22) misses.push(`bats cold ${s.hot.hits}-for-${s.hot.ab} over the last 5`);
+      if (s.arm && s.arm.flags.length >= 2) misses.push(`starter flags: ${s.arm.flags.slice(0, 2).join("; ")}`);
+      if (s.price != null && s.price > 0 && aligns.length < 3) misses.push(`posted ${s.raw} and the registry is not stacked`);
+      return { ...s, other, aligns, misses, score: registry(aligns, misses) };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0];
+  if (best?.arm?.p || best?.bats) {
+    const against = best.misses.length
+      ? `Not aligned: ${best.misses.join("; ")}.`
+      : "Nothing in the registry is pointing the other way.";
     edges.push({
       gamePk: g.gamePk,
       game,
       market: "Moneyline",
-      pick: `${sideHome ? g.homeTeam : g.awayTeam} ML`,
-      edgeScore: score,
-      pitcher: ace.p.name,
-      reasoning: `${ace.p.name} (${ace.p.era} ERA, ${ace.p.k9} K/9, ${ace.p.whip} WHIP) vs ${dog?.p?.name || "TBD"}${dog?.p ? ` (${dog.p.era} ERA, ${dog.p.k9} K/9)` : ""}. Posted ML ${line?.mlAway || "—"}/${line?.mlHome || "—"}. ${against} ${lessonLine("Moneyline")} Score ${score}.`,
-      stats: { "L5 hit rate": ace.logs.map((x) => `${x.k}K/${x.h}H/${x.bb}BB`).join(" · ") || "—" },
+      pick: `${best.team} ML`,
+      edgeScore: best.score,
+      pitcher: best.arm?.p.name,
+      reasoning: `Registry for ${best.team}: ${best.aligns.join("; ") || "nothing stacked"}. ${best.arm?.p ? `${best.arm.p.name} ${best.arm.p.era} ERA / ${best.arm.p.whip} WHIP. ` : ""}${best.other.arm?.p ? `Other arm ${best.other.arm.p.name} ${best.other.arm.p.era} ERA. ` : ""}Posted ${line?.mlAway || "—"}/${line?.mlHome || "—"}. ${against} More alignments raise this. One number cannot. ${lessonLine("Moneyline")} Score ${best.score}.`,
+      stats: {
+        Aligns: best.aligns.length,
+        Misses: best.misses.length,
+        "L5 bats": best.hot ? `${best.hot.hits}/${best.hot.ab}, ${best.hot.runs} R` : "n/a",
+      },
     });
   }
 
@@ -115,6 +149,7 @@ export async function alwaysCard(
   if (combEra <= 3.5) totConfirms.push(`combined starter ERA ${combEra.toFixed(2)}`);
   if (combK >= 24) totConfirms.push(`combined lineup K% ${combK.toFixed(1)}`);
   if ((home?.flags.length || 0) + (away?.flags.length || 0) >= 2) totFlags.push("both starters already showed contact or walks in L5");
+  if ((homeBats?.runs || 0) + (awayBats?.runs || 0) >= 45) totFlags.push("both lineups have been scoring");
   const tot = grade(totConfirms, totFlags);
   const totAgainst = totFlags.length
     ? `Case against: ${totFlags.join("; ")}.`
@@ -127,7 +162,7 @@ export async function alwaysCard(
     market: "Game Total",
     pick: under ? "Under runs" : "Over runs",
     edgeScore: tot.score,
-    reasoning: `${g.awayPitcher || "Away SP"} ERA ${awayP?.era ?? "?"}, L5 ER ${awayLogs.map((x) => x.er).join("-") || "n/a"}. ${g.homePitcher || "Home SP"} ERA ${homeP?.era ?? "?"}, L5 ER ${homeLogs.map((x) => x.er).join("-") || "n/a"}. Lineups: ${g.awayTeam} K% ${awayT?.kPct ?? "?"} / OPS ${awayT?.ops ?? "?"}; ${g.homeTeam} K% ${homeT?.kPct ?? "?"} / OPS ${homeT?.ops ?? "?"}. Combined ERA ${combEra.toFixed(2)}. ${totAgainst} Score ${tot.score}.`,
+    reasoning: `${g.awayPitcher || "Away SP"} ERA ${awayP?.era ?? "?"}, L5 ER ${awayLogs.map((x) => x.er).join("-") || "n/a"}. ${g.homePitcher || "Home SP"} ERA ${homeP?.era ?? "?"}, L5 ER ${homeLogs.map((x) => x.er).join("-") || "n/a"}. Lineups: ${g.awayTeam} K% ${awayT?.kPct ?? "?"} / OPS ${awayT?.ops ?? "?"}; ${g.homeTeam} K% ${homeT?.kPct ?? "?"} / OPS ${homeT?.ops ?? "?"}. Last 5 runs ${awayBats?.runs ?? "?"} / ${homeBats?.runs ?? "?"}. Combined ERA ${combEra.toFixed(2)}. ${totAgainst} Score ${tot.score}.`,
     stats: { "Home L5 ER": homeLogs.map((x) => x.er).join("-") || "—", "Away L5 ER": awayLogs.map((x) => x.er).join("-") || "—" },
   });
 
@@ -138,9 +173,9 @@ export async function alwaysCard(
       game,
       market: "Pitcher Ks",
       pick: `${kSide.p.name} strikeouts (proj ${kSide.proj})`,
-      edgeScore: Math.min(kSide.score, 66),
+      edgeScore: kSide.score,
       pitcher: kSide.p.name,
-      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. ${lessonLine("Pitcher Ks")} Score ${Math.min(kSide.score, 66)}.`,
+      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. ${lessonLine("Pitcher Ks")} Score ${kSide.score}.`,
       stats: {
         "L5 hit rate": kSide.logs.length
           ? `${kSide.overProj}/${kSide.logs.length} starts at or above ${Math.floor(kSide.proj)} K · ${kSide.logs.map((x) => `${x.k}K/${x.h}H`).join("-")}`
