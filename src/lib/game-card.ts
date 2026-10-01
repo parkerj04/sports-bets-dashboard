@@ -1,6 +1,7 @@
 import type { Edge, GameMatchup, PitcherStats, TeamKStats } from "./mlb";
 import { getPitcherLogs, projectKs } from "./propdesk";
 import { grade } from "./confidence";
+import { lessonLine } from "./calibrate";
 import type { StartLog } from "./propdesk";
 
 function lastVs(logs: StartLog[], abbr?: string) {
@@ -107,15 +108,15 @@ export async function alwaysCard(
   });
 
   const kSide = (home?.p?.k9 || 0) >= (away?.p?.k9 || 0) ? home : away;
-  if (kSide?.p && kSide.flags.length === 0 && kSide.confirms.length >= 2) {
+  if (kSide?.p && kSide.flags.length === 0 && kSide.confirms.length >= 2 && kSide.p.avgAgainst < 0.23) {
     edges.push({
       gamePk: g.gamePk,
       game,
       market: "Pitcher Ks",
       pick: `${kSide.p.name} strikeouts (proj ${kSide.proj})`,
-      edgeScore: kSide.score,
+      edgeScore: Math.min(kSide.score, 72),
       pitcher: kSide.p.name,
-      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. Score ${kSide.score}.`,
+      reasoning: `${kSide.p.name} ${kSide.p.k9} K/9, ${kSide.p.era} ERA into ${kSide.opp?.name || "the other lineup"} (${kSide.opp?.kPct ?? "?"}% K, ${kSide.opp?.avg ?? "?"} AVG). Projected ${kSide.proj} Ks. Last 5: ${logLine(kSide.logs)}. Hit rate vs that projection: ${kSide.overProj}/${kSide.logs.length || 0}. Case against: projected ${kSide.proj} Ks is a model, not a book number. If he is pulled at 80 pitches the over is dead. ${lessonLine("Pitcher Ks")} Score ${Math.min(kSide.score, 72)}.`,
       stats: {
         "L5 hit rate": kSide.logs.length
           ? `${kSide.overProj}/${kSide.logs.length} starts at or above ${Math.floor(kSide.proj)} K · ${kSide.logs.map((x) => `${x.k}K/${x.h}H`).join("-")}`
