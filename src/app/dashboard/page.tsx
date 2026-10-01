@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -15,6 +15,16 @@ const statusClass: Record<string, string> = {
   lost: "status-lost",
   push: "status-push",
   void: "status-void",
+};
+
+type CatalogPick = {
+  id: string;
+  sport: Sport;
+  event: string;
+  selection: string;
+  market: string;
+  score: number;
+  research: string;
 };
 
 export default function DashboardPage() {
@@ -32,6 +42,9 @@ export default function DashboardPage() {
   const [notes, setNotes] = useState("");
   const [research, setResearch] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [catalog, setCatalog] = useState<CatalogPick[]>([]);
+  const [chosen, setChosen] = useState("");
+  const [catalogStatus, setCatalogStatus] = useState("");
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -54,6 +67,37 @@ export default function DashboardPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!showForm) return;
+    setCatalogStatus("Loading researched plays…");
+    fetch("/api/research/catalog")
+      .then((r) => r.json())
+      .then((d) => {
+        setCatalog(d.options || []);
+        setCatalogStatus((d.options || []).length ? "" : "No researched plays loaded.");
+      })
+      .catch(() => setCatalogStatus("Could not load the research list."));
+  }, [showForm]);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, CatalogPick[]> = {};
+    for (const p of catalog) {
+      (map[p.sport] ||= []).push(p);
+    }
+    return map;
+  }, [catalog]);
+
+  function fillFrom(id: string) {
+    setChosen(id);
+    const p = catalog.find((x) => x.id === id);
+    if (!p) return;
+    setSport(p.sport);
+    setEvent(p.event);
+    setSelection(p.selection);
+    setNotes(p.market);
+    setResearch(p.research);
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -71,7 +115,7 @@ export default function DashboardPage() {
       is_public: isPublic,
     });
     if (error) { alert(error.message); return; }
-    setEvent(""); setSelection(""); setOdds("-110"); setStake("1"); setNotes(""); setResearch(""); setShowForm(false);
+    setEvent(""); setSelection(""); setOdds("-110"); setStake("1"); setNotes(""); setResearch(""); setChosen(""); setShowForm(false);
     load();
   }
 
@@ -159,6 +203,23 @@ export default function DashboardPage() {
 
         {showForm && (
           <form onSubmit={handleAdd} className="card p-5 space-y-3">
+            <div>
+              <label className="text-xs text-muted mb-1 block">Fill from research</label>
+              <select className="input" value={chosen} onChange={(e) => fillFrom(e.target.value)}>
+                <option value="">Select a researched play…</option>
+                {Object.entries(grouped).map(([sp, rows]) => (
+                  <optgroup key={sp} label={sp}>
+                    {rows.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.score} · {p.selection} — {p.event}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {catalogStatus && <p className="text-[11px] text-muted mt-1">{catalogStatus}</p>}
+              <p className="text-[11px] text-muted mt-1">Picks the sport, game, selection, and research. You still set odds and units.</p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted mb-1 block">Sport</label>
