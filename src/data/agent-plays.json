@@ -1,0 +1,31 @@
+{
+  "plays": [
+    {
+      "id": "pit-cle-warren",
+      "game": "Steelers at Browns",
+      "away": "PIT",
+      "home": "CLE",
+      "pick": "Jaylen Warren over 15.5 rush attempts",
+      "score": 62,
+      "why": "Rico Dowdle is out, so the backfield is Warren. He had 176 yards from scrimmage last week. Cleveland allows 2.7 explosive runs a game, 27th. Mason Graham is the flag. Attempts can still come if the yards do not."
+    },
+    {
+      "id": "pit-cle-murt",
+      "game": "Steelers at Browns",
+      "away": "PIT",
+      "home": "CLE",
+      "pick": "Pat Freiermuth over 27.5 receiving yards",
+      "score": 58,
+      "why": "Cleveland is in man after Week 1, 8th in man rate and first in middle-of-field closed. Tight end against a linebacker is the fit. Freiermuth had 3 for 63 in the December 28, 2025 meeting. Washington splits the room."
+    },
+    {
+      "id": "pit-cle-fannin",
+      "game": "Steelers at Browns",
+      "away": "PIT",
+      "home": "CLE",
+      "pick": "Harold Fannin Jr. anytime touchdown",
+      "score": 60,
+      "why": "Two scores in the last two weeks. Pittsburgh is the zone side and Porter is in Dallas. Only if the number is plus money. Watson is behind a line missing both Jenkins, with Watt on the edge."
+    }
+  ]
+}
