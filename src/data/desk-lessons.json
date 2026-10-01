@@ -4,13 +4,13 @@
     "market": "Pitcher Ks",
     "result": "loss",
     "flaw": "Season K/9 was treated like an edge while the opponent was making contact, around .250 against him, and a prior meeting produced hits.",
-    "rule": "A strikeout card is not playable if season AVG against is .230 or higher, or the last look / last start allowed 6 hits. A later win does not lift this cap."
+    "rule": "Contact against the pitcher is a miss in the registry. It does not ban the market. It has to be offset by other alignments."
   },
   {
     "id": "bos-ml-nyy-2026-09-30",
     "market": "Moneyline",
     "result": "loss",
-    "flaw": "Boston moneyline was scored off one starter's season line. Yankees won Game 1 9-0 behind Schlittler and led Game 2 9-2. The other arm was not soft, and the posted price did not agree.",
-    "rule": "A moneyline cannot print 70 if the other starter's ERA is under 4.00, the ERA gap is under 1.25, or the side is plus money. Close arms are research only, capped at 58."
+    "flaw": "Boston moneyline was scored off one starter. The Yankees won Game 1 9-0 and led Game 2 9-2. The other arm was live and Boston's bats were not stacked on the card.",
+    "rule": "A moneyline is a registry: starter, other starter, season bats, last-5 hot bats, and the posted price. More alignments raise it. One number cannot print a 70."
   }
 ]
