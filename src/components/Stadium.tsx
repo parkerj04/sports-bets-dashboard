@@ -20,6 +20,19 @@ const SKIN: Record<string, { end: string; ink: string }> = {
   DAL: { end: "#041e42", ink: "#b0b7bc" }, PHI: { end: "#004c54", ink: "#a5acaf" },
 };
 
+function Post({ edge, dir }: { edge: number; dir: -1 | 1 }) {
+  const mid = 123;
+  const stem = edge + dir * 16;
+  return (
+    <g stroke="#f4d27a" strokeWidth="4" fill="none" strokeLinecap="square">
+      <line x1={edge} y1={mid} x2={stem} y2={mid} />
+      <line x1={stem} y1={mid - 22} x2={stem} y2={mid + 22} />
+      <line x1={stem} y1={mid - 22} x2={stem + dir * 14} y2={mid - 22} />
+      <line x1={stem} y1={mid + 22} x2={stem + dir * 14} y2={mid + 22} />
+    </g>
+  );
+}
+
 export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?: string; home: string; away: string; team?: string; name: string; rec: number; plays: Play[] }) {
   const [open, setOpen] = useState(0);
   useEffect(() => setOpen(0), [name, home, away]);
@@ -32,7 +45,6 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
   const clubSkin = SKIN[club] || awaySkin;
   const fieldX = 110;
   const fieldW = 780;
-  const goal = 18 + 210 / 2;
   return (
     <div className="overflow-hidden rounded-lg border border-black bg-black text-white">
       <div className="flex items-center gap-3 px-3 py-3">
@@ -67,10 +79,8 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
             </g>
           );
         })}
-        <g stroke="#f4d27a" strokeWidth="4" fill="none">
-          <path d={`M22 ${goal} h16 M22 ${goal - 16} v32`} />
-          <path d={`M1018 ${goal} h-16 M1018 ${goal - 16} v32`} />
-        </g>
+        <Post edge={40} dir={-1} />
+        <Post edge={960} dir={1} />
         <circle cx={fieldX + fieldW / 2} cy="123" r="32" fill="#111" opacity="0.28" />
         <image href={homeLogo} x={fieldX + fieldW / 2 - 24} y="99" width="48" height="48" />
         {plays.map((p, i) => {
