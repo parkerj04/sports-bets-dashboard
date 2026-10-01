@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Prop = { name: string; team: string; opp: string; line: number; last5: number[]; hit: string; prior: { week: string; yards: number }[]; why: string };
+type Prop = { name: string; team: string; opp: string; market: string; line: number; last5: number[]; hit: string; prior: { week: string; value: number }[]; why: string };
 
 export function PropMatch({ away, home }: { away: string; home: string }) {
   const [rows, setRows] = useState<Prop[] | null>(null);
@@ -12,18 +12,18 @@ export function PropMatch({ away, home }: { away: string; home: string }) {
   }, [away, home]);
   return (
     <section className="card p-4 space-y-3">
-      <h3 className="font-semibold text-sm">Receiving props, 25+</h3>
-      <p className="text-[11px] text-muted">Last 5 this year, then 2025 games against this defense. 25 is an alt shape, not a book number.</p>
+      <h3 className="font-semibold text-sm">Researched player props</h3>
+      <p className="text-[11px] text-muted">Receptions, receiving yards, or passing yards. Last 5 this year, then 2025 against this defense. The line is his median, not a book number.</p>
       {rows === null && <p className="text-xs text-muted">Loading 2026 and 2025 logs…</p>}
       {rows?.map((p) => (
-        <div key={p.name} className="border-t border-card-border pt-2 text-sm">
-          <div className="font-semibold">{p.name} · {p.team} over {p.line}</div>
+        <div key={p.name + p.market} className="border-t border-card-border pt-2 text-sm">
+          <div className="font-semibold">{p.name} · {p.team} {p.market.toLowerCase()} over {p.line}</div>
           <div className="font-mono text-xs">Last 5: {p.last5.join(", ")} · {p.hit}</div>
-          <div className="text-xs text-muted">2025 vs {p.opp}: {p.prior.length ? p.prior.map((g) => `W${g.week} ${g.yards}`).join(", ") : "none"}</div>
+          <div className="text-xs text-muted">2025 vs {p.opp}: {p.prior.length ? p.prior.map((g) => `W${g.week} ${g.value}`).join(", ") : "none"}</div>
           <p className="text-xs mt-1">{p.why}</p>
         </div>
       ))}
-      {rows && rows.length === 0 && <p className="text-xs text-muted">Nobody on these two teams cleared 25 in 3 of the last 5.</p>}
+      {rows && rows.length === 0 && <p className="text-xs text-muted">No prop on these two teams cleared its own line in 3 of the last 5.</p>}
     </section>
   );
 }
