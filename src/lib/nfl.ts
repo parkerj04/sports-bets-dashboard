@@ -23,6 +23,7 @@ export interface NflGame {
 
 import { impliedTotals } from "./ticket";
 import { footballRegistry } from "./football-desk";
+import { newsLine } from "./nfl-news";
 
 function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanScore">): NflGame {
   const total = typeof g.total === "number" ? g.total : parseFloat(String(g.total)) || 44;
@@ -36,9 +37,11 @@ function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanSc
   });
   const leanTotal = total >= 47.5 ? "Under" : total <= 41 ? "Over" : "No total lean";
   const imp = impliedTotals(g.total, g.spread, g.home, g.away);
+  const news = newsLine(g.away, g.home);
   const leanWhy =
     `${g.away} ${g.awayRecord} at ${g.home} ${g.homeRecord}, ${g.venue || "site TBD"}. Posted ${g.spread}, total ${total}, ML ${g.mlAway || "—"}/${g.mlHome || "—"}. ` +
     (imp ? `Implied points ${g.away} ${imp.awayImp} / ${g.home} ${imp.homeImp}. ` : "") +
+    (news ? `${news} ` : "") +
     `${desk.why} Total note: ${leanTotal} at ${total}, and that is a number read, not a play. Open the game lab before a unit. Injuries, QB status, and last 5 are not on this slate card.`;
   return { ...g, leanML: desk.pick, leanTotal, leanWhy, leanScore: desk.score };
 }
