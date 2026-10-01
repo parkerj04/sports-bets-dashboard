@@ -14,6 +14,7 @@ import { GamePlays } from "@/components/GamePlays";
 import { GameDesk } from "@/components/GameDesk";
 import { PropMatch } from "@/components/PropMatch";
 import { TonightDesk } from "@/components/TonightDesk";
+import { AgentDesk } from "@/components/AgentDesk";
 import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
@@ -69,6 +70,7 @@ function Inner() {
         <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
+      <AgentDesk away={lab.awayAbbr} home={lab.homeAbbr} />
       <TonightDesk away={lab.awayAbbr} home={lab.homeAbbr} />
       <GameDesk id={id} />
       <PropMatch away={lab.awayAbbr} home={lab.homeAbbr} />
