@@ -53,10 +53,8 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
           </button>
         ))}
       </div>
-      <Stadium venue={venue} team={active?.team || side} name={active?.name || ""} rec={active?.rec || 0} plays={active?.recent || []} />
-      {active && (
-        <p className="text-xs text-muted">{vs.length} of these were vs {opp}.</p>
-      )}
+      <Stadium venue={venue} home={home} away={away} name={active?.name || ""} rec={active?.rec || 0} plays={active?.recent || []} />
+      {active && <p className="text-xs text-muted">{vs.length} of these were vs {opp}.</p>}
       <h3 className="font-semibold text-sm pt-2">2025 coverage splits</h3>
       <p className="text-[11px] text-muted">{data.source}</p>
       <div className="grid grid-cols-2 gap-2 text-xs">
