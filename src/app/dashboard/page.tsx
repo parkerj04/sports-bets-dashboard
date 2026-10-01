@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Bet, Sport } from "@/lib/types";
 import { profitIfWon } from "@/lib/types";
+import { DeskReview } from "@/components/DeskReview";
 
 const SPORTS: Sport[] = ["MLB", "NFL", "NBA", "NHL", "NCAAF", "NCAAB", "Soccer", "UFC", "Other"];
 
@@ -128,6 +129,15 @@ export default function DashboardPage() {
     load();
   }
 
+  async function tagReview(id: string, tag: string) {
+    const bet = picks.find((p) => p.id === id);
+    if (!bet) return;
+    const note = bet.notes?.includes(tag) ? bet.notes : `${tag}${bet.notes ? ` | ${bet.notes}` : ""}`;
+    const supabase = createClient();
+    await supabase.from("picks").update({ notes: note }).eq("id", id);
+    load();
+  }
+
   async function togglePublic(id: string, current: boolean) {
     const supabase = createClient();
     await supabase.from("picks").update({ is_public: !current }).eq("id", id);
@@ -193,6 +203,8 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {isOwner && <DeskReview picks={picks} onTag={tagReview} />}
 
         <div className="flex justify-between items-center">
           <h2 className="font-semibold">Your picks</h2>
