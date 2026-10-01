@@ -1,4 +1,4 @@
-type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string; x?: number | null; concept?: string };
+type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string; x?: number | null; coverage?: string; concept?: string };
 
 const COLORS = ["#e23b3b", "#2f6fed", "#f08a24", "#7a4de0", "#1f9d57", "#1aa7c7", "#d4b24a", "#d4537e"];
 const LANE: Record<string, number> = { left: 22, middle: 40, right: 58 };
@@ -10,7 +10,7 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
     <div className="space-y-2">
       <div>
         <div className="font-semibold">{name || "Receiver"} receptions <span className="text-muted font-normal">2026</span></div>
-        <p className="text-[11px] text-muted">End spot for {dots.length} of {rec} catches · {venue || "this venue"}. Coverage is not in the play file.</p>
+        <p className="text-[11px] text-muted">End spot for {dots.length} of {rec} catches · {venue || "this venue"}. Coverage and concept are estimates.</p>
       </div>
       <svg viewBox="0 0 220 78" className="w-full rounded-lg border border-card-border bg-[#1f6b3a]">
         <rect x="8" y="8" width="18" height="54" fill="#111" />
@@ -42,7 +42,7 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
             <span className="font-mono w-5" style={{ color: COLORS[i % COLORS.length] }}>{i + 1}</span>
             <span>
               <span className="block">Week {p.week} {p.def} · Q{p.qtr || "?"} {p.time || ""} · {ORD[Number(p.down)] || "?"} & {p.togo || "?"} · {p.yards ?? "?"} yards · {p.from || "?"} to {p.to || "not in the play"}</span>
-              <span className="block text-muted">Coverage: not charted. Concept: {p.concept || "not enough on the play."}</span>
+              <span className="block text-muted">Likely coverage: {p.coverage || "estimate unavailable"} · Likely concept: {p.concept || "estimate unavailable"}</span>
             </span>
           </div>
         ))}
