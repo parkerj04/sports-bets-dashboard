@@ -18,13 +18,15 @@ function abbr(name: string) {
   return hit ? ABBR[hit] : "";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const id = new URL(request.url).searchParams.get("id") || "";
   const week = await getNflWeek();
   const players = coverage.players as Player[];
   const zones = coverage.teams as Record<string, { zonePct: number; snaps: number }>;
   const schemes = scheme.teams as Record<string, { passEpa: number; epaPlay: number; blitz: number; passRate: number }>;
   const cards = [];
   for (const g of week.games) {
+    if (id && g.id !== id) continue;
     const pairs = [
       { off: abbr(g.away), def: abbr(g.home), game: `${g.away} at ${g.home}`, id: g.id },
       { off: abbr(g.home), def: abbr(g.away), game: `${g.away} at ${g.home}`, id: g.id },
@@ -54,11 +56,14 @@ export async function GET() {
         if (offEpa > 0.05 && passRate >= 55) { score += 5; bits.push(`${p.off} pass EPA/play is ${offEpa} at a ${passRate}% pass rate. Script should throw.`); }
         else bits.push(`${p.off} pass EPA/play is ${offEpa} at a ${passRate}% pass rate. Do not assume a pass-heavy script.`);
         if (defBlitz >= 14) { score -= 4; bits.push(`${p.def} extra-rusher rate is ${defBlitz}%. Pressure cuts receiving TDs more than it creates them.`); }
-        bits.push(score >= 68 ? "Best TD shape on this side if the number is plus money." : "Volume lean. Coverage or script does not finish the case.");
+        bits.push(score >= 68 ? "Best TD shape on this side if the number is plus money. First-TD is the alt only if this is the top name on the side. No price in this feed." : "Volume lean. Coverage or script does not finish the case. Do not force an alt.");
         cards.push({ game: p.game, pick: `${pl.name} anytime TD`, score: Math.max(40, Math.min(88, Math.round(score))), why: bits.join(" "), href: `/research/nfl/game?id=${p.id}` });
       }
     }
   }
   cards.sort((a, b) => b.score - a.score);
-  return NextResponse.json({ cards: cards.slice(0, 10), note: "Targets, zone fit, pass script, pressure. No odds. Red-zone share is not in the free file." });
+  return NextResponse.json({
+    cards: id ? cards : cards.slice(0, 10),
+    note: "Targets, zone fit, pass script, pressure. No odds. Red-zone share is not in the free file.",
+  });
 }
