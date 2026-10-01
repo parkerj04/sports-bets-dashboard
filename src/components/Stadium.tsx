@@ -1,7 +1,8 @@
-type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; from?: string; to?: string; x?: number | null };
+type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string; x?: number | null; concept?: string };
 
 const COLORS = ["#e23b3b", "#2f6fed", "#f08a24", "#7a4de0", "#1f9d57", "#1aa7c7", "#d4b24a", "#d4537e"];
 const LANE: Record<string, number> = { left: 22, middle: 40, right: 58 };
+const ORD = ["", "1st", "2nd", "3rd", "4th"];
 
 export function Stadium({ venue, home, away, name, rec, plays }: { venue?: string; home: string; away: string; name: string; rec: number; plays: Play[] }) {
   const dots = plays.map((p, i) => ({ ...p, n: i + 1 })).filter((p) => p.x != null && LANE[p.loc]);
@@ -9,7 +10,7 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
     <div className="space-y-2">
       <div>
         <div className="font-semibold">{name || "Receiver"} receptions <span className="text-muted font-normal">2026</span></div>
-        <p className="text-[11px] text-muted">End spot for {dots.length} of {rec} catches · {venue || "this venue"}</p>
+        <p className="text-[11px] text-muted">End spot for {dots.length} of {rec} catches · {venue || "this venue"}. Coverage is not in the play file.</p>
       </div>
       <svg viewBox="0 0 220 78" className="w-full rounded-lg border border-card-border bg-[#1f6b3a]">
         <rect x="8" y="8" width="18" height="54" fill="#111" />
@@ -24,7 +25,6 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
         ))}
         <line x1="26" y1="28" x2="178" y2="28" stroke="#f4f1ea" strokeWidth="0.25" />
         <line x1="26" y1="48" x2="178" y2="48" stroke="#f4f1ea" strokeWidth="0.25" />
-        <path d="M8 24 v-4 h-3 M8 46 v4 h-3 M212 24 v-4 h3 M212 46 v4 h3" fill="none" stroke="#f4d27a" strokeWidth="0.8" />
         {dots.map((p) => {
           const x = 26 + (Number(p.x) / 100) * 152;
           const y = LANE[p.loc];
@@ -40,10 +40,12 @@ export function Stadium({ venue, home, away, name, rec, plays }: { venue?: strin
         {plays.map((p, i) => (
           <div key={i} className="flex gap-2 text-xs px-2 py-1.5 border-t border-card-border first:border-t-0">
             <span className="font-mono w-5" style={{ color: COLORS[i % COLORS.length] }}>{i + 1}</span>
-            <span>Week {p.week} {p.def} · Q{p.qtr || "?"} {p.time || ""} · {p.yards ?? "?"} yards · {p.from || "?"} to {p.to || "not in the play"}</span>
+            <span>
+              <span className="block">Week {p.week} {p.def} · Q{p.qtr || "?"} {p.time || ""} · {ORD[Number(p.down)] || "?"} & {p.togo || "?"} · {p.yards ?? "?"} yards · {p.from || "?"} to {p.to || "not in the play"}</span>
+              <span className="block text-muted">Coverage: not charted. Concept: {p.concept || "not enough on the play."}</span>
+            </span>
           </div>
         ))}
-        {plays.length === 0 && <p className="text-xs text-muted p-2">No catches loaded.</p>}
       </div>
     </div>
   );
