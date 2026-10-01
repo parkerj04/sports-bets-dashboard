@@ -12,6 +12,7 @@ import { TicketDesk } from "@/components/TicketDesk";
 import { RosterCheck } from "@/components/RosterCheck";
 import { GamePlays } from "@/components/GamePlays";
 import { GameDesk } from "@/components/GameDesk";
+import { PropMatch } from "@/components/PropMatch";
 import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
@@ -68,6 +69,7 @@ function Inner() {
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
       <GameDesk id={id} />
+      <PropMatch away={lab.awayAbbr} home={lab.homeAbbr} />
       <GamePlays away={lab.awayAbbr} home={lab.homeAbbr} />
       <RosterCheck sport="nfl" away={lab.away} home={lab.home} awayAbbr={lab.awayAbbr} homeAbbr={lab.homeAbbr} />
       {notes.map((n) => (
