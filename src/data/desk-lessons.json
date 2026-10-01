@@ -1,0 +1,9 @@
+[
+  {
+    "id": "hunter-brown-k-2026-09",
+    "market": "Pitcher Ks",
+    "result": "loss",
+    "flaw": "Season K/9 was treated like an edge while the opponent was making contact, around .250 against him, and a prior meeting produced hits.",
+    "rule": "A strikeout card is not playable if season AVG against is .230 or higher, or the last look / last start allowed 6 hits. A later win does not lift this cap."
+  }
+]
