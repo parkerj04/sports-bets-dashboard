@@ -9,6 +9,8 @@ import type { Ticket } from "@/lib/ticket";
 import { CoverageSplit } from "@/components/CoverageSplit";
 import { Scheme2026 } from "@/components/Scheme2026";
 import { TicketDesk } from "@/components/TicketDesk";
+import { footballRegistry } from "@/lib/football-desk";
+import { scoreTone } from "@/lib/score-color";
 
 function Inner() {
   const id = useSearchParams().get("id");
@@ -34,6 +36,24 @@ function Inner() {
   if (error || !lab) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
   const awayInj = lab.injuries.filter((i) => i.team === lab.away);
   const homeInj = lab.injuries.filter((i) => i.team === lab.home);
+  const out = (rows: typeof awayInj) => rows.filter((r) => /out|doubt/i.test(r.status)).map((r) => `${r.name} ${r.status}`);
+  const yards = lab.stats.find((s) => /total yards/i.test(s.label));
+  const desk = footballRegistry({
+    away: lab.away,
+    home: lab.home,
+    awayRecord: card?.awayRecord || "",
+    homeRecord: card?.homeRecord || "",
+    mlAway: card?.mlAway || lab.mlAway,
+    mlHome: card?.mlHome || lab.mlHome,
+    awayOuts: out(awayInj),
+    homeOuts: out(homeInj),
+    awayL5: lab.lastFive.filter((g) => g.team === lab.away).map((g) => g.result),
+    homeL5: lab.lastFive.filter((g) => g.team === lab.home).map((g) => g.result),
+    awayYards: yards?.away,
+    homeYards: yards?.home,
+    predAway: lab.predAway,
+    predHome: lab.predHome,
+  });
 
   return (
     <div className="space-y-6">
@@ -43,19 +63,19 @@ function Inner() {
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
       {ticket && <TicketDesk ticket={ticket} />}
+      <div className="card p-4 space-y-1">
+        <div className="text-xs text-muted uppercase">Researched side</div>
+        <div className="flex justify-between gap-3">
+          <div className="font-semibold">{desk.pick}</div>
+          <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
+        </div>
+        <p className="text-sm">{desk.why}</p>
+      </div>
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
       </div>
-      {card && (
-        <div className="card p-4 space-y-1">
-          <div className="text-xs text-muted uppercase">Desk lean</div>
-          <div className="font-semibold">{card.leanML} · Total: {card.leanTotal} · {card.leanScore}</div>
-          <p className="text-sm text-muted">{card.leanWhy}</p>
-          <Link href="/research/nfl-playbook" className="text-xs text-accent">Open full checklist →</Link>
-        </div>
-      )}
       <Scheme2026 away={lab.awayAbbr} home={lab.homeAbbr} />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} />
       {(lab.predHome || lab.predAway) && (
