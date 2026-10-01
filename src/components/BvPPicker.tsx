@@ -91,56 +91,61 @@ export function BvPPicker({
   return (
     <div className="card p-4 space-y-3">
       <h3 className="font-semibold text-sm">Pick any batter vs the starter</h3>
-      <p className="text-[11px] text-muted">Star is the best season-power matchup on this side (OPS, then HR). Compare his zones to where the starter attacks.</p>
+      <p className="text-[11px] text-muted">Star is the best season-power matchup on this side (OPS, then HR). Zones first, then career vs this starter, then last 5.</p>
       <div className="flex gap-2">
         <button type="button" onClick={() => setOpenSide("away")} className={`text-xs px-3 py-1.5 rounded-full border ${openSide === "away" ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{awayTeam}</button>
         <button type="button" onClick={() => setOpenSide("home")} className={`text-xs px-3 py-1.5 rounded-full border ${openSide === "home" ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{homeTeam}</button>
       </div>
       <div className="grid sm:grid-cols-2 gap-4 items-start">
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {list.map((b) => (
-              <button
-                type="button"
-                key={`${b.side}-${b.id}`}
-                onClick={() => tap(b)}
-                className={`text-xs px-2.5 py-1.5 rounded-lg border ${picked?.id === b.id && picked?.side === b.side ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}
-              >
-                {b.id === starId ? "★ " : ""}{b.name}
-              </button>
-            ))}
-            {list.length === 0 && <p className="text-xs text-muted">No hitters loaded for this side.</p>}
-          </div>
-          {picked && (
-            <p className="text-xs text-muted">
-              {picked.name} vs {picked.vsName} · season {picked.avg} / {picked.ops}
-            </p>
-          )}
-          {loading && <p className="text-xs text-muted">Loading matchup…</p>}
-          {error && <p className="text-xs text-danger">{error}</p>}
-          {bvp && (
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <Stat k="AB" v={bvp.ab} />
-              <Stat k="H" v={bvp.h} />
-              <Stat k="HR" v={bvp.hr} />
-              <Stat k="SO" v={bvp.so} />
-              <Stat k="AVG" v={bvp.avg} />
-              <Stat k="OPS" v={bvp.ops} />
-            </div>
-          )}
-          {picked && !loading && !bvp && !error && (
-            <p className="text-xs text-muted">No career sample vs this pitcher.</p>
-          )}
-          {form && form.games.length > 0 && (
-            <p className="text-xs font-mono text-muted">
-              L5: {form.l5h}/{form.l5ab} · {form.l5hr} HR · {form.games.map((g) => `${g.h}/${g.ab}`).join(" · ")}
-            </p>
-          )}
+        <div className="flex flex-wrap gap-2">
+          {list.map((b) => (
+            <button
+              type="button"
+              key={`${b.side}-${b.id}`}
+              onClick={() => tap(b)}
+              className={`text-xs px-2.5 py-1.5 rounded-lg border ${picked?.id === b.id && picked?.side === b.side ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}
+            >
+              {b.id === starId ? "★ " : ""}{b.name}
+            </button>
+          ))}
+          {list.length === 0 && <p className="text-xs text-muted">No hitters loaded for this side.</p>}
         </div>
         <div className="space-y-3">
           <PitcherZones id={vsPitcherId} name={vsPitcherName || "Starter"} />
           {picked && <BatterZones id={picked.id} name={picked.name} />}
         </div>
+      </div>
+      <div className="space-y-2 border-t border-card-border pt-3">
+        <div className="text-xs text-muted uppercase tracking-wide">Career vs this starter</div>
+        {picked && (
+          <p className="text-xs text-muted">
+            {picked.name} vs {picked.vsName} · season {picked.avg} / {picked.ops}
+          </p>
+        )}
+        {loading && <p className="text-xs text-muted">Loading matchup…</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
+        {bvp && (
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <Stat k="AB" v={bvp.ab} />
+            <Stat k="H" v={bvp.h} />
+            <Stat k="HR" v={bvp.hr} />
+            <Stat k="SO" v={bvp.so} />
+            <Stat k="AVG" v={bvp.avg} />
+            <Stat k="OPS" v={bvp.ops} />
+          </div>
+        )}
+        {picked && !loading && !bvp && !error && (
+          <p className="text-xs text-muted">No career sample vs this pitcher.</p>
+        )}
+        {!picked && <p className="text-xs text-muted">Tap a batter to load career vs the starter.</p>}
+        <div className="text-xs text-muted uppercase tracking-wide pt-1">Last 5</div>
+        {form && form.games.length > 0 ? (
+          <p className="text-xs font-mono text-muted">
+            {form.l5h}/{form.l5ab} · {form.l5hr} HR · {form.games.map((g) => `${g.h}/${g.ab}`).join(" · ")}
+          </p>
+        ) : (
+          <p className="text-xs text-muted">{picked && !loading ? "No last-5 row yet." : "Shows after you pick a batter."}</p>
+        )}
       </div>
     </div>
   );
