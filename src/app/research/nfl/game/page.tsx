@@ -70,11 +70,6 @@ function Inner() {
         <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
-      <AgentDesk away={lab.awayAbbr} home={lab.homeAbbr} />
-      <TonightDesk away={lab.awayAbbr} home={lab.homeAbbr} />
-      <GameDesk id={id} />
-      <PropMatch away={lab.awayAbbr} home={lab.homeAbbr} />
-      <GamePlays away={lab.awayAbbr} home={lab.homeAbbr} />
       <RosterCheck sport="nfl" away={lab.away} home={lab.home} awayAbbr={lab.awayAbbr} homeAbbr={lab.homeAbbr} />
       {notes.map((n) => (
         <div key={n.id} className="card p-4 text-sm">
@@ -85,14 +80,6 @@ function Inner() {
         </div>
       ))}
       {ticket && <TicketDesk ticket={ticket} />}
-      <div className="card p-4 space-y-1">
-        <div className="text-xs text-muted uppercase">Researched side</div>
-        <div className="flex justify-between gap-3">
-          <div className="font-semibold">{desk.pick}</div>
-          <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
-        </div>
-        <p className="text-sm">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
-      </div>
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
@@ -141,6 +128,20 @@ function Inner() {
           ))}
         </div>
       )}
+      <h2 className="text-sm font-semibold pt-4">Picks</h2>
+      <AgentDesk away={lab.away} home={lab.home} />
+      <TonightDesk away={lab.awayAbbr} home={lab.homeAbbr} />
+      <PropMatch away={lab.awayAbbr} home={lab.homeAbbr} />
+      <GamePlays away={lab.awayAbbr} home={lab.homeAbbr} />
+      <GameDesk id={id} />
+      <div className="card p-4 space-y-1">
+        <div className="text-xs text-muted uppercase">Researched side</div>
+        <div className="flex justify-between gap-3">
+          <div className="font-semibold">{desk.pick}</div>
+          <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
+        </div>
+        <p className="text-sm">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
+      </div>
     </div>
   );
 }
