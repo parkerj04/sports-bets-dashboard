@@ -8,6 +8,8 @@ import { footballRegistry } from "@/lib/football-desk";
 import { scoreTone } from "@/lib/score-color";
 import { AgentDesk } from "@/components/AgentDesk";
 
+type Catcher = { name: string; team: string; rec: number; yards: number; td: number };
+
 function Inner() {
   const id = useSearchParams().get("id");
   const [game, setGame] = useState<CfbGame | null>(null);
@@ -15,11 +17,17 @@ function Inner() {
   const [error, setError] = useState("");
   const [side, setSide] = useState("");
   const [picked, setPicked] = useState("");
+  const [catchers, setCatchers] = useState<Catcher[]>([]);
+  const [recSource, setRecSource] = useState("");
   useEffect(() => {
     if (!id) { setError("Missing game"); return; }
     fetch(`/api/research/cfb/game?id=${id}`).then((r) => r.json()).then((d) => {
       if (d.error) setError(d.error); else { setGame(d.game); setLab(d.lab); setSide(d.game?.away || ""); }
     });
+    fetch(`/api/research/cfb/receivers?id=${id}`).then((r) => r.json()).then((d) => {
+      setCatchers(d.players || []);
+      setRecSource(d.source || "");
+    }).catch(() => setCatchers([]));
   }, [id]);
   if (error) return <p className="text-danger text-center py-16">{error}</p>;
   if (!game) return <p className="text-muted text-center py-16">Loading college lab…</p>;
@@ -30,7 +38,6 @@ function Inner() {
     awayQbLine: game.awayQbLine, homeQbLine: game.homeQbLine, awayYards: yards?.away, homeYards: yards?.home,
     predAway: lab?.predAway, predHome: lab?.predHome,
   });
-  const catchers = (lab?.leaders || []).filter((l) => /rec|receiving/i.test(l.category));
   const list = catchers.filter((l) => l.team === side);
   const active = list.find((l) => l.name === picked) || list[0];
   return (
@@ -44,7 +51,7 @@ function Inner() {
       </div>
       <section className="card p-4 space-y-3">
         <h3 className="font-semibold text-sm">Pick a receiver</h3>
-        <p className="text-[11px] text-muted">Season receiving leaders from the ESPN college summary. College play-by-play is not in the free file, so there is no catch chart and no fake dots.</p>
+        <p className="text-[11px] text-muted">{recSource || "Loading 2026 receptions…"} Everyone with a catch is listed. No field dots.</p>
         <div className="flex gap-2">
           {[game.away, game.home].map((t) => (
             <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === t ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{t}</button>
@@ -52,11 +59,11 @@ function Inner() {
         </div>
         <div className="flex flex-wrap gap-2">
           {list.map((p) => (
-            <button key={p.name + p.category} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>{p.name}</button>
+            <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>{p.name} {p.rec}</button>
           ))}
         </div>
-        {active && <div className="text-sm"><div className="font-semibold">{active.name}</div><div className="font-mono text-xs">{active.category}: {active.value}</div></div>}
-        {list.length === 0 && <p className="text-xs text-muted">No receiving leader in this summary for {side}.</p>}
+        {active && <div className="text-sm"><div className="font-semibold">{active.name}</div><div className="font-mono text-xs">{active.rec} rec · {active.yards} yards · {active.td} TD</div></div>}
+        {list.length === 0 && <p className="text-xs text-muted">No 2026 receptions in the player box for {side}.</p>}
       </section>
       <div className="card p-4">
         <div className="text-xs text-muted uppercase">QB read</div>
