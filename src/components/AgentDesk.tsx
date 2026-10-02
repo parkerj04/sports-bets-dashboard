@@ -9,11 +9,32 @@ function ticketOf(p: Play) {
   return m ? `P${m[1] || m[2]}` : "";
 }
 
+function marketOf(pick: string) {
+  return pick.toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9.+-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function oneEach(rows: Play[]) {
+  const out: Play[] = [];
+  for (const p of rows) {
+    const key = marketOf(p.pick);
+    const hit = out.find((x) => marketOf(x.pick) === key);
+    if (!hit) out.push(p);
+    else if ((p.why || "").length > (hit.why || "").length) {
+      hit.why = `${p.why} The other card on this same bet scored ${hit.score}.`;
+      hit.score = Math.min(hit.score, p.score);
+    } else {
+      hit.why = `${hit.why} The other card on this same bet scored ${p.score}.`;
+      hit.score = Math.min(hit.score, p.score);
+    }
+  }
+  return out;
+}
+
 function Board({ title, rows }: { title: string; rows: Play[] }) {
   if (!rows.length) return null;
   const groups = new Map<string, Play[]>();
   const singles: Play[] = [];
-  for (const p of rows) {
+  for (const p of oneEach(rows)) {
     const ticket = ticketOf(p);
     if (!ticket) singles.push(p);
     else groups.set(ticket, [...(groups.get(ticket) || []), p]);
@@ -59,8 +80,8 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
       .catch(() => setRows([]));
   }, [away, home]);
   const published = rows.filter((p) => p.status === "published");
-  const review = rows.filter((p) => p.status !== "published");
-  if (!rows.length) return null;
+  const review = rows.filter((p) => p.status !== "published" && p.status !== "archived_superseded" && p.status !== "superseded");
+  if (!published.length && !review.length) return null;
   return (
     <>
       <Board title="Willie Parker's Picks" rows={published} />
