@@ -39,8 +39,6 @@ function Inner() {
     predAway: lab?.predAway, predHome: lab?.predHome,
   });
   const list = catchers.filter((l) => l.team === side);
-  const plus = [...list].sort((a, b) => b.yards - a.yards)[0];
-  const star = [...list].sort((a, b) => b.td - a.td || b.yards - a.yards)[0];
   const active = list.find((l) => l.name === picked) || list[0];
   return (
     <div className="space-y-4">
@@ -53,10 +51,8 @@ function Inner() {
       </div>
       <section className="card p-4 space-y-3">
         <h3 className="font-semibold text-sm">Pick a receiver</h3>
-        <p className="text-[11px] text-muted">+ is the season receiving-yards leader. ★ is the score lean, most receiving touchdowns. No catch chart, so this is not a coverage matchup.</p>
+        <p className="text-[11px] text-muted">Season receptions, yards, and touchdowns from the 2026 player box. No plus or star. Those marks need a matchup, and this file does not have one.</p>
         <p className="text-[11px] text-muted">{recSource || "Loading 2026 receptions…"}</p>
-        {plus && <p className="text-xs">+ {plus.name}. {plus.yards} receiving yards, {plus.rec} catches.</p>}
-        {star && <p className="text-xs">★ {star.name} is the score lean, {star.td} receiving TD.</p>}
         <div className="flex gap-2">
           {[game.away, game.home].map((t) => (
             <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === t ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{t}</button>
@@ -64,12 +60,10 @@ function Inner() {
         </div>
         <div className="flex flex-wrap gap-2">
           {list.map((p) => (
-            <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>
-              {p.name === plus?.name ? "+ " : ""}{p.name === star?.name ? "★ " : ""}{p.name} {p.rec}
-            </button>
+            <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>{p.name} {p.rec}</button>
           ))}
         </div>
-        {active && <div className="text-sm"><div className="font-semibold">{active.name === plus?.name ? "+ " : ""}{active.name === star?.name ? "★ " : ""}{active.name}</div><div className="font-mono text-xs">{active.rec} rec · {active.yards} yards · {active.td} TD</div></div>}
+        {active && <div className="text-sm"><div className="font-semibold">{active.name}</div><div className="font-mono text-xs">{active.rec} rec · {active.yards} yards · {active.td} TD</div></div>}
         {list.length === 0 && <p className="text-xs text-muted">No 2026 receptions in the player box for {side}.</p>}
       </section>
       <div className="card p-4">
