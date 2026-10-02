@@ -5,8 +5,26 @@ export const dynamic = "force-dynamic";
 
 type Play = { id: string; game: string; away: string; home: string; pick: string; score: number; why: string };
 
+const NICK: Record<string, string> = {
+  PIT: "STEELER", CLE: "BROWN", BAL: "RAVEN", CIN: "BENGAL", WAS: "COMMANDER", WSH: "COMMANDER",
+  PHI: "EAGLE", DAL: "COWBOY", NYG: "GIANT", NYJ: "JET", NE: "PATRIOT", BUF: "BILL",
+  MIA: "DOLPHIN", KC: "CHIEF", LV: "RAIDER", LAC: "CHARGER", DEN: "BRONCO",
+  IND: "COLT", JAX: "JAGUAR", HOU: "TEXAN", TEN: "TITAN", LAR: "RAM", LA: "RAM",
+  SF: "49", SEA: "SEAHAWK", ARI: "CARDINAL", GB: "PACKER", CHI: "BEAR", MIN: "VIKING",
+  DET: "LION", TB: "BUCCANEER", ATL: "FALCON", CAR: "PANTHER", NO: "SAINT",
+};
+
 function serviceKey() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+}
+
+function hit(tag: string, value: string) {
+  const t = tag.toUpperCase();
+  const v = value.toUpperCase();
+  if (!t) return true;
+  if (v === t || v.includes(t) || t.includes(v)) return true;
+  const nick = NICK[t];
+  return Boolean(nick && v.includes(nick));
 }
 
 async function live(): Promise<Play[] | null> {
@@ -22,10 +40,10 @@ async function live(): Promise<Play[] | null> {
 
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
-  const away = (q.get("away") || "").toUpperCase();
-  const home = (q.get("home") || "").toUpperCase();
+  const away = q.get("away") || "";
+  const home = q.get("home") || "";
   const rows = (await live()) || (seed.plays as Play[]);
-  const plays = rows.filter((p) => !away || (p.away === away && p.home === home) || (p.away === home && p.home === away));
+  const plays = rows.filter((p) => !away || ((hit(away, p.away) && hit(home, p.home)) || (hit(away, p.home) && hit(home, p.away)) || (hit(away, p.game) && hit(home, p.game))));
   return NextResponse.json({ plays, note: "Agent desk. A posted play still needs a case against. 80 is not available from this route." });
 }
 
