@@ -59,11 +59,23 @@ function Board({ title, rows }: { title: string; rows: Play[] }) {
     </section>
   );
 }
-function hit(tag: string, p: Play) {
-  const blob = `${p.away || ""} ${p.home || ""} ${p.game || ""} ${p.pick}`.toUpperCase();
-  const t = tag.toUpperCase();
-  const nick: Record<string, string> = { PITT: "PITTSBURGH", VT: "VIRGINIA TECH", PSU: "PENN", NW: "NORTHWESTERN", LIB: "LIBERTY", DEL: "DELAWARE", MTST: "MONTANA", IDHO: "IDAHO", PIT: "STEELER", CLE: "BROWN" };
-  return blob.includes(t) || blob.includes(nick[t] || "NOMATCH");
+function teamHit(page: string, code: string) {
+  const t = page.toUpperCase();
+  const c = code.toUpperCase();
+  if (c === "PIT") return t.includes("STEELER") || t === "PIT";
+  if (c === "PITT") return t.includes("PANTHER") || t.includes("PITT");
+  if (c === "CLE") return t.includes("BROWN") || t.includes("CLEVELAND") || t === "CLE";
+  if (c === "VT") return t.includes("VIRGINIA TECH") || t.includes("HOKIES") || t === "VT";
+  if (c === "PSU") return t.includes("PENN STATE") || t === "PSU";
+  if (c === "NW") return t.includes("NORTHWESTERN") || t === "NW";
+  if (c === "LIB") return t.includes("LIBERTY") || t === "LIB";
+  if (c === "DEL") return t.includes("DELAWARE") || t === "DEL";
+  if (c === "MTST") return t.includes("MONTANA") || t === "MTST";
+  if (c === "IDHO" || c === "IDA") return t.includes("IDAHO") || t === "IDHO";
+  return t.includes(c);
+}
+function onGame(away: string, home: string, p: Play) {
+  return (teamHit(away, p.away || "") && teamHit(home, p.home || "")) || (teamHit(away, p.home || "") && teamHit(home, p.away || ""));
 }
 export function AgentDesk({ away, home }: { away: string; home: string }) {
   const [rows, setRows] = useState<Play[]>([]);
@@ -72,13 +84,13 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
     fetch(`/api/agent/plays?away=${encodeURIComponent(away)}&home=${encodeURIComponent(home)}`)
       .then((r) => r.json()).then((d) => setRows(d.plays || [])).catch(() => setRows([]));
   }, [away, home]);
-  const desk = DESK.filter((p) => hit(away, p) && hit(home, p));
+  const desk = DESK.filter((p) => onGame(away, home, p));
   const review = rows.filter((p) => p.status !== "published" && p.status !== "archived_superseded" && p.status !== "superseded");
   if (!desk.length && !review.length) return null;
   return (
     <>
       <Board title="Desk" rows={desk} />
-      <Board title="Willie Parker's Picks · in review" rows={review} />
+      <Board title="In review" rows={review} />
     </>
   );
 }
