@@ -2,22 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-type Play = { id: string; pick: string; score: number; why: string };
+type Play = { id: string; pick: string; score: number; why: string; status?: string };
 
 function ticketOf(p: Play) {
   const m = `${p.id} ${p.pick}`.match(/\bP(\d+)\b|p(\d+)-leg/i);
   return m ? `P${m[1] || m[2]}` : "";
 }
 
-export function AgentDesk({ away, home }: { away: string; home: string }) {
-  const [rows, setRows] = useState<Play[]>([]);
-  useEffect(() => {
-    if (!away || !home) return;
-    fetch(`/api/agent/plays?away=${encodeURIComponent(away)}&home=${encodeURIComponent(home)}`)
-      .then((r) => r.json())
-      .then((d) => setRows((d.plays || []).slice().sort((a: Play, b: Play) => b.score - a.score)))
-      .catch(() => setRows([]));
-  }, [away, home]);
+function Board({ title, rows }: { title: string; rows: Play[] }) {
   if (!rows.length) return null;
   const groups = new Map<string, Play[]>();
   const singles: Play[] = [];
@@ -26,10 +18,10 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
     if (!ticket) singles.push(p);
     else groups.set(ticket, [...(groups.get(ticket) || []), p]);
   }
-  const tickets = Array.from(groups.entries()).sort((a, b) => b[1][0].score - a[1][0].score);
+  const tickets = Array.from(groups.entries());
   return (
     <section className="space-y-3">
-      <h3 className="font-semibold text-sm">Willie Parker's Picks</h3>
+      <h3 className="font-semibold text-sm">{title}</h3>
       {singles.map((p, i) => (
         <div key={p.id} className="card p-4 text-sm">
           <div className="flex justify-between gap-2">
@@ -54,5 +46,25 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
         </div>
       ))}
     </section>
+  );
+}
+
+export function AgentDesk({ away, home }: { away: string; home: string }) {
+  const [rows, setRows] = useState<Play[]>([]);
+  useEffect(() => {
+    if (!away || !home) return;
+    fetch(`/api/agent/plays?away=${encodeURIComponent(away)}&home=${encodeURIComponent(home)}`)
+      .then((r) => r.json())
+      .then((d) => setRows((d.plays || []).slice().sort((a: Play, b: Play) => b.score - a.score)))
+      .catch(() => setRows([]));
+  }, [away, home]);
+  const published = rows.filter((p) => p.status === "published");
+  const review = rows.filter((p) => p.status !== "published");
+  if (!rows.length) return null;
+  return (
+    <>
+      <Board title="Willie Parker's Picks" rows={published} />
+      <Board title="Willie Parker's Picks · in review" rows={review} />
+    </>
   );
 }
