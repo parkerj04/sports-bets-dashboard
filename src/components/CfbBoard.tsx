@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CfbGame } from "@/lib/cfb";
 import { scoreTone } from "@/lib/score-color";
+import { ModelCall } from "@/components/ModelCall";
 
 export function CfbBoard() {
   const [week, setWeek] = useState(0);
@@ -15,7 +16,7 @@ export function CfbBoard() {
   return (
     <section className="space-y-3">
       <h1 className="text-xl font-bold">College football week {week || "—"}</h1>
-      <p className="text-sm text-muted">SEC, Big Ten, Big 12, ACC, plus Notre Dame. Finals are off the slate. In progress stays.</p>
+      <p className="text-sm text-muted">SEC, Big Ten, Big 12, ACC, plus Notre Dame. Finals are off the slate. The score on a card is the posted number, not a private model.</p>
       {loading && <p className="text-muted text-sm">Loading college…</p>}
       {results.length > 0 && (
         <div className="card p-4 space-y-2">
@@ -42,6 +43,7 @@ export function CfbBoard() {
             </div>
           </div>
           <div className="text-xs font-mono text-muted">{g.spread} · O/U {g.total}</div>
+          <ModelCall away={g.away} home={g.home} spread={g.spread} total={g.total} />
           <div className="text-sm">{g.awayQb} vs {g.homeQb}</div>
         </Link>
       ))}
