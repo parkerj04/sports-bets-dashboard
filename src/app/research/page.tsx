@@ -11,6 +11,7 @@ import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
 import { SlipTray } from "@/components/SlipTray";
 import { TrendBoard } from "@/components/TrendBoard";
+import { ModelCall } from "@/components/ModelCall";
 import { scoreTone } from "@/lib/score-color";
 
 type Sport = "MLB" | "NFL" | "CFB";
@@ -59,7 +60,7 @@ export default function ResearchPage() {
             <button key={s} onClick={() => setSport(s)} className={`px-4 py-1.5 rounded-full text-sm border ${sport === s ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{s}</button>
           ))}
         </div>
-        <p className="text-xs text-muted">Scoreboards checked 2:11 AM ET, Saturday Oct 3. Finals are off the slate. Games that have not kicked off stay.</p>
+        <p className="text-xs text-muted">Scoreboards checked 2:11 AM ET, Saturday Oct 3. Finals are off the slate. The model score is the posted number split, not a private model.</p>
         {sport === "CFB" && (
           <>
             <CfbBoard />
@@ -70,7 +71,7 @@ export default function ResearchPage() {
           <>
             <section className="space-y-3">
               <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-              <p className="text-sm text-muted">Tap a game for researched plays and touchdown leans. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>. Finals are off this slate. {nfl.checked}</p>
+              <p className="text-sm text-muted">Tap a game for researched plays. Finals are off this slate. {nfl.checked}</p>
               {loading && <p className="text-muted text-sm">Loading NFL…</p>}
               {(nfl.results || []).length > 0 && (
                 <div className="card p-4 space-y-2">
@@ -100,6 +101,7 @@ export default function ResearchPage() {
                     <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.total}</div></div>
                     <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.mlAway}/{g.mlHome}</div></div>
                   </div>
+                  <ModelCall away={g.away} home={g.home} spread={g.spread} total={g.total} />
                   <div className="text-sm"><span className="text-accent font-medium">{g.leanML}</span>{" · "}<span className="text-accent font-medium">Total: {g.leanTotal}</span></div>
                   <p className="text-xs text-muted">{g.leanWhy}</p>
                 </Link>
@@ -112,7 +114,7 @@ export default function ResearchPage() {
         {sport === "MLB" && (
           <section className="space-y-3">
             <h1 className="text-xl font-bold">MLB slate</h1>
-            <p className="text-sm text-muted">Tap a game for ticket desk, BvP, steals, and researched picks. Finals are removed. Only games that have not started stay on the slate.</p>
+            <p className="text-sm text-muted">Tap a game for the lab. Finals are off the slate. The model score uses the posted run line and total.</p>
             {loading && <p className="text-muted text-sm">Loading slate…</p>}
             {error && !loading && <p className="text-danger text-sm">{error}</p>}
             <div className="card p-4 space-y-2">
@@ -135,15 +137,16 @@ export default function ResearchPage() {
                   </div>
                   <div className="text-right text-[10px] text-accent">Open game →</div>
                 </div>
-                <div className="text-sm">
-                  <span className="text-muted">SP</span> {g.awayPitcher || "TBD"} <span className="text-muted">vs</span> {g.homePitcher || "TBD"}
-                </div>
+                <div className="text-sm"><span className="text-muted">SP</span> {g.awayPitcher || "TBD"} <span className="text-muted">vs</span> {g.homePitcher || "TBD"}</div>
                 {g.line && (
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.line.spread}</div></div>
-                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.line.total}</div></div>
-                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.line.mlAway}/{g.line.mlHome}</div></div>
-                  </div>
+                  <>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.line.spread}</div></div>
+                      <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.line.total}</div></div>
+                      <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.line.mlAway}/{g.line.mlHome}</div></div>
+                    </div>
+                    <ModelCall away={g.awayTeam} home={g.homeTeam} spread={g.line.spread} total={g.line.total} />
+                  </>
                 )}
               </Link>
             ))}
