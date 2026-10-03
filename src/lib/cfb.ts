@@ -96,13 +96,16 @@ function cfbCards(away: string, home: string, awayScore: string, homeScore: stri
   if (pair.includes("penn state") && pair.includes("northwestern")) {
     return ["No desk card. Northwestern 34, Penn State 13. ESPN final."];
   }
+  if (pair.includes("montana state") && pair.includes("idaho")) {
+    return ["No desk card. Idaho 35, Montana State 34. ESPN final."];
+  }
   return [`No desk card. Final ${away} ${awayScore}, ${home} ${homeScore}.`];
 }
 
 export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[]; results: CfbResult[] }> {
   const boards = await Promise.all([
-    fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=200", { next: { revalidate: 300 } }),
-    fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=200", { next: { revalidate: 300 } }),
+    fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=200", { cache: "no-store" }),
+    fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=200", { cache: "no-store" }),
   ]);
   const games: CfbGame[] = [];
   const results: CfbResult[] = [];

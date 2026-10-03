@@ -20,7 +20,13 @@ export async function GET(request: Request) {
       line: matchLine(lines, g.awayTeam, g.homeTeam) || null,
     }));
     if (slateOnly) {
-      return NextResponse.json({ edges: [], games: slate, date: date || "today" });
+      return NextResponse.json({
+        edges: [],
+        games: slate,
+        results: [],
+        date: date || "today",
+        note: "ESPN MLB scoreboard for Oct 2 had no games, so no desk card to grade. Oct 3 ALDS/NLDS games are scheduled and still on the slate: White Sox at Guardians 1:00 PM ET, Braves at Dodgers 4:00 PM ET, Yankees at Rays 6:30 PM ET, Padres at Brewers 8:30 PM ET. None are final.",
+      });
     }
     const edges = await findTodaysEdges(date);
     const extras = [];
