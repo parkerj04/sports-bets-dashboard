@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Play = { id: string; pick: string; score: number; why: string; status?: string; game?: string; away?: string; home?: string };
 
-const DESK: Play[] = [
+const RESULTS: Play[] = [
   { id: "desk-pitt-25", away: "PITT", home: "VT", pick: "Pittsburgh +2.5, shop the largest number", score: 58, status: "published", why: "Both agents took the points, so this is one card. Virginia Tech opened -4 to -5.5 and drifted to -2.5 or -3 by game day while the total climbed from about 52.5 to 54.5-55.5. DraftKings had 85 percent of the handle and 59 percent of the tickets on Virginia Tech, and the number still moved toward Pitt. That is the sharp-side tell. Both teams are 4-0, the first meeting of two unranked 4-0 power teams since 1985. Pitt is 3rd in scoring defense at 8.5 points allowed. James Franklin is in year one at Virginia Tech. Pat Narduzzi is in year 12. Ja'Kyrian Turner is probable. The flag is Malik Knight: two outlets ruled him out and the Oct 2 depth chart still listed him. Shop the largest number. Do not lay a shorter one. Graded: Pitt won 35-33." },
   { id: "desk-lib-65", away: "LIB", home: "DEL", pick: "Liberty -6.5, do not chase past -7", score: 56, status: "published", why: "Both agents took Liberty. The 70 and the 54 were the same bet. Liberty is 3-1 and put up 485 total yards and 263 rushing yards in the 34-17 win at Coastal Carolina, with 46 percent on third down and 13 scores on 16 red-zone trips. Delaware just lost 42-3 at Virginia with 160 total yards. Nick Minicucci hurt his knee in that game. Ryan Carty would not confirm him on Sept 30. If he sits, Braden Streeter was 2-for-16 for 9 yards and 2 picks in relief. The case against is real: Delaware is 2-0 at home, beat Coastal 22-14, and has a five-game home streak. One tracker had 58 percent of tickets on Liberty and 55 percent of the money on Delaware. Take -6.5. If the number is -7.5, pass. Graded: Liberty won 30-14." },
   { id: "desk-ida-145", away: "MTST", home: "IDHO", pick: "Idaho +14.5, shop the largest number", score: 54, status: "published", why: "This is a price card, not a form card. Montana State is the defending FCS champion, 5-0, No. 1 in both polls, on a 19-game win streak. Idaho is 0-4. The number drifted from Montana State -17.5 toward -14.5 or -15.5. That drift is the only reason the dog is on the board. A 15-point spread needs the favorite's cover rate and the blowout habit checked before anyone lays it. Shop the largest number. If it is back to -17, the card is gone." },
@@ -76,6 +76,7 @@ function teamHit(page: string, code: string) {
 function onGame(away: string, home: string, p: Play) {
   return (teamHit(away, p.away || "") && teamHit(home, p.home || "")) || (teamHit(away, p.home || "") && teamHit(home, p.away || ""));
 }
+const OPEN_IDS = new Set(["desk-ida-145"]);
 export function AgentDesk({ away, home }: { away: string; home: string }) {
   const [rows, setRows] = useState<Play[]>([]);
   useEffect(() => {
@@ -83,12 +84,15 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
     fetch(`/api/agent/plays?away=${encodeURIComponent(away)}&home=${encodeURIComponent(home)}`)
       .then((r) => r.json()).then((d) => setRows(d.plays || [])).catch(() => setRows([]));
   }, [away, home]);
-  const desk = DESK.filter((p) => onGame(away, home, p));
-  const review = rows.filter((p) => p.status !== "published" && p.status !== "archived_superseded" && p.status !== "superseded");
-  if (!desk.length && !review.length) return null;
+  const matched = RESULTS.filter((p) => onGame(away, home, p));
+  const desk = matched.filter((p) => OPEN_IDS.has(p.id));
+  const graded = matched.filter((p) => !OPEN_IDS.has(p.id));
+  const review = rows.filter((p) => p.status !== "published" && p.status !== "archived_superseded" && p.status !== "superseded" && p.status !== "graded");
+  if (!desk.length && !review.length && !graded.length) return null;
   return (
     <>
       <Board title="Desk" rows={desk} />
+      <Board title="Results" rows={graded} />
       <Board title="In review" rows={review} />
     </>
   );

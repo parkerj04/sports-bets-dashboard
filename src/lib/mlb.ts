@@ -96,6 +96,8 @@ export async function getTodaysGames(date?: string): Promise<GameMatchup[]> {
     for (const g of day.games || []) {
       const away = g.teams?.away;
       const home = g.teams?.home;
+      const abstract = g.status?.abstractGameState || "";
+      if (abstract === "Final") continue;
       games.push({
         gamePk: g.gamePk,
         awayTeam: away?.team?.name || "Away",

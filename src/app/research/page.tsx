@@ -19,7 +19,7 @@ type SlateGame = GameMatchup & { line?: MlbLine | null };
 export default function ResearchPage() {
   const [sport, setSport] = useState<Sport>("MLB");
   const [games, setGames] = useState<SlateGame[]>([]);
-  const [nfl, setNfl] = useState<{ week: number; games: NflGame[] }>({ week: 0, games: [] });
+  const [nfl, setNfl] = useState<{ week: number; games: NflGame[]; results?: { id: string; game: string; scoreline: string; cards: string[] }[] }>({ week: 0, games: [], results: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -30,7 +30,7 @@ export default function ResearchPage() {
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
-        if (sport === "NFL") setNfl({ week: data.week || 0, games: data.games || [] });
+        if (sport === "NFL") setNfl({ week: data.week || 0, games: data.games || [], results: data.results || [] });
         else setGames(data.games || []);
         if (data.error) setError(data.error);
       })
@@ -62,8 +62,19 @@ export default function ResearchPage() {
           <>
             <section className="space-y-3">
               <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-              <p className="text-sm text-muted">Tap a game for researched plays and touchdown leans. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>.</p>
+              <p className="text-sm text-muted">Tap a game for researched plays and touchdown leans. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>. Finals are off this slate.</p>
               {loading && <p className="text-muted text-sm">Loading NFL…</p>}
+              {(nfl.results || []).length > 0 && (
+                <div className="card p-4 space-y-2">
+                  <h2 className="font-semibold text-sm">Results</h2>
+                  {(nfl.results || []).map((r) => (
+                    <div key={r.id} className="text-sm border-t border-card-border pt-2">
+                      <div className="font-medium">{r.scoreline}</div>
+                      {r.cards.map((c) => <p key={c} className="text-xs text-muted mt-1">{c}</p>)}
+                    </div>
+                  ))}
+                </div>
+              )}
               {nfl.games.map((g) => (
                 <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className="card p-4 space-y-2 block hover:border-accent/40">
                   <div className="flex justify-between gap-3">
@@ -93,7 +104,7 @@ export default function ResearchPage() {
         {sport === "MLB" && (
           <section className="space-y-3">
             <h1 className="text-xl font-bold">MLB slate</h1>
-            <p className="text-sm text-muted">Tap a game for ticket desk, BvP, steals, and researched picks.</p>
+            <p className="text-sm text-muted">Tap a game for ticket desk, BvP, steals, and researched picks. Finals are removed. ESPN Oct 2 board was empty. Oct 3 games are still scheduled.</p>
             {loading && <p className="text-muted text-sm">Loading slate…</p>}
             {error && !loading && <p className="text-danger text-sm">{error}</p>}
             {games.map((g) => (

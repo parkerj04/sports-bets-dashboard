@@ -21,6 +21,13 @@ export interface NflGame {
   leanScore?: number;
 }
 
+export type SlateResult = {
+  id: string;
+  game: string;
+  scoreline: string;
+  cards: string[];
+};
+
 import { impliedTotals } from "./ticket";
 import { footballRegistry } from "./football-desk";
 import { newsLine } from "./nfl-news";
@@ -46,20 +53,50 @@ function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanSc
   return { ...g, leanML: desk.pick, leanTotal, leanWhy, leanScore: desk.score };
 }
 
-export async function getNflWeek(): Promise<{ week: number; games: NflGame[] }> {
+function deskCards(away: string, home: string, awayScore: string, homeScore: string): string[] {
+  const a = away.toLowerCase();
+  const h = home.toLowerCase();
+  if (a.includes("steelers") && h.includes("browns")) {
+    return [
+      "Jaylen Warren over 15.5 rush attempts: win, 17 carries (ESPN box).",
+      "Jaylen Warren over 67.5 rush yards: win, 93 yards.",
+      "Pat Freiermuth over 27.5 receiving yards: loss, 3 catches for 17.",
+      "Harold Fannin Jr. anytime touchdown: win, 1 receiving TD.",
+      "Under 38.5: loss, 24-27, total 51.",
+    ];
+  }
+  return [`No desk card. Final ${away} ${awayScore}, ${home} ${homeScore}.`];
+}
+
+export async function getNflWeek(): Promise<{ week: number; games: NflGame[]; results: SlateResult[] }> {
   const res = await fetch(
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2",
     { next: { revalidate: 300 } }
   );
-  if (!res.ok) return { week: 0, games: [] };
+  if (!res.ok) return { week: 0, games: [], results: [] };
   const data = await res.json();
   const week = data.week?.number || 0;
   const games: NflGame[] = [];
+  const results: SlateResult[] = [];
   for (const e of data.events || []) {
     const c = e.competitions?.[0] || {};
     const comps = c.competitors || [];
     const home = comps.find((t: { homeAway: string }) => t.homeAway === "home");
     const away = comps.find((t: { homeAway: string }) => t.homeAway === "away");
+    const state = c.status?.type?.name || e.status?.type?.name || "";
+    const awayName = away?.team?.displayName || "Away";
+    const homeName = home?.team?.displayName || "Home";
+    if (state === "STATUS_FINAL" || state === "STATUS_FINAL_OVERTIME") {
+      const awayScore = String(away?.score ?? "");
+      const homeScore = String(home?.score ?? "");
+      results.push({
+        id: String(e.id),
+        game: `${awayName} at ${homeName}`,
+        scoreline: `${awayName} ${awayScore}, ${homeName} ${homeScore} Final`,
+        cards: deskCards(awayName, homeName, awayScore, homeScore),
+      });
+      continue;
+    }
     const rec = (t: { records?: { type: string; summary: string }[] } | undefined) =>
       t?.records?.find((r) => r.type === "total")?.summary || "";
     const odds = c.odds?.[0];
@@ -70,12 +107,12 @@ export async function getNflWeek(): Promise<{ week: number; games: NflGame[] }> 
         name: e.name,
         shortName: e.shortName,
         date: e.date,
-        status: e.status?.type?.description || "",
+        status: c.status?.type?.description || e.status?.type?.description || "",
         venue: c.venue?.fullName || "",
         broadcast: c.broadcasts?.[0]?.names?.[0] || "",
         week,
-        away: away?.team?.displayName || "Away",
-        home: home?.team?.displayName || "Home",
+        away: awayName,
+        home: homeName,
         awayRecord: rec(away),
         homeRecord: rec(home),
         spread: odds?.details || "NL",
@@ -86,5 +123,5 @@ export async function getNflWeek(): Promise<{ week: number; games: NflGame[] }> 
     );
   }
   games.sort((a, b) => a.date.localeCompare(b.date));
-  return { week, games };
+  return { week, games, results };
 }

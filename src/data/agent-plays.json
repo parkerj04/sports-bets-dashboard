@@ -7,7 +7,8 @@
       "home": "CLE",
       "pick": "Jaylen Warren over 15.5 rush attempts",
       "score": 62,
-      "why": "Rico Dowdle is out, so the backfield is Warren. He had 176 yards from scrimmage last week. Cleveland allows 2.7 explosive runs a game, 27th. Mason Graham is the flag. Attempts can still come if the yards do not."
+      "status": "graded",
+      "why": "Graded win. ESPN box: 17 carries, 93 yards. Rico Dowdle was out."
     },
     {
       "id": "pit-cle-murt",
@@ -16,7 +17,8 @@
       "home": "CLE",
       "pick": "Pat Freiermuth over 27.5 receiving yards",
       "score": 58,
-      "why": "Cleveland is in man after Week 1, 8th in man rate and first in middle-of-field closed. Tight end against a linebacker is the fit. Freiermuth had 3 for 63 in the December 28, 2025 meeting. Washington splits the room."
+      "status": "graded",
+      "why": "Graded loss. ESPN box: 3 catches for 17 yards. Darnell Washington had the touchdown."
     },
     {
       "id": "pit-cle-fannin",
@@ -25,7 +27,8 @@
       "home": "CLE",
       "pick": "Harold Fannin Jr. anytime touchdown",
       "score": 60,
-      "why": "Two scores in the last two weeks. Pittsburgh is the zone side and Porter is in Dallas. Only if the number is plus money. Watson is behind a line missing both Jenkins, with Watt on the edge."
+      "status": "graded",
+      "why": "Graded win. ESPN box: 3 catches, 27 yards, 1 receiving touchdown."
     }
   ]
 }
