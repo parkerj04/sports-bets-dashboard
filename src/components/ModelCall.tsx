@@ -7,30 +7,25 @@ export function ModelCall({ away, home, spread, total }: { away: string; home: s
   const awayToken = away.toLowerCase().split(" ").pop() || "";
   const text = raw.toLowerCase();
   const homeFav = text.includes(homeToken) ? text.includes("-") : text.includes(awayToken) ? false : text.trim().startsWith("-");
-  const homeScore = homeFav ? (ou + line) / 2 : (ou - line) / 2;
-  const awayScore = ou - homeScore;
+  const homeScore = Math.round(homeFav ? (ou + line) / 2 : (ou - line) / 2);
+  const awayScore = Math.round(ou - homeScore);
   const confidence = line >= 14 ? 64 : line >= 7 ? 58 : line >= 3 ? 54 : 51;
-  const fav = homeFav ? home.split(" ").pop() : away.split(" ").pop();
-  const dog = homeFav ? away.split(" ").pop() : home.split(" ").pop();
+  const tag = (name: string) => name.split(" ").pop()?.slice(0, 4).toUpperCase();
   return (
     <div className="rounded-lg border border-card-border bg-white/5 px-3 py-2 text-xs">
       <div className="flex justify-between gap-2">
-        <span className="text-muted">Model spread</span>
-        <span className="font-mono">{fav} -{line} · {dog} +{line}</span>
-      </div>
-      <div className="flex justify-between gap-2 mt-1">
         <span className="text-muted">Model score</span>
-        <span className="font-mono">{away.split(" ").pop()} {awayScore.toFixed(1)} · {home.split(" ").pop()} {homeScore.toFixed(1)}</span>
+        <span className="font-mono font-semibold">{tag(away)} {awayScore} {tag(home)} {homeScore}</span>
       </div>
       <div className="flex justify-between gap-2 mt-1">
         <span className="text-muted">Model total</span>
-        <span className="font-mono">{ou}</span>
+        <span className="font-mono">{awayScore + homeScore}</span>
       </div>
       <div className="flex justify-between gap-2 mt-1">
         <span className="text-muted">Confidence</span>
         <span className="font-mono">{confidence}</span>
       </div>
-      <p className="text-[11px] text-muted mt-1">Minus lays the points. Plus gets them. -1.5 has to win by 2. +1.5 can lose by 1. This is the posted number, not a private model.</p>
+      <p className="text-[11px] text-muted mt-1">Straight score from the posted number. Not a private model, and not a bet.</p>
     </div>
   );
 }
