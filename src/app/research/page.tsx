@@ -15,11 +15,14 @@ import { scoreTone } from "@/lib/score-color";
 
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
+type ResultNote = { id: string; game: string; scoreline: string; cards: string[] };
 
 export default function ResearchPage() {
   const [sport, setSport] = useState<Sport>("MLB");
   const [games, setGames] = useState<SlateGame[]>([]);
-  const [nfl, setNfl] = useState<{ week: number; games: NflGame[]; results?: { id: string; game: string; scoreline: string; cards: string[] }[] }>({ week: 0, games: [], results: [] });
+  const [mlbResults, setMlbResults] = useState<ResultNote[]>([]);
+  const [mlbNote, setMlbNote] = useState("");
+  const [nfl, setNfl] = useState<{ week: number; games: NflGame[]; results?: ResultNote[]; checked?: string }>({ week: 0, games: [], results: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -30,8 +33,12 @@ export default function ResearchPage() {
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
-        if (sport === "NFL") setNfl({ week: data.week || 0, games: data.games || [], results: data.results || [] });
-        else setGames(data.games || []);
+        if (sport === "NFL") setNfl({ week: data.week || 0, games: data.games || [], results: data.results || [], checked: data.checked });
+        else {
+          setGames(data.games || []);
+          setMlbResults(data.results || []);
+          setMlbNote(data.note || "");
+        }
         if (data.error) setError(data.error);
       })
       .catch(() => setError("Could not load research"))
@@ -52,6 +59,7 @@ export default function ResearchPage() {
             <button key={s} onClick={() => setSport(s)} className={`px-4 py-1.5 rounded-full text-sm border ${sport === s ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{s}</button>
           ))}
         </div>
+        <p className="text-xs text-muted">Scoreboards checked 2:11 AM ET, Saturday Oct 3. Finals are off the slate. Games that have not kicked off stay.</p>
         {sport === "CFB" && (
           <>
             <CfbBoard />
@@ -62,7 +70,7 @@ export default function ResearchPage() {
           <>
             <section className="space-y-3">
               <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-              <p className="text-sm text-muted">Tap a game for researched plays and touchdown leans. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>. Finals are off this slate.</p>
+              <p className="text-sm text-muted">Tap a game for researched plays and touchdown leans. Checklist: <Link href="/research/nfl-playbook" className="text-accent hover:underline">NFL pre-bet checklist</Link>. Finals are off this slate. {nfl.checked}</p>
               {loading && <p className="text-muted text-sm">Loading NFL…</p>}
               {(nfl.results || []).length > 0 && (
                 <div className="card p-4 space-y-2">
@@ -104,9 +112,19 @@ export default function ResearchPage() {
         {sport === "MLB" && (
           <section className="space-y-3">
             <h1 className="text-xl font-bold">MLB slate</h1>
-            <p className="text-sm text-muted">Tap a game for ticket desk, BvP, steals, and researched picks. Finals are removed. ESPN Oct 2 board was empty. Oct 3 games are still scheduled.</p>
+            <p className="text-sm text-muted">Tap a game for ticket desk, BvP, steals, and researched picks. Finals are removed. Only games that have not started stay on the slate.</p>
             {loading && <p className="text-muted text-sm">Loading slate…</p>}
             {error && !loading && <p className="text-danger text-sm">{error}</p>}
+            <div className="card p-4 space-y-2">
+              <h2 className="font-semibold text-sm">Results</h2>
+              <p className="text-xs text-muted">{mlbNote || "Checking ESPN…"}</p>
+              {mlbResults.map((r) => (
+                <div key={r.id} className="text-sm border-t border-card-border pt-2">
+                  <div className="font-medium">{r.scoreline}</div>
+                  {r.cards.map((c) => <p key={c} className="text-xs text-muted mt-1">{c}</p>)}
+                </div>
+              ))}
+            </div>
             {games.map((g) => (
               <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card p-4 space-y-2 block hover:border-accent/40">
                 <div className="flex justify-between gap-3">

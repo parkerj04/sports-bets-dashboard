@@ -60,20 +60,20 @@ function deskCards(away: string, home: string, awayScore: string, homeScore: str
     return [
       "Jaylen Warren over 15.5 rush attempts: win, 17 carries (ESPN box).",
       "Jaylen Warren over 67.5 rush yards: win, 93 yards.",
-      "Pat Freiermuth over 27.5 receiving yards: loss, 3 catches for 17.",
-      "Harold Fannin Jr. anytime touchdown: win, 1 receiving TD.",
+      "Pat Freiermuth over 27.5 receiving yards: loss, 3 catches for 17 yards. He did score a TD; the yards card still missed.",
+      "Harold Fannin Jr. anytime touchdown: win, 1 receiving TD (3 catches, 27 yards).",
       "Under 38.5: loss, 24-27, total 51.",
     ];
   }
   return [`No desk card. Final ${away} ${awayScore}, ${home} ${homeScore}.`];
 }
 
-export async function getNflWeek(): Promise<{ week: number; games: NflGame[]; results: SlateResult[] }> {
+export async function getNflWeek(): Promise<{ week: number; games: NflGame[]; results: SlateResult[]; checked: string }> {
   const res = await fetch(
     "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2",
-    { next: { revalidate: 300 } }
+    { next: { revalidate: 120 } }
   );
-  if (!res.ok) return { week: 0, games: [], results: [] };
+  if (!res.ok) return { week: 0, games: [], results: [], checked: "ESPN NFL scoreboard unavailable" };
   const data = await res.json();
   const week = data.week?.number || 0;
   const games: NflGame[] = [];
@@ -123,5 +123,5 @@ export async function getNflWeek(): Promise<{ week: number; games: NflGame[]; re
     );
   }
   games.sort((a, b) => a.date.localeCompare(b.date));
-  return { week, games, results };
+  return { week, games, results, checked: "ESPN NFL scoreboard, Week 4. Finals removed from the slate." };
 }
