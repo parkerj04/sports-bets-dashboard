@@ -10,9 +10,15 @@ export function ModelCall({ away, home, spread, total }: { away: string; home: s
   const homeScore = homeFav ? (ou + line) / 2 : (ou - line) / 2;
   const awayScore = ou - homeScore;
   const confidence = line >= 14 ? 64 : line >= 7 ? 58 : line >= 3 ? 54 : 51;
+  const fav = homeFav ? home.split(" ").pop() : away.split(" ").pop();
+  const dog = homeFav ? away.split(" ").pop() : home.split(" ").pop();
   return (
     <div className="rounded-lg border border-card-border bg-white/5 px-3 py-2 text-xs">
       <div className="flex justify-between gap-2">
+        <span className="text-muted">Model spread</span>
+        <span className="font-mono">{fav} -{line} · {dog} +{line}</span>
+      </div>
+      <div className="flex justify-between gap-2 mt-1">
         <span className="text-muted">Model score</span>
         <span className="font-mono">{away.split(" ").pop()} {awayScore.toFixed(1)} · {home.split(" ").pop()} {homeScore.toFixed(1)}</span>
       </div>
@@ -24,7 +30,7 @@ export function ModelCall({ away, home, spread, total }: { away: string; home: s
         <span className="text-muted">Confidence</span>
         <span className="font-mono">{confidence}</span>
       </div>
-      <p className="text-[11px] text-muted mt-1">This is the posted spread and total split into a score. It is not a private model, and it is not a bet.</p>
+      <p className="text-[11px] text-muted mt-1">Minus lays the points. Plus gets them. -1.5 has to win by 2. +1.5 can lose by 1. This is the posted number, not a private model.</p>
     </div>
   );
 }
