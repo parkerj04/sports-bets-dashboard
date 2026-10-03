@@ -15,6 +15,35 @@ const statusClass: Record<string, string> = {
   void: "status-void",
 };
 
+const PLACED = [
+  {
+    id: "fri-spread",
+    title: "3-leg parlay",
+    stake: "3u ($30)",
+    price: "+421, boosted to +631",
+    result: "Won",
+    note: "Liberty covered 30-14. Pitt covered 35-33. Northwestern finished 34-13, so +3.5 covered. Payout shown $219.39.",
+    legs: [
+      { pick: "Northwestern +3.5", price: "-107", result: "Won, 34-13" },
+      { pick: "Liberty -6.5", price: "+103", result: "Won, 30-14" },
+      { pick: "Pittsburgh +3.5", price: "-119", result: "Won, 35-33" },
+    ],
+  },
+  {
+    id: "fri-ml",
+    title: "3-leg parlay, bonus bet",
+    stake: "2u bonus ($20)",
+    price: "+518",
+    result: "Won",
+    note: "Same three sides on the moneyline. Pitt and Liberty were already in. Northwestern closed it at 34-13. Ticket payout shown $103.76. A $100.80 cash-out was sitting there if it was taken.",
+    legs: [
+      { pick: "Northwestern moneyline", price: "+116", result: "Won, 34-13" },
+      { pick: "Pittsburgh moneyline", price: "+108", result: "Won, 35-33" },
+      { pick: "Liberty moneyline", price: "-265", result: "Won, 30-14" },
+    ],
+  },
+];
+
 export default function PicksPage() {
   const [picks, setPicks] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +67,7 @@ export default function PicksPage() {
             <Link href="/" className="text-xl">🎯</Link>
             <div>
               <div className="font-semibold text-sm">Public Picks</div>
-              <div className="text-xs text-muted">Bets that were placed. A parlay is one ticket.</div>
+              <div className="text-xs text-muted">Bets that were placed. 1u is $10. A parlay is one ticket.</div>
             </div>
           </div>
           <div className="flex gap-3 text-sm">
@@ -48,68 +77,60 @@ export default function PicksPage() {
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-        {loading && <p className="text-muted text-center py-10">Loading picks…</p>}
-        {!loading && picks.length === 0 && (
-          <div className="card p-10 text-center text-muted">
-            <p className="text-lg mb-1">No public picks yet</p>
-            <p className="text-sm">Check back once a placed bet is shared.</p>
+        {PLACED.map((ticket) => (
+          <div key={ticket.id} className="card p-4 space-y-2">
+            <div className="flex justify-between gap-3">
+              <div>
+                <div className="flex gap-2">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-muted">NCAAF</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full status-won">WON</span>
+                </div>
+                <h3 className="font-semibold mt-1.5">{ticket.title}</h3>
+                <p className="text-sm text-muted">{ticket.stake} · {ticket.price}</p>
+              </div>
+            </div>
+            {ticket.legs.map((leg) => (
+              <div key={leg.pick} className="border-t border-card-border pt-2 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-accent">{leg.pick}</span><span className="font-mono text-xs">{leg.price}</span></div>
+                <p className="text-xs text-muted">{leg.result}</p>
+              </div>
+            ))}
+            <p className="text-xs text-muted border-t border-card-border pt-2">{ticket.note}</p>
           </div>
-        )}
+        ))}
+        {loading && <p className="text-muted text-center py-10">Loading picks…</p>}
         {tickets.map(([name, legs]) => {
           const status = ticketStatus(legs);
-          const stake = legs[0]?.stake || 0;
           return (
             <div key={name} className="card p-4 space-y-2">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex justify-between gap-3">
                 <div>
-                  <div className="flex gap-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-muted">{legs[0].sport}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[status]}`}>{status.toUpperCase()}</span>
-                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[status]}`}>{status.toUpperCase()}</span>
                   <h3 className="font-semibold mt-1.5">{name} · {legs.length} legs</h3>
-                  <p className="text-sm text-muted">{legs[0].event}</p>
                 </div>
-                <div className="text-right text-xs text-muted">{stake}u on the ticket</div>
+                <div className="text-xs text-muted">{legs[0].stake}u</div>
               </div>
               {legs.map((leg) => (
                 <div key={leg.id} className="border-t border-card-border pt-2 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-accent">{leg.selection.replace(/\s*\(P\d+ leg \d+\/\d+\)/, "")}</span>
-                    <span className="font-mono text-xs">{leg.odds > 0 ? `+${leg.odds}` : leg.odds}</span>
-                  </div>
-                  {leg.research && <p className="text-xs text-muted mt-1">{leg.research}</p>}
+                  <span className="text-accent">{leg.selection.replace(/\s*\(P\d+ leg \d+\/\d+\)/, "")}</span>
                 </div>
               ))}
             </div>
           );
         })}
-        {singles.map((bet) => {
-          const oddsStr = bet.odds > 0 ? `+${bet.odds}` : `${bet.odds}`;
-          return (
-            <div key={bet.id} className="card p-4 space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/5 text-muted">{bet.sport}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusClass[bet.status]}`}>{bet.status.toUpperCase()}</span>
-                  </div>
-                  <h3 className="font-semibold mt-1.5">{bet.event}</h3>
-                  <p className="text-accent font-medium text-sm">{bet.selection}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="font-mono font-semibold">{oddsStr}</div>
-                  <div className="text-xs text-muted">{bet.stake}u · to win {profitIfWon(bet.stake, bet.odds).toFixed(2)}u</div>
-                </div>
+        {singles.map((bet) => (
+          <div key={bet.id} className="card p-4 space-y-2">
+            <div className="flex justify-between gap-3">
+              <div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[bet.status]}`}>{bet.status.toUpperCase()}</span>
+                <h3 className="font-semibold mt-1.5">{bet.event}</h3>
+                <p className="text-accent text-sm">{bet.selection}</p>
               </div>
-              {(bet.notes || bet.research) && (
-                <div className="text-sm text-muted border-t border-card-border pt-2 space-y-1">
-                  {bet.notes && <p>{bet.notes}</p>}
-                  {bet.research && <p className="text-xs">{bet.research}</p>}
-                </div>
-              )}
+              <div className="font-mono text-sm">{bet.odds > 0 ? `+${bet.odds}` : bet.odds}<div className="text-xs text-muted">{bet.stake}u · to win {profitIfWon(bet.stake, bet.odds).toFixed(2)}u</div></div>
             </div>
-          );
-        })}
+            {bet.research && <p className="text-xs text-muted">{bet.research}</p>}
+          </div>
+        ))}
       </main>
     </div>
   );
