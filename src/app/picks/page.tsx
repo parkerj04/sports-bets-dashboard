@@ -17,6 +17,22 @@ const statusClass: Record<string, string> = {
 
 const PLACED = [
   {
+    id: "p53",
+    title: "P53 · Lions at Panthers",
+    stake: "Placed",
+    price: "Same-game parlay",
+    result: "Pending",
+    note: "8:20. Charlotte last check was cloudy, 66 degrees, wind 1 mph, 7 percent precip. If it is raining at kickoff, the over and Young come off. Gibbs anytime is not on this ticket.",
+    legs: [
+      { pick: "Jahmyr Gibbs over 44.5 rushing yards", price: "alt", result: "Floor 52" },
+      { pick: "Chuba Hubbard over 39.5 rushing yards", price: "alt", result: "Agent floor 49" },
+      { pick: "Amon-Ra St. Brown over 5 receptions", price: "alt", result: "35 targets in 3 games" },
+      { pick: "Bryce Young over 199.5 passing yards", price: "alt", result: "Detroit 30th pass defense" },
+      { pick: "Over 50.5", price: "total", result: "Off if the rain arrives" },
+      { pick: "Darren Waller anytime", price: "+235", result: "Detroit allowed a tight end score in all 3" },
+    ],
+  },
+  {
     id: "fri-spread",
     title: "3-leg parlay",
     stake: "3u ($30)",
@@ -35,7 +51,7 @@ const PLACED = [
     stake: "2u bonus ($20)",
     price: "+518",
     result: "Won",
-    note: "Same three sides on the moneyline. Pitt and Liberty were already in. Northwestern closed it at 34-13. Ticket payout shown $103.76. A $100.80 cash-out was sitting there if it was taken.",
+    note: "Same three sides on the moneyline. Pitt and Liberty were already in. Northwestern closed it at 34-13. Ticket payout shown $103.76.",
     legs: [
       { pick: "Northwestern moneyline", price: "+116", result: "Won, 34-13" },
       { pick: "Pittsburgh moneyline", price: "+108", result: "Won, 35-33" },
@@ -82,8 +98,8 @@ export default function PicksPage() {
             <div className="flex justify-between gap-3">
               <div>
                 <div className="flex gap-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-muted">NCAAF</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full status-won">WON</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-muted">NFL</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${ticket.result === "Won" ? "status-won" : "status-pending"}`}>{ticket.result.toUpperCase()}</span>
                 </div>
                 <h3 className="font-semibold mt-1.5">{ticket.title}</h3>
                 <p className="text-sm text-muted">{ticket.stake} · {ticket.price}</p>
