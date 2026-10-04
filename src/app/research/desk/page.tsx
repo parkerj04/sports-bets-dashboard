@@ -1,28 +1,105 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/Logo";
 
-const COMPARE = [
-  { game: "Patriots at Bills", mine: "Buffalo -6.5 only. James Cook is the touchdown name, not the side.", agent: "James Cook anytime, score 70. Price was mid -100s.", call: "Split", why: "The side makes the cut at -6.5. The touchdown does not at a minus price. Josh Allen has 6 rushing scores in 3 games, so he is the case against Cook." },
-  { game: "Cardinals at Giants", mine: "Trey McBride and Malik Nabers.", agent: "McBride +160, score 70. The 8 red-zone targets are the agent's number, not mine.", call: "On the edge", why: "Plus money keeps McBride alive. I have not confirmed the red-zone count from the boxes. Nabers was posted +210 at Action. James Conner is on injured reserve, so the Cardinals' receiving work is the path. It stays up to decipher." },
-  { game: "Lions at Panthers", mine: "Jahmyr Gibbs and Amon-Ra St. Brown. Side is Carolina +3.5.", agent: "Lions moneyline 71 and Lions -3.5 70. No touchdown card.", call: "Split", why: "The agent took the side. I did not. Gibbs is the back and St. Brown is the target. Neither is a touchdown card without a plus-money price. Laying -3.5 still does not make the cut." },
-  { game: "Packers at Buccaneers", mine: "Josh Jacobs. No second name.", agent: "Packers moneyline, score 72. Mayfield is out.", call: "Cut", why: "The moneyline at 72 does not make the cut. Jacobs is the only touchdown role I will name. Jalon Daniels making a first start is not a score bet." },
-];
-
-const TD = [
-  { game: "Cardinals at Giants", a: "Trey McBride", b: "Malik Nabers", why: "McBride is the agent card at +160. Nabers was +210 at Action. Conner is on injured reserve. The hole is I have not confirmed McBride's red-zone count." },
-  { game: "Patriots at Bills", a: "James Cook", b: "Josh Allen", why: "Cook is the carry back and Barmore is out. Allen has 6 rushing scores in 3 games, so he is both the other name and the case against Cook. Cook's price was minus. Allen is the plus-money name if it is still plus." },
-  { game: "Cowboys at Texans", a: "CeeDee Lamb", b: "No second name", why: "Lamb is the Dallas target. I do not have a confirmed Houston scorer or a price. A name without a price does not make the cut." },
-  { game: "Packers at Buccaneers", a: "Josh Jacobs", b: "No second name", why: "Mayfield is out. Daniels is a first start, not a score. Jacobs is the Green Bay back. No price confirmed." },
-  { game: "Jaguars at Bengals", a: "No card", b: "No card", why: "Action posted Joe Burrow +950 and Jakobi Meyers +250. I have not confirmed Burrow is active. No touchdown goes up on an unconfirmed quarterback." },
-  { game: "Rams at Eagles", a: "Jalen Hurts", b: "No second name", why: "Hurts is the short-yardage quarterback. Action said the price is too short to be a bet. No Rams name makes the cut without a plus number." },
-  { game: "Jets at Bears", a: "No card", b: "No card", why: "No role and no price I can source. A guess does not go on the board." },
-  { game: "Titans at Ravens", a: "Derrick Henry", b: "No second name", why: "Henry is the Baltimore back in a game Baltimore is laying 11.5. The side is the dog. The score name is Henry only if the number is plus. It will not be." },
-  { game: "Dolphins at Vikings", a: "Justin Jefferson", b: "No second name", why: "Jefferson is the target. The books have already cut this price. The under is the card. The touchdown is not, unless it is plus money." },
-  { game: "Broncos at 49ers", a: "No card", b: "No card", why: "No confirmed price and no confirmed red-zone role. Pass." },
-  { game: "Chiefs at Raiders", a: "No card", b: "No card", why: "Both teams are 3-0. The card is Raiders +4.5. I will not add a touchdown to force a name onto a short favorite." },
-  { game: "Chargers at Seahawks", a: "No card", b: "No card", why: "Seattle is laying 7.5. No plus-money scorer confirmed. Pass." },
-  { game: "Lions at Panthers", a: "Jahmyr Gibbs", b: "Amon-Ra St. Brown", why: "Gibbs is the back. St. Brown is the target. The agent took the Lions side, not these scores. Neither is a bet until the price is plus." },
-  { game: "Falcons at Saints, Monday", a: "Bijan Robinson", b: "No second name", why: "Bijan is the Atlanta back. Tyler Allgeier showed up on a combined board, which is the case against Bijan getting every score. No price confirmed." },
+const GAMES = [
+  {
+    game: "Patriots at Bills",
+    mine: "James Cook and Josh Allen",
+    agent: "Cook 70. Dalton Kincaid +165, score 65. D.J. Moore +160, score 65.",
+    call: "Split",
+    why: "Cook is the carry back and Barmore is out. His price was minus, so the touchdown does not make the cut. Allen has 6 rushing scores in 3 games, so he is the second name and the case against Cook. Kincaid and Moore are plus money. Schooler and both starting corners are the agent's hole. Those two stay on the edge. I have not confirmed the corner names from the inactive list.",
+  },
+  {
+    game: "Cardinals at Giants",
+    mine: "Trey McBride and Malik Nabers",
+    agent: "McBride +160, score 70.",
+    call: "On the edge",
+    why: "Same first name. Nabers is my second, posted +210 at Action. The agent's 8 red-zone targets are not confirmed by me. Plus money keeps McBride up. It is not a keep until that count is checked.",
+  },
+  {
+    game: "Cowboys at Texans",
+    mine: "Nico Collins and Jake Ferguson",
+    agent: "Collins +140, score 65. Ferguson +310, score 65.",
+    call: "Keep Ferguson. Collins on the edge.",
+    why: "I had no second name. The agent did. Ferguson at +310 is the price that makes the cut if the red-zone tie is real. Collins is the Houston target, and the agent says it is his first game back since Week 1. That is a flag, not a kill. The Dallas secondary claim is the agent's, not confirmed here.",
+  },
+  {
+    game: "Packers at Buccaneers",
+    mine: "Josh Jacobs and Christian Watson",
+    agent: "Bucky Irving +145, score 65. Watson +175, score 65.",
+    call: "Split",
+    why: "Mayfield is out, so Tampa leaning on Irving is a real path. Watson at +175 is the Green Bay pass name. Jacobs is my back. The Packers moneyline at 72 still does not make the cut. The two plus-money scores stay.",
+  },
+  {
+    game: "Rams at Eagles",
+    mine: "Saquon Barkley and Davante Adams",
+    agent: "Adams +115, score 65. Barkley +110, score 65.",
+    call: "On the edge",
+    why: "Same two names. The agent says Mitchell shadows Nacua, so Adams is the second corner. I have not confirmed that shadow. Barkley at +110 is short for a back who gets the goal line. The A.J. Brown traded line in the agent note is not confirmed. Do not use it.",
+  },
+  {
+    game: "Jets at Bears",
+    mine: "Garrett Wilson and Braelon Allen",
+    agent: "Wilson +150, score 50. Allen +115, score 50.",
+    call: "Keep Wilson. Allen on the edge.",
+    why: "I had no card. The agent filled both. Wilson at +150 is the receiver if the room is down to him. Allen only makes it if Breece Hall is out. That inactive has to be confirmed before it is a bet.",
+  },
+  {
+    game: "Titans at Ravens",
+    mine: "Derrick Henry and Lamar Jackson",
+    agent: "Lamar rushing score +240, score 65. Henry first-half +120, score 65.",
+    call: "Keep Lamar. Henry on the edge.",
+    why: "Henry is the back. Lamar at +240 is the second scorer and the better price. The agent says 5 of Henry's 6 scores were in the first half. I have not confirmed that split. The side is still Tennessee +11.5, not a Henry ticket at a short number.",
+  },
+  {
+    game: "Dolphins at Vikings",
+    mine: "Jordan Addison and Aaron Jones",
+    agent: "Jones -140, score 65. Addison +135, score 65. Agent says Jefferson and Achane are out.",
+    call: "Keep Addison. Cut Jones on price.",
+    why: "If Jefferson is out, my earlier Jefferson name is dead. Addison at +135 is the pass name. Jones at -140 does not make the cut. Confirm Jefferson and Achane are inactive before either is a bet.",
+  },
+  {
+    game: "Jaguars at Bengals",
+    mine: "Ja'Marr Chase and Parker Washington",
+    agent: "Chase -105, score 50. Washington +150, score 50.",
+    call: "Keep Washington. Cut Chase on price.",
+    why: "Chase is the name and the price is minus. Washington at +150 is the second scorer. Burrow was not confirmed earlier, so this is a receiver card, not a quarterback card.",
+  },
+  {
+    game: "Broncos at 49ers",
+    mine: "J.K. Dobbins and Christian McCaffrey",
+    agent: "Dobbins +120 to +125, score 65. McCaffrey -165, score 50.",
+    call: "Keep Dobbins. Cut McCaffrey on price.",
+    why: "Dobbins is the plus-money back. McCaffrey is the name and the price is too short. Bosa out is the agent's flag, not confirmed here.",
+  },
+  {
+    game: "Chiefs at Raiders",
+    mine: "Ashton Jeanty and no Chiefs score",
+    agent: "Jeanty, score 50, price -120 to -175. Kenneth Walker III, score 50, filed on this game.",
+    call: "Cut both.",
+    why: "Jeanty is the Raiders back and the price is minus. Walker is a Seahawks back filed on a Chiefs game. Wrong team. That card does not make the cut. The side remains Raiders +4.5.",
+  },
+  {
+    game: "Chargers at Seahawks",
+    mine: "No confirmed second name",
+    agent: "Emanuel Wilson +110, score 50, filed on this game.",
+    call: "Cut",
+    why: "Emanuel Wilson is a Packers back. He is filed on the Seattle game. Wrong team. I will not invent a Seattle or Chargers scorer to fill the slot.",
+  },
+  {
+    game: "Lions at Panthers",
+    mine: "Jahmyr Gibbs and Amon-Ra St. Brown",
+    agent: "Chuba Hubbard -140, score 65. Gibbs -325, score 50.",
+    call: "Cut both agent prices. St. Brown is the second name.",
+    why: "Gibbs at -325 is not a bet. Hubbard at -140 is not a bet. St. Brown is the pass name. Neither agent card makes the cut on price. The side split with Carolina +3.5 still stands.",
+  },
+  {
+    game: "Falcons at Saints, Monday",
+    mine: "Bijan Robinson and Tyler Allgeier",
+    agent: "No card.",
+    call: "On the edge",
+    why: "Bijan is the back. Allgeier is the second scorer because he showed up on the combined board, which is the case against Bijan getting every score. No price confirmed. No agent card to beat.",
+  },
 ];
 
 export default function DeskPage() {
@@ -36,21 +113,12 @@ export default function DeskPage() {
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         <h1 className="text-xl font-bold">Desk review</h1>
-        <p className="text-sm text-muted">My card, then the agent card, then the call. Touchdowns are two names a game. A blank second name means I would not invent one. London has already kicked and is not on this list.</p>
-        <h2 className="font-semibold">Side and total</h2>
-        {COMPARE.map((r) => (
+        <p className="text-sm text-muted">My two scorers, then every agent scorer. 25 agent touchdown cards were in the intake. A cut is price or a wrong team. A keep is plus money with a role. Nothing here is a placed bet. London already kicked and is off.</p>
+        {GAMES.map((r) => (
           <article key={r.game} className="card p-4 space-y-2 text-sm">
             <div className="flex justify-between gap-3"><h2 className="font-semibold">{r.game}</h2><span className="font-mono text-accent">{r.call}</span></div>
             <p><span className="text-muted">Mine. </span>{r.mine}</p>
             <p><span className="text-muted">Agent. </span>{r.agent}</p>
-            <p className="leading-6">{r.why}</p>
-          </article>
-        ))}
-        <h2 className="font-semibold pt-4">Anytime touchdowns</h2>
-        {TD.map((r) => (
-          <article key={r.game} className="card p-4 space-y-2 text-sm">
-            <h2 className="font-semibold">{r.game}</h2>
-            <p className="font-mono">{r.a} · {r.b}</p>
             <p className="leading-6">{r.why}</p>
           </article>
         ))}
