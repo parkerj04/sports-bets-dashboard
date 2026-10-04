@@ -51,7 +51,7 @@ export default function ResearchPage() {
       <header className="border-b border-card-border sticky top-0 z-10 bg-background/90 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/dashboard"><BrandMark /></Link>
-          <Link href="/research/playbook" className="text-sm text-muted hover:text-accent">Playbook</Link>
+          <Link href="/research/desk" className="text-sm text-accent hover:underline">Desk review</Link>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
@@ -61,12 +61,7 @@ export default function ResearchPage() {
           ))}
         </div>
         <p className="text-xs text-muted">Scoreboards checked 2:11 AM ET, Saturday Oct 3. Finals are off the slate. The model score is the posted number split, not a private model.</p>
-        {sport === "CFB" && (
-          <>
-            <CfbBoard />
-            <SportPicks sport="CFB" />
-          </>
-        )}
+        {sport === "CFB" && (<><CfbBoard /><SportPicks sport="CFB" /></>)}
         {sport === "NFL" && (
           <>
             <section className="space-y-3">
