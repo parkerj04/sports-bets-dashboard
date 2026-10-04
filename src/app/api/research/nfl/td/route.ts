@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getNflWeek } from "@/lib/nfl";
 import coverage from "@/data/nfl-coverage.json";
 import scheme from "@/data/nfl-scheme-2026.json";
+import { onRoster, rosterNames } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,11 @@ export async function GET(request: Request) {
   const players = coverage.players as Player[];
   const zones = coverage.teams as Record<string, { zonePct: number; snaps: number }>;
   const schemes = scheme.teams as Record<string, { passEpa: number; epaPlay: number; blitz: number; passRate: number }>;
+  const cache = new Map<string, string[]>();
+  async function roster(code: string) {
+    if (!cache.has(code)) cache.set(code, await rosterNames(code));
+    return cache.get(code) || [];
+  }
   const cards = [];
   for (const g of week.games) {
     if (id && g.id !== id) continue;
@@ -32,7 +38,8 @@ export async function GET(request: Request) {
       { off: abbr(g.home), def: abbr(g.away), game: `${g.away} at ${g.home}`, id: g.id },
     ];
     for (const p of pairs) {
-      const pool = players.filter((x) => x.team === p.off).slice(0, 2);
+      const names = await roster(p.off);
+      const pool = players.filter((x) => x.team === p.off && onRoster(x.name, names)).slice(0, 2);
       const defZone = zones[p.def]?.zonePct ?? 60;
       const offEpa = schemes[p.off]?.passEpa ?? 0;
       const passRate = schemes[p.off]?.passRate ?? 55;
@@ -41,29 +48,21 @@ export async function GET(request: Request) {
         const zoneGap = pl.zonePct - (100 - defZone);
         let score = 46 + Math.min(pl.tgt, 140) / 10;
         const bits = [
-          `${pl.name} has ${pl.tgt} charted targets, ${pl.zoneTgt} vs zone and ${pl.manTgt} vs man, catch rate ${pl.compPct}%. Volume is the role. This file does not have red-zone touches, so a TD is inferred from opportunity, not a painted goal-line role.`,
+          `${pl.name} is on the live roster. ${pl.tgt} charted targets, ${pl.zoneTgt} vs zone and ${pl.manTgt} vs man, catch rate ${pl.compPct}%. Volume is the role. This file does not have red-zone touches.`,
         ];
         if (defZone >= 65 && pl.zonePct >= 65) {
           score += 8;
-          bits.push(`${p.def} played zone on ${defZone}% of charted snaps. ${pl.name} took ${pl.zonePct}% of his targets against zone. That is the coverage fit.`);
-        } else if (defZone <= 55 && pl.zonePct < 55) {
-          score += 4;
-          bits.push(`${p.def} is closer to man (${defZone}% zone). ${pl.name} is not a pure zone target (${pl.zonePct}%). Fit is fine, not a smash.`);
+          bits.push(`${p.def} played zone on ${defZone}% of charted snaps. ${pl.name} took ${pl.zonePct}% of his targets against zone.`);
         } else {
-          score -= 2;
-          bits.push(`${p.def} zone rate is ${defZone}%. ${pl.name} zone-target rate is ${pl.zonePct}%. Coverage fit is mixed (gap ${Math.round(zoneGap)}).`);
+          bits.push(`${p.def} zone rate is ${defZone}%. ${pl.name} zone-target rate is ${pl.zonePct}%. Fit is mixed (gap ${Math.round(zoneGap)}).`);
         }
-        if (offEpa > 0.05 && passRate >= 55) { score += 5; bits.push(`${p.off} pass EPA/play is ${offEpa} at a ${passRate}% pass rate. Script should throw.`); }
-        else bits.push(`${p.off} pass EPA/play is ${offEpa} at a ${passRate}% pass rate. Do not assume a pass-heavy script.`);
-        if (defBlitz >= 14) { score -= 4; bits.push(`${p.def} extra-rusher rate is ${defBlitz}%. Pressure cuts receiving TDs more than it creates them.`); }
-        bits.push(score >= 68 ? "Best TD shape on this side if the number is plus money. First-TD is the alt only if this is the top name on the side. No price in this feed." : "Volume lean. Coverage or script does not finish the case. Do not force an alt.");
-        cards.push({ game: p.game, pick: `${pl.name} anytime TD`, score: Math.max(40, Math.min(88, Math.round(score))), why: bits.join(" "), href: `/research/nfl/game?id=${p.id}` });
+        if (offEpa > 0.05 && passRate >= 55) bits.push(`${p.off} pass EPA/play is ${offEpa} at a ${passRate}% pass rate.`);
+        if (defBlitz >= 14) { score -= 4; bits.push(`${p.def} extra-rusher rate is ${defBlitz}%.`); }
+        bits.push("No price in this feed. Plus money only.");
+        cards.push({ game: p.game, pick: `${pl.name} anytime TD`, score: Math.max(40, Math.min(70, Math.round(score))), why: bits.join(" "), href: `/research/nfl/game?id=${p.id}` });
       }
     }
   }
   cards.sort((a, b) => b.score - a.score);
-  return NextResponse.json({
-    cards: id ? cards : cards.slice(0, 10),
-    note: "Targets, zone fit, pass script, pressure. No odds. Red-zone share is not in the free file.",
-  });
+  return NextResponse.json({ cards: id ? cards : cards.slice(0, 10), note: "Names not on the live roster are removed for every game." });
 }
