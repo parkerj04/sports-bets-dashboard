@@ -9,16 +9,29 @@ export type RosterSide = {
   confirmed: boolean;
 };
 
-export async function nflRoster(abbr: string, team: string): Promise<RosterSide> {
-  const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${abbr}/roster`, { next: { revalidate: 300 } });
+const ESPN: Record<string, string> = { WSH: "WSH", WAS: "WSH", LAR: "LAR", LA: "LAR" };
+
+export async function rosterNames(abbr: string) {
+  const code = ESPN[abbr.toUpperCase()] || abbr.toUpperCase();
+  const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${code}/roster`, { next: { revalidate: 300 } });
   const names: string[] = [];
-  if (res.ok) {
-    const data = await res.json();
-    for (const group of data.athletes || []) {
-      for (const p of group.items || []) names.push(p.displayName || p.fullName || "");
-    }
+  if (!res.ok) return names;
+  const data = await res.json();
+  for (const group of data.athletes || []) {
+    for (const p of group.items || []) names.push(p.displayName || p.fullName || "");
   }
-  return stamp(team, names.filter(Boolean));
+  return names.filter(Boolean);
+}
+
+export function onRoster(name: string, roster: string[]) {
+  const last = name.toLowerCase().split(" ").pop() || "";
+  if (!last || last.length < 3) return false;
+  return roster.some((n) => n.toLowerCase().endsWith(last) || n.toLowerCase().includes(last));
+}
+
+export async function nflRoster(abbr: string, team: string): Promise<RosterSide> {
+  const names = await rosterNames(abbr);
+  return stamp(team, names);
 }
 
 export async function mlbRoster(teamId: number, team: string): Promise<RosterSide> {
