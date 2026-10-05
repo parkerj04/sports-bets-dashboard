@@ -7,6 +7,7 @@ import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/
 import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import type { Ticket } from "@/lib/ticket";
+import { StarterKs } from "@/components/StarterKs";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
 import { StealBoard } from "@/components/StealBoard";
@@ -210,6 +211,12 @@ function GameInner() {
         <h1 className="text-2xl font-bold mt-2">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
         <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
       </div>
+      <StarterKs
+        away={data.awayPitcher ? { id: data.awayPitcher.id, name: data.awayPitcher.name, hand: data.awayPitcher.hand, team: game.awayTeam, foe: game.homeTeam, wins: data.awayPitcher.wins, losses: data.awayPitcher.losses, gs: data.awayPitcher.gamesStarted, ip: data.awayPitcher.inningsPitched, k9: data.awayPitcher.k9, era: data.awayPitcher.era, so: data.awayPitcher.strikeOuts } : null}
+        home={data.homePitcher ? { id: data.homePitcher.id, name: data.homePitcher.name, hand: data.homePitcher.hand, team: game.homeTeam, foe: game.awayTeam, wins: data.homePitcher.wins, losses: data.homePitcher.losses, gs: data.homePitcher.gamesStarted, ip: data.homePitcher.inningsPitched, k9: data.homePitcher.k9, era: data.homePitcher.era, so: data.homePitcher.strikeOuts } : null}
+        venue={game.venue}
+        status={game.status}
+      />
       <AgentDesk away={game.awayTeam} home={game.homeTeam} />
       <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
       {data.ticket && <TicketDesk ticket={data.ticket} />}
