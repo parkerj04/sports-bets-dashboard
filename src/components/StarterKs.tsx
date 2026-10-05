@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { Crew } from "@/lib/facts";
 
 type Start = { date: string; opp: string; k: number; ip: string };
 type Arm = {
@@ -82,11 +83,17 @@ export function StarterKs({
   home,
   venue,
   status,
+  open,
+  situation,
+  crew,
 }: {
   away: Arm | null;
   home: Arm | null;
   venue?: string;
   status?: string;
+  open?: string | null;
+  situation?: string | null;
+  crew?: Crew | null;
 }) {
   const arms = [away, home].filter((a): a is Arm => !!a?.id);
   const [side, setSide] = useState(0);
@@ -178,6 +185,7 @@ export function StarterKs({
           <div className="rounded-xl bg-background py-2"><div className="text-muted">ML</div><div className="font-mono">{lineBox.ml || "—"}</div></div>
         </div>
       ) : null}
+      {open ? <p className="text-sm text-muted">{open}</p> : null}
       <div className="flex gap-2 overflow-x-auto">
         {arms.map((a, i) => (
           <button key={a.id} type="button" onClick={() => setSide(i)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${arm.id === a.id ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
@@ -243,10 +251,31 @@ export function StarterKs({
             <p className="text-xs uppercase tracking-widest text-accent">Desk call</p>
             <h3 className="mt-1 text-2xl font-semibold">{call}</h3>
             <p className="mt-2 text-sm text-muted">{why} Season line is {arm.so} strikeouts in {arm.ip} innings.</p>
+            {situation ? <p className="mt-2 text-sm">{situation}</p> : null}
+            <CrewNote crew={crew} team={arm.team} starter={arm.name} />
           </div>
         </>
       )}
     </section>
+  );
+}
+
+function CrewNote({ crew, team, starter }: { crew?: Crew | null; team: string; starter: string }) {
+  if (!crew || (!crew.umpire && crew.pens.length === 0)) return null;
+  const pen = crew.pens.find((p) => p.team === team) || crew.pens.find((p) => team.includes(p.team) || p.team.includes(team));
+  const ump = crew.umpire;
+  return (
+    <div className="mt-3 space-y-2 text-sm text-muted">
+      {ump ? (
+        <p>
+          Home plate {ump.name}.
+          {ump.k9 != null ? ` ${one(ump.k9)} K/9 in his last ${ump.games} games, ${ump.k} K in ${ump.ip} innings.` : " Not enough final games in the sample for a K rate."}
+        </p>
+      ) : null}
+      {pen && pen.arms.length > 0 ? (
+        <p>Most used behind {starter}, not a promise of the seventh: {pen.arms.map((a) => `${a.name} ${a.g} G, ${one(a.k9)} K/9`).join(" · ")}.</p>
+      ) : null}
+    </div>
   );
 }
 

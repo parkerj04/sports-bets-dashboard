@@ -10,6 +10,7 @@ import { PropsDesk } from "@/components/builds/props-desk";
 import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
+import { FactLine, useDeskFacts } from "@/components/DeskFacts";
 
 function Inner() {
   const id = useSearchParams().get("id") || "";
@@ -29,6 +30,8 @@ function Inner() {
       .catch(() => setError("Could not load NFL game"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const facts = useDeskFacts(lab ? { sport: "nfl", away: lab.away, home: lab.home, awayAbbr: lab.awayAbbr, homeAbbr: lab.homeAbbr } : null);
 
   if (loading) return <p className="text-muted text-center py-16">Loading NFL lab…</p>;
   if (error || !lab) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
@@ -66,6 +69,7 @@ function Inner() {
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
       </div>
+      <FactLine text={facts?.open} />
       <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <div className="card space-y-1 p-4">
@@ -75,6 +79,7 @@ function Inner() {
           <div className={`font-mono text-2xl font-semibold ${scoreTone(desk.score)}`}>{desk.score}</div>
         </div>
         <p className="text-sm text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
+        <FactLine text={facts?.situation} />
       </div>
       <div className="card overflow-x-auto p-4">
         <h3 className="mb-2 text-sm font-semibold">Season</h3>
