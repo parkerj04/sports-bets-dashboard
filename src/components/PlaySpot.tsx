@@ -21,8 +21,13 @@ function when(date: string) {
 function one(n: number) {
   return (Math.round(n * 10) / 10).toFixed(1);
 }
+function cleanName(name: string) {
+  return name.replace(/^\d+\.\s*/, "").replace(/,/g, "").trim();
+}
 function lastName(name: string) {
-  return name.split(" ").slice(-1)[0] || name;
+  const parts = cleanName(name).split(/\s+/).filter(Boolean);
+  while (parts.length > 1 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(parts[parts.length - 1])) parts.pop();
+  return parts[parts.length - 1] || name;
 }
 function valueOf(row: Log, market: BatMarket) {
   if (market === "Hits") return row.h;
@@ -189,7 +194,7 @@ function BatterCard({
   const scale = Math.max(line, ...nums, 1) * 1.25;
   return (
     <div className="rounded-xl bg-background p-3">
-      <div className="text-lg font-semibold">{player.name}</div>
+      <div className="text-lg font-semibold">{cleanName(player.name)}</div>
       <p className="text-sm text-muted">{label} · {player.avg} AVG · {player.hr} HR · {player.rbi} RBI on the season</p>
       <div className="mt-3 flex items-end justify-between">
         <div>
