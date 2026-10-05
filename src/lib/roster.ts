@@ -23,10 +23,25 @@ export async function rosterNames(abbr: string) {
   return names.filter(Boolean);
 }
 
+export function lastToken(name: string) {
+  const token = name.trim().toLowerCase().split(/\s+/).pop() || "";
+  return token.includes(".") ? token.split(".").pop() || "" : token;
+}
+
 export function onRoster(name: string, roster: string[]) {
-  const last = name.toLowerCase().split(" ").pop() || "";
+  const last = lastToken(name);
   if (!last || last.length < 3) return false;
-  return roster.some((n) => n.toLowerCase().endsWith(last) || n.toLowerCase().includes(last));
+  if (roster.length === 0) return true;
+  return roster.some((n) => lastToken(n) === last);
+}
+
+export function prettyName(short: string, roster: string[]) {
+  if (!short.includes(".")) return short;
+  const [pre, lastRaw] = short.split(".");
+  const hits = roster.filter((n) => lastToken(n) === lastRaw.toLowerCase());
+  if (hits.length === 1) return hits[0];
+  const preL = pre.toLowerCase();
+  return hits.find((n) => n.split(" ")[0].toLowerCase().startsWith(preL)) || short;
 }
 
 export async function nflRoster(abbr: string, team: string): Promise<RosterSide> {

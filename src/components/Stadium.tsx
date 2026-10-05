@@ -118,7 +118,7 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
           </button>
         ))}
       </div>
-      <p className="px-3 pb-3 text-[11px] text-white/50">End zones are the two teams in this game. A dot without a charted spot is placed by side of the field, not a fake yard line.</p>
+      <p className="px-3 pb-3 text-[11px] text-white/50">Dots are catch spots from the 2026 play file. Coverage lines are estimates, not charted film.</p>
     </div>
   );
 }

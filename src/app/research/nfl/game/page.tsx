@@ -5,20 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { NflGame } from "@/lib/nfl";
 import type { NflLab } from "@/lib/nfl-game";
-import type { Ticket } from "@/lib/ticket";
 import { CoverageSplit } from "@/components/CoverageSplit";
-import { ReceiverLab } from "@/components/ReceiverLab";
-import { BackSplit } from "@/components/BackSplit";
-import { Scheme2026 } from "@/components/Scheme2026";
-import { TicketDesk } from "@/components/TicketDesk";
-import { RosterCheck } from "@/components/RosterCheck";
-import { GamePlays } from "@/components/GamePlays";
-import { GameDesk } from "@/components/GameDesk";
-import { PropMatch } from "@/components/PropMatch";
-import { TonightDesk } from "@/components/TonightDesk";
-import { AgentDesk } from "@/components/AgentDesk";
-import { footballRegistry } from "@/lib/football-desk";
 import { PropsDesk } from "@/components/builds/props-desk";
+import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 
@@ -26,7 +15,6 @@ function Inner() {
   const id = useSearchParams().get("id") || "";
   const [lab, setLab] = useState<NflLab | null>(null);
   const [card, setCard] = useState<NflGame | null>(null);
-  const [ticket, setTicket] = useState<Ticket | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +24,7 @@ function Inner() {
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
-        else { setLab(d.lab); setCard(d.card); setTicket(d.ticket || null); }
+        else { setLab(d.lab); setCard(d.card); }
       })
       .catch(() => setError("Could not load NFL game"))
       .finally(() => setLoading(false));
@@ -78,30 +66,14 @@ function Inner() {
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
       </div>
-      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
-      <ReceiverLab away={lab.awayAbbr} home={lab.homeAbbr} />
-      <BackSplit away={lab.awayAbbr} home={lab.homeAbbr} />
-      <RosterCheck sport="nfl" away={lab.away} home={lab.home} awayAbbr={lab.awayAbbr} homeAbbr={lab.homeAbbr} />
-      {notes.map((n) => (
-        <div key={n.id} className="card p-4 text-sm">
-          <div className="text-xs text-muted uppercase">Roster news · {n.date}</div>
-          <div className="font-semibold mt-1">{n.headline}</div>
-          <p className="text-muted mt-1">{n.detail}</p>
-          <p className="mt-2">{n.desk}</p>
-        </div>
-      ))}
-      {ticket && <TicketDesk ticket={ticket} />}
-      <Scheme2026 away={lab.awayAbbr} home={lab.homeAbbr} />
-      {(lab.predHome || lab.predAway) && (
-        <div className="card p-4 text-sm">ESPN predictor: {lab.away} {lab.predAway}% · {lab.home} {lab.predHome}%</div>
-      )}
-      <div className="card p-4 overflow-x-auto">
-        <h3 className="font-semibold text-sm mb-2">Season unit stats</h3>
+      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
+      <div className="card overflow-x-auto p-4">
+        <h3 className="mb-2 text-sm font-semibold">Season</h3>
         <table className="w-full text-xs">
-          <thead className="text-muted"><tr><th className="text-left pb-2">Stat</th><th>{lab.awayAbbr}</th><th>{lab.homeAbbr}</th></tr></thead>
+          <thead className="text-muted"><tr><th className="pb-2 text-left">Stat</th><th>{lab.awayAbbr}</th><th>{lab.homeAbbr}</th></tr></thead>
           <tbody>
-            {lab.stats.map((s) => (
+            {lab.stats.slice(0, 8).map((s) => (
               <tr key={s.label} className="border-t border-card-border font-mono">
                 <td className="py-1.5 pr-2 font-sans">{s.label}</td><td>{s.away}</td><td>{s.home}</td>
               </tr>
@@ -109,44 +81,25 @@ function Inner() {
           </tbody>
         </table>
       </div>
-      {lab.leaders.length > 0 && (
-        <div className="card p-4">
-          <h3 className="font-semibold text-sm mb-2">Leaders</h3>
-          <div className="space-y-1 text-xs">
-            {lab.leaders.map((l, i) => (
-              <div key={i} className="flex justify-between gap-2 border-t border-card-border py-1.5">
-                <span>{l.team} · {l.category}</span>
-                <span className="font-mono">{l.name} {l.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Inj title={`${lab.away} injuries`} rows={awayInj} />
-        <Inj title={`${lab.home} injuries`} rows={homeInj} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Inj title={`${lab.away} injuries`} rows={awayInj.slice(0, 6)} />
+        <Inj title={`${lab.home} injuries`} rows={homeInj.slice(0, 6)} />
       </div>
       {lab.lastFive.length > 0 && (
         <div className="card p-4 text-xs">
-          <h3 className="font-semibold text-sm mb-2">Last 5</h3>
+          <h3 className="mb-2 text-sm font-semibold">Last 5</h3>
           {lab.lastFive.map((g, i) => (
-            <div key={i} className="font-mono border-t border-card-border py-1">{g.team} {g.result} {g.score} {g.opp}</div>
+            <div key={i} className="border-t border-card-border py-1 font-mono">{g.team} {g.result} {g.score} {g.opp}</div>
           ))}
         </div>
       )}
-      <h2 className="text-sm font-semibold pt-4">Picks</h2>
-      <AgentDesk away={lab.away} home={lab.home} />
-      <TonightDesk away={lab.awayAbbr} home={lab.homeAbbr} />
-      <PropMatch away={lab.awayAbbr} home={lab.homeAbbr} />
-      <GamePlays away={lab.awayAbbr} home={lab.homeAbbr} />
-      <GameDesk id={id} />
-      <div className="card p-4 space-y-1">
-        <div className="text-xs text-muted uppercase">Researched side</div>
-        <div className="flex justify-between gap-3">
+      <div className="card space-y-1 p-4">
+        <div className="text-xs uppercase tracking-widest text-muted">Researched side</div>
+        <div className="flex items-start justify-between gap-3">
           <div className="font-semibold">{desk.pick}</div>
-          <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
+          <div className={`font-mono text-2xl font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
         </div>
-        <p className="text-sm">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
+        <p className="text-sm text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
       </div>
     </div>
   );
