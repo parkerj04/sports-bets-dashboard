@@ -7,6 +7,7 @@ import type { NflGame } from "@/lib/nfl";
 import type { NflLab } from "@/lib/nfl-game";
 import type { Ticket } from "@/lib/ticket";
 import { CoverageSplit } from "@/components/CoverageSplit";
+import { ReceiverLab } from "@/components/ReceiverLab";
 import { BackSplit } from "@/components/BackSplit";
 import { Scheme2026 } from "@/components/Scheme2026";
 import { TicketDesk } from "@/components/TicketDesk";
@@ -71,6 +72,14 @@ function Inner() {
         <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
+      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
+        <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
+        <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
+      </div>
+      <ReceiverLab away={lab.awayAbbr} home={lab.homeAbbr} />
+      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
+      <BackSplit away={lab.awayAbbr} home={lab.homeAbbr} />
       <RosterCheck sport="nfl" away={lab.away} home={lab.home} awayAbbr={lab.awayAbbr} homeAbbr={lab.homeAbbr} />
       {notes.map((n) => (
         <div key={n.id} className="card p-4 text-sm">
@@ -81,14 +90,7 @@ function Inner() {
         </div>
       ))}
       {ticket && <TicketDesk ticket={ticket} />}
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
-        <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
-        <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
-      </div>
       <Scheme2026 away={lab.awayAbbr} home={lab.homeAbbr} />
-      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
-      <BackSplit away={lab.awayAbbr} home={lab.homeAbbr} />
       {(lab.predHome || lab.predAway) && (
         <div className="card p-4 text-sm">ESPN predictor: {lab.away} {lab.predAway}% · {lab.home} {lab.predHome}%</div>
       )}
