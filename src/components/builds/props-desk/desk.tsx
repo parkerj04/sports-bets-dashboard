@@ -171,6 +171,30 @@ function Card({ prop, onBack, onOpen, embedded }: { prop: PropCard; onBack: () =
             </button>
           ))}
         </div>
+        <div className="mb-3 rounded-xl bg-background p-3">
+          <p className="text-xs uppercase tracking-widest text-muted">
+            {win === "L5" ? "Last 5 games" : win === "L10" ? "Last 10 games" : win === "L15" ? "Last 15 games" : win === "2026" ? "2026 games" : `Games vs ${foe}`}
+          </p>
+          {activeIdx.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">No logged games in this window.</p>
+          ) : (
+            <ul className="mt-2">
+              {[...activeIdx].reverse().map((i) => {
+                const bar = prop.chart[i];
+                const value = bar.value ?? 0;
+                const over = value > line;
+                return (
+                  <li key={`${bar.date}-${bar.abbr}-${i}`}>
+                    <button type="button" onClick={() => setPicked(i)} className="flex min-h-11 w-full items-center justify-between gap-3 border-t border-card-border py-2 text-left first:border-t-0">
+                      <span className="text-sm">{bar.date} vs {bar.abbr}</span>
+                      <span className={`font-mono text-sm ${over ? "text-good" : "text-danger"}`}>{value} {over ? "over" : "under"}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <LineLog bars={prop.chart} line={line} active={activeIdx} picked={picked} onPick={setPicked} />
         {pickedBar && pickedBar.value != null ? (
           <p className="mt-3 text-sm">
@@ -270,8 +294,8 @@ function LineLog({ bars, line, active, picked, onPick }: { bars: ChartBar[]; lin
 
 function Defense({ foe, pos, market }: { foe: "ATL" | "NO"; pos: Pos; market: string }) {
   const [spot, setSpot] = useState<Pos>(pos);
-  const [kind, setKind] = useState<"rec" | "rush">(market.startsWith("Rush") ? "rush" : "rec");
-  const [focus, setFocus] = useState("yds");
+  const [kind, setKind] = useState<"rec" | "rush">(market.startsWith("Rush") || pos === "QB" ? "rush" : "rec");
+  const [focus, setFocus] = useState(pos === "QB" || market.startsWith("Rush") ? "ryds" : "yds");
   const slice = DVP[foe][spot];
   const rows =
     kind === "rush"
@@ -313,6 +337,7 @@ function Defense({ foe, pos, market }: { foe: "ATL" | "NO"; pos: Pos; market: st
       </div>
       <p className="mt-3 text-sm text-muted">
         {foe} allows to <span className="font-medium text-foreground">{spot}</span>
+        {spot === "QB" ? ". This row is rushing, not passing yards." : ""}
       </p>
       <ul className="mt-3 flex flex-col gap-4">
         {rows.map((row) => {
