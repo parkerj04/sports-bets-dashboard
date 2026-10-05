@@ -7,6 +7,7 @@ import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/
 import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import type { Ticket } from "@/lib/ticket";
+import { useDeskFacts } from "@/components/DeskFacts";
 import { StarterKs } from "@/components/StarterKs";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
@@ -197,6 +198,20 @@ function GameInner() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const facts = useDeskFacts(data ? {
+    sport: "mlb",
+    away: data.game.awayTeam,
+    home: data.game.homeTeam,
+    awayAbbr: data.game.awayAbbr,
+    homeAbbr: data.game.homeAbbr,
+    awayId: data.game.awayId,
+    homeId: data.game.homeId,
+    awayPitcherId: data.awayPitcher?.id,
+    homePitcherId: data.homePitcher?.id,
+    awayPitcher: data.awayPitcher?.name,
+    homePitcher: data.homePitcher?.name,
+  } : null);
+
   if (loading) return <p className="text-muted text-center py-16">Loading game lab…</p>;
   if (error || !data) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
   const { game } = data;
@@ -216,6 +231,9 @@ function GameInner() {
         home={data.homePitcher ? { id: data.homePitcher.id, name: data.homePitcher.name, hand: data.homePitcher.hand, team: game.homeTeam, foe: game.awayTeam, wins: data.homePitcher.wins, losses: data.homePitcher.losses, gs: data.homePitcher.gamesStarted, ip: data.homePitcher.inningsPitched, k9: data.homePitcher.k9, era: data.homePitcher.era, so: data.homePitcher.strikeOuts } : null}
         venue={game.venue}
         status={game.status}
+        open={facts?.open}
+        situation={facts?.situation}
+        crew={facts?.crew}
       />
       <section className="space-y-3">
         <h2 className="text-sm text-good">Playable</h2>

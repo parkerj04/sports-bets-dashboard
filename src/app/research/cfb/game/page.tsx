@@ -7,6 +7,7 @@ import type { CfbLab } from "@/lib/cfb-lab";
 import { footballRegistry } from "@/lib/football-desk";
 import { scoreTone } from "@/lib/score-color";
 import { AgentDesk } from "@/components/AgentDesk";
+import { FactLine, useDeskFacts } from "@/components/DeskFacts";
 
 type Catcher = { name: string; team: string; rec: number; yards: number; td: number };
 
@@ -29,6 +30,7 @@ function Inner() {
       setRecSource(d.source || "");
     }).catch(() => setCatchers([]));
   }, [id]);
+  const facts = useDeskFacts(game ? { sport: "cfb", away: game.away, home: game.home, awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr } : null);
   if (error) return <p className="text-danger text-center py-16">{error}</p>;
   if (!game) return <p className="text-muted text-center py-16">Loading college lab…</p>;
   const yards = lab?.stats.find((s) => /total yards/i.test(s.label));
@@ -52,6 +54,7 @@ function Inner() {
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{game.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{game.mlAway}/{game.mlHome}</div></div>
       </div>
+      <FactLine text={facts?.open} />
       <section className="card space-y-3 p-4">
         <h2 className="text-sm">Receivers</h2>
         <p className="text-xs text-muted">{recSource || "Loading 2026 receptions…"}</p>
@@ -79,6 +82,7 @@ function Inner() {
           <div className={`font-mono text-2xl font-semibold ${scoreTone(desk.score)}`}>{desk.score}</div>
         </div>
         <p className="text-sm text-muted">{desk.why}</p>
+        <FactLine text={facts?.situation} />
       </div>
       {lab?.predHome && <div className="card p-4 text-sm">ESPN predictor: {game.away} {lab.predAway}% · {game.home} {lab.predHome}%</div>}
       {lab && lab.stats.length > 0 && (
