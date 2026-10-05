@@ -78,9 +78,9 @@ function Inner() {
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
       </div>
+      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
       <ReceiverLab away={lab.awayAbbr} home={lab.homeAbbr} />
-      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <BackSplit away={lab.awayAbbr} home={lab.homeAbbr} />
       <RosterCheck sport="nfl" away={lab.away} home={lab.home} awayAbbr={lab.awayAbbr} homeAbbr={lab.homeAbbr} />
       {notes.map((n) => (
