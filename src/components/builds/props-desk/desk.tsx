@@ -31,7 +31,7 @@ export function PropsDesk({
   if ((away || home) && !(teams.includes("ATL") && teams.includes("NO"))) return null;
   const prop = PROPS.find((p) => p.slug === slug) ?? null;
   return prop ? (
-    <Card prop={prop} embedded={embedded} onBack={() => setSlug(null)} />
+    <Card key={prop.slug} prop={prop} embedded={embedded} onBack={() => setSlug(null)} onOpen={setSlug} />
   ) : (
     <Board embedded={embedded} onOpen={setSlug} />
   );
@@ -78,29 +78,49 @@ function Board({ onOpen, embedded }: { onOpen: (slug: string) => void; embedded:
   );
 }
 
-function Card({ prop, onBack, embedded }: { prop: PropCard; onBack: () => void; embedded: boolean }) {
+function Card({ prop, onBack, onOpen, embedded }: { prop: PropCard; onBack: () => void; onOpen: (slug: string) => void; embedded: boolean }) {
   const Shell = embedded ? "section" : "main";
   const [line, setLine] = useState(prop.line);
+  const [win, setWin] = useState<"L5" | "L10" | "L15" | "2026" | "H2H">("L10");
+  const [picked, setPicked] = useState<number | null>(null);
   const foe: "ATL" | "NO" = prop.team === "ATL" ? "NO" : "ATL";
-  const logged = useMemo(() => prop.chart.flatMap((b) => (b.value == null ? [] : [b.value])), [prop.chart]);
-  const vsFoe = useMemo(
-    () => prop.chart.flatMap((b) => (b.abbr === foe && b.value != null ? [b.value] : [])),
-    [prop.chart, foe],
-  );
-  const summary = summarize(logged, line);
+  const loggedIdx = useMemo(() => prop.chart.flatMap((b, i) => (b.value == null ? [] : [i])), [prop.chart]);
+  const activeIdx =
+    win === "L5" ? loggedIdx.slice(-5) :
+    win === "L10" ? loggedIdx.slice(-10) :
+    win === "L15" ? loggedIdx.slice(-15) :
+    win === "2026" ? loggedIdx.slice(-prop.games.length) :
+    loggedIdx.filter((i) => prop.chart[i].abbr === foe);
+  const activeVals = activeIdx.map((i) => prop.chart[i].value as number);
+  const shown = summarize(activeVals, line);
+  const logged = loggedIdx.map((i) => prop.chart[i].value as number);
   const windows = [
-    { label: "L5", ...summarize(logged.slice(-5), line) },
-    { label: "L10", ...summarize(logged.slice(-10), line) },
-    { label: "2026", ...summarize(prop.games, line) },
-    { label: `vs ${foe}`, ...summarize(vsFoe, line) },
+    { key: "L5" as const, label: "L5", ...summarize(logged.slice(-5), line) },
+    { key: "L10" as const, label: "L10", ...summarize(logged.slice(-10), line) },
+    { key: "L15" as const, label: "L15", ...summarize(logged.slice(-15), line) },
+    { key: "2026" as const, label: "2026", ...summarize(prop.games, line) },
+    { key: "H2H" as const, label: `vs ${foe}`, ...summarize(loggedIdx.filter((i) => prop.chart[i].abbr === foe).map((i) => prop.chart[i].value as number), line) },
   ];
   const maxLine = Math.max(line, ...logged, 40);
+  const pickedBar = picked == null ? null : prop.chart[picked];
 
   return (
     <Shell className={embedded ? "flex w-full flex-col gap-3" : "mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-4 pb-16"}>
       <button type="button" onClick={onBack} className="min-h-11 self-start text-sm font-medium">
         ← Props
       </button>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {PROPS.map((p) => (
+          <button
+            key={p.slug}
+            type="button"
+            onClick={() => onOpen(p.slug)}
+            className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${p.slug === prop.slug ? "bg-accent text-foreground" : "bg-card text-muted"}`}
+          >
+            {p.player.split(" ")[0]} · {p.market.split(" ")[0]}
+          </button>
+        ))}
+      </div>
       <header className="card overflow-hidden">
         <div className="bg-accent/30 px-4 py-4">
           <p className="text-xs text-muted">ATL @ NO · Mon 8:15 PM ET</p>
@@ -120,10 +140,10 @@ function Card({ prop, onBack, embedded }: { prop: PropCard; onBack: () => void; 
             </div>
             <div className="text-right">
               <div className="font-mono text-lg text-good">
-                {summary.hits}/{summary.n} over
+                {shown.n ? `${shown.hits}/${shown.n} over` : "No games"}
               </div>
               <div className="text-xs text-muted">
-                {pct(summary.pct)} · avg {one(summary.avg)} · median {one(summary.mid)}
+                {shown.n ? `${pct(shown.pct)} · avg ${one(shown.avg)}` : "Pick another window"} · {windows.find((w) => w.key === win)?.label}
               </div>
             </div>
           </div>
@@ -137,23 +157,32 @@ function Card({ prop, onBack, embedded }: { prop: PropCard; onBack: () => void; 
         </div>
         <div className="mb-3 flex gap-2 overflow-x-auto">
           {windows.map((w) => (
-            <div
-              key={w.label}
-              className={`min-w-16 shrink-0 rounded-xl px-2 py-2 text-center ${w.label === "L10" ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}
+            <button
+              key={w.key}
+              type="button"
+              onClick={() => setWin(w.key)}
+              className={`min-h-11 min-w-16 shrink-0 rounded-xl px-2 py-2 text-center ${win === w.key ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}
             >
               <div className="text-xs text-muted">{w.label}</div>
               <div className={`font-mono text-sm font-semibold ${w.n && w.pct >= 0.5 ? "text-good" : "text-danger"}`}>
                 {w.n ? pct(w.pct) : "—"}
               </div>
               <div className="font-mono text-xs text-muted">{w.n ? `Avg ${one(w.avg)}` : "No games"}</div>
-            </div>
+            </button>
           ))}
         </div>
-        <LineLog bars={prop.chart} line={line} />
-        <label className="mt-4 block text-xs text-muted">
-          Line
+        <LineLog bars={prop.chart} line={line} active={activeIdx} picked={picked} onPick={setPicked} />
+        {pickedBar && pickedBar.value != null ? (
+          <p className="mt-3 text-sm">
+            {pickedBar.date} vs {pickedBar.abbr}: <span className="font-mono">{pickedBar.value}</span> is {pickedBar.value > line ? "over" : "under"} {one(line)}.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-muted">Tap a bar. Bars outside the window you picked are dimmed.</p>
+        )}
+        <div className="mt-4 flex items-center gap-2">
+          <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Lower the line" onClick={() => setLine((v) => Math.max(0, Math.round((v - 0.5) * 10) / 10))}>−</button>
           <input
-            className="mt-1 h-11 w-full accent-accent"
+            className="h-11 min-w-0 flex-1 accent-accent"
             type="range"
             min={0}
             max={Math.ceil(maxLine / 5) * 5}
@@ -162,12 +191,13 @@ function Card({ prop, onBack, embedded }: { prop: PropCard; onBack: () => void; 
             aria-label="Research line"
             onChange={(e) => setLine(Number(e.target.value))}
           />
-        </label>
-        <p className="mt-1 text-xs text-muted">{prop.lineNote} Last 10 logged games, then tonight.</p>
+          <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
+        </div>
+        <p className="mt-1 text-xs text-muted">{prop.lineNote} Move it and the colors follow. Not a sportsbook price.</p>
       </section>
 
       <Defense foe={foe} pos={prop.pos} market={prop.market} />
-      {prop.team === "ATL" ? <Share player={prop.player} /> : null}
+      {prop.team === "ATL" ? <Share player={prop.player} onOpen={onOpen} /> : null}
       <section className="card p-4">
         <p className="text-xs uppercase tracking-widest text-accent">Desk call</p>
         <h2 className="mt-1 text-2xl font-semibold">{prop.call}</h2>
@@ -179,10 +209,11 @@ function Card({ prop, onBack, embedded }: { prop: PropCard; onBack: () => void; 
   );
 }
 
-function LineLog({ bars, line }: { bars: ChartBar[]; line: number }) {
+function LineLog({ bars, line, active, picked, onPick }: { bars: ChartBar[]; line: number; active: number[]; picked: number | null; onPick: (i: number) => void }) {
   const nums = bars.flatMap((b) => (b.value == null ? [] : [b.value]));
   const scale = Math.max(line, ...nums, 1) * 1.08;
   const linePct = (line / scale) * 100;
+  const on = new Set(active);
   return (
     <div className="overflow-x-auto pb-1">
       <div className="relative" style={{ width: Math.max(bars.length * 52, 320) }}>
@@ -193,13 +224,14 @@ function LineLog({ bars, line }: { bars: ChartBar[]; line: number }) {
             </span>
           </div>
           <div className="flex h-full items-end">
-            {bars.map((b) => {
+            {bars.map((b, i) => {
               const pending = b.value == null;
               const height = pending ? 36 : Math.max((b.value! / scale) * 100, b.value === 0 ? 3 : 8);
               const over = !pending && b.value! > line;
               const inside = !pending && height > 24;
+              const dim = !pending && !on.has(i);
               return (
-                <div key={`${b.date}-${b.abbr}`} className="relative h-full w-12 shrink-0">
+                <button key={`${b.date}-${b.abbr}-${i}`} type="button" onClick={() => onPick(i)} aria-pressed={picked === i} className={`relative h-full w-12 shrink-0 ${dim ? "opacity-30" : ""}`}>
                   {!pending && !inside ? (
                     <span
                       className={`absolute inset-x-0 text-center font-mono text-xs font-semibold ${over ? "text-good" : "text-danger"}`}
@@ -208,8 +240,8 @@ function LineLog({ bars, line }: { bars: ChartBar[]; line: number }) {
                       {b.value}
                     </span>
                   ) : null}
-                  <div
-                    className={`absolute inset-x-1 bottom-0 rounded-md ${pending ? "border border-dashed border-muted" : over ? "bg-good" : "bg-danger"}`}
+                  <span
+                    className={`absolute inset-x-1 bottom-0 rounded-md ${pending ? "border border-dashed border-muted" : over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-foreground" : ""}`}
                     style={{ height: `${height}%` }}
                   >
                     {pending ? (
@@ -217,8 +249,8 @@ function LineLog({ bars, line }: { bars: ChartBar[]; line: number }) {
                     ) : inside ? (
                       <span className="block pt-1 text-center font-mono text-xs font-semibold text-background">{b.value}</span>
                     ) : null}
-                  </div>
-                </div>
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -239,6 +271,7 @@ function LineLog({ bars, line }: { bars: ChartBar[]; line: number }) {
 function Defense({ foe, pos, market }: { foe: "ATL" | "NO"; pos: Pos; market: string }) {
   const [spot, setSpot] = useState<Pos>(pos);
   const [kind, setKind] = useState<"rec" | "rush">(market.startsWith("Rush") ? "rush" : "rec");
+  const [focus, setFocus] = useState("yds");
   const slice = DVP[foe][spot];
   const rows =
     kind === "rush"
@@ -290,18 +323,23 @@ function Defense({ foe, pos, market }: { foe: "ATL" | "NO"; pos: Pos; market: st
           const bar = grade === "Soft" ? "bg-good" : grade === "Tough" ? "bg-danger" : "bg-accent";
           return (
             <li key={row.key}>
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span>
-                  <span className="font-medium">{row.label}</span>{" "}
-                  <span className="font-mono text-muted">{one(cell.per)} allowed</span>
-                </span>
-                <span>
-                  <span className="font-mono text-muted">{ordinal(cell.rank)}</span> <span className={`font-semibold ${tone}`}>{grade}</span>
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background">
-                <div className={`h-full rounded-full ${bar}`} style={{ width: `${(cell.rank / 32) * 100}%` }} />
-              </div>
+              <button type="button" onClick={() => setFocus(row.key)} className={`w-full rounded-xl p-2 text-left ${focus === row.key ? "bg-background" : ""}`}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span>
+                    <span className="font-medium">{row.label}</span>{" "}
+                    <span className="font-mono text-muted">{one(cell.per)} allowed</span>
+                  </span>
+                  <span>
+                    <span className="font-mono text-muted">{ordinal(cell.rank)}</span> <span className={`font-semibold ${tone}`}>{grade}</span>
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-card">
+                  <div className={`h-full rounded-full ${bar}`} style={{ width: `${(cell.rank / 32) * 100}%` }} />
+                </div>
+                {focus === row.key ? (
+                  <p className="mt-2 text-xs text-muted">{foe} allows {one(cell.per)} {row.label.toLowerCase()} per game to {spot}. {ordinal(cell.rank)} of 32. {grade}.</p>
+                ) : null}
+              </button>
             </li>
           );
         })}
@@ -311,7 +349,7 @@ function Defense({ foe, pos, market }: { foe: "ATL" | "NO"; pos: Pos; market: st
   );
 }
 
-function Share({ player }: { player: string }) {
+function Share({ player, onOpen }: { player: string; onOpen: (slug: string) => void }) {
   const [mode, setMode] = useState<"targets" | "rush">("targets");
   const total = mode === "targets" ? FALCONS_TARGETS.reduce((a, m) => a + m.targets, 0) : FALCONS_RUSH.reduce((a, m) => a + m.yards, 0);
   const stops =
@@ -342,33 +380,46 @@ function Share({ player }: { player: string }) {
       {mode === "targets" ? (
         <ul className="mt-4">
           {FALCONS_TARGETS.map((m) => {
+            const match = PROPS.find((p) => p.player === m.name);
             const on = m.name === player;
             return (
-              <li key={m.name} className={`flex items-center gap-2 rounded-xl px-1 py-1.5 ${on ? "bg-accent/25" : ""}`}>
-                <span className="size-2 shrink-0 rounded-full" style={{ background: m.color }} />
-                <Head id={m.espnId} name={m.name} compact />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{m.name}</span>
-                  <span className="text-xs text-muted">{m.pos}</span>
-                </span>
-                <span className="font-mono text-sm">{m.targets}</span>
-                <span className="w-14 text-right font-mono text-sm text-muted">{pct(m.targets / total)}</span>
+              <li key={m.name}>
+                <button
+                  type="button"
+                  disabled={!match}
+                  onClick={() => match && onOpen(match.slug)}
+                  className={`flex w-full items-center gap-2 rounded-xl px-1 py-1.5 text-left ${on ? "bg-accent/25" : ""} ${match ? "" : "opacity-70"}`}
+                >
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: m.color }} />
+                  <Head id={m.espnId} name={m.name} compact />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{m.name}</span>
+                    <span className="text-xs text-muted">{m.pos}{match ? " · open" : ""}</span>
+                  </span>
+                  <span className="font-mono text-sm">{m.targets}</span>
+                  <span className="w-14 text-right font-mono text-sm text-muted">{pct(m.targets / total)}</span>
+                </button>
               </li>
             );
           })}
         </ul>
       ) : (
         <ul className="mt-4 text-sm">
-          {FALCONS_RUSH.map((m) => (
-            <li key={m.name} className="flex justify-between py-2">
-              <span>
-                {m.name} <span className="text-muted">{m.carries} car</span>
-              </span>
-              <span className="font-mono">
-                {m.yards} · {pct(m.yards / total)}
-              </span>
-            </li>
-          ))}
+          {FALCONS_RUSH.map((m) => {
+            const match = PROPS.find((p) => p.player === m.name && p.market.startsWith("Rush"));
+            return (
+              <li key={m.name}>
+                <button type="button" disabled={!match} onClick={() => match && onOpen(match.slug)} className="flex min-h-11 w-full items-center justify-between py-2 text-left">
+                  <span>
+                    {m.name} <span className="text-muted">{m.carries} car</span>
+                  </span>
+                  <span className="font-mono">
+                    {m.yards} · {pct(m.yards / total)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       <p className="mt-3 text-xs text-muted">Player logs sum to 76 targets. ESPN’s Falcons team total is 75. Not red zone.</p>
