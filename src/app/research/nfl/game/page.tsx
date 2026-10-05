@@ -55,10 +55,10 @@ function Inner() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="game space-y-6">
       <div>
         <Link href="/research" className="text-xs text-muted hover:text-accent">← NFL slate</Link>
-        <h1 className="text-2xl font-bold mt-2">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
+        <h1 className="mt-2 text-2xl tracking-tight">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -68,6 +68,14 @@ function Inner() {
       </div>
       <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
+      <div className="card space-y-1 p-4">
+        <div className="text-xs uppercase tracking-widest text-muted">Researched side</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="font-semibold">{desk.pick}</div>
+          <div className={`font-mono text-2xl font-semibold ${scoreTone(desk.score)}`}>{desk.score}</div>
+        </div>
+        <p className="text-sm text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
+      </div>
       <div className="card overflow-x-auto p-4">
         <h3 className="mb-2 text-sm font-semibold">Season</h3>
         <table className="w-full text-xs">
@@ -93,14 +101,6 @@ function Inner() {
           ))}
         </div>
       )}
-      <div className="card space-y-1 p-4">
-        <div className="text-xs uppercase tracking-widest text-muted">Researched side</div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="font-semibold">{desk.pick}</div>
-          <div className={`font-mono text-2xl font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
-        </div>
-        <p className="text-sm text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
-      </div>
     </div>
   );
 }

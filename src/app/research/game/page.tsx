@@ -205,10 +205,10 @@ function GameInner() {
   const watch = otherPlays.filter((e) => !isPlayable(e));
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="game space-y-6 pb-24">
       <div>
         <Link href="/research" className="text-xs text-muted hover:text-accent">← Back to slate</Link>
-        <h1 className="text-2xl font-bold mt-2">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
+        <h1 className="mt-2 text-2xl tracking-tight">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
         <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
       </div>
       <StarterKs
@@ -217,10 +217,14 @@ function GameInner() {
         venue={game.venue}
         status={game.status}
       />
-      <AgentDesk away={game.awayTeam} home={game.homeTeam} />
-      <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
-      {data.ticket && <TicketDesk ticket={data.ticket} />}
-      <section className="grid sm:grid-cols-2 gap-3">
+      <section className="space-y-3">
+        <h2 className="text-sm text-good">Playable</h2>
+        {live.map((e, i) => <PlayCard key={`l${i}`} e={e} live />)}
+        {!live.length && <p className="text-xs text-muted">Nothing cleared the bar in this game.</p>}
+        <h2 className="pt-2 text-sm text-danger">Research only</h2>
+        {watch.map((e, i) => <PlayCard key={`w${i}`} e={e} live={false} />)}
+      </section>
+      <section className="grid gap-3 sm:grid-cols-2">
         <PitcherCard p={data.awayPitcher} label="Away starter" deep={data.awayDeep} />
         <PitcherCard p={data.homePitcher} label="Home starter" deep={data.homeDeep} />
       </section>
@@ -235,8 +239,8 @@ function GameInner() {
         awayTeam={game.awayTeam}
       />
       {data.bvp?.length > 0 && (
-        <div className="card p-4 overflow-x-auto">
-          <h3 className="font-semibold text-sm mb-2">Batter vs this starter (career)</h3>
+        <div className="card overflow-x-auto p-4">
+          <h3 className="mb-2 text-sm">Batter vs this starter</h3>
           <table className="w-full text-xs">
             <thead className="text-muted">
               <tr className="text-left">
@@ -255,16 +259,12 @@ function GameInner() {
         </div>
       )}
       <HitterForm rows={data.form || []} />
-      <StealBoard edges={data.steals || []} />
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-good">Playable</h2>
-        {live.map((e, i) => <PlayCard key={`l${i}`} e={e} live />)}
-        {!live.length && <p className="text-xs text-muted">Nothing cleared the bar in this game.</p>}
-        <h2 className="text-sm font-semibold text-danger pt-2">Research only</h2>
-        {watch.map((e, i) => <PlayCard key={`w${i}`} e={e} live={false} />)}
-      </section>
       <BatterTable title={`${game.awayTeam} hitters`} rows={data.awayHitters} />
       <BatterTable title={`${game.homeTeam} hitters`} rows={data.homeHitters} />
+      <StealBoard edges={data.steals || []} />
+      <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
+      {data.ticket && <TicketDesk ticket={data.ticket} />}
+      <AgentDesk away={game.awayTeam} home={game.homeTeam} />
       <SlipTray />
     </div>
   );
