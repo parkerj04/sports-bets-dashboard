@@ -18,6 +18,7 @@ import { PropMatch } from "@/components/PropMatch";
 import { TonightDesk } from "@/components/TonightDesk";
 import { AgentDesk } from "@/components/AgentDesk";
 import { footballRegistry } from "@/lib/football-desk";
+import { PropsDesk } from "@/components/builds/props-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 
@@ -77,6 +78,7 @@ function Inner() {
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
       </div>
+      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
       <ReceiverLab away={lab.awayAbbr} home={lab.homeAbbr} />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <BackSplit away={lab.awayAbbr} home={lab.homeAbbr} />

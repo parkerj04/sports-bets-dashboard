@@ -17,18 +17,37 @@ import {
   type PropCard,
 } from "./data";
 
-export function PropsDesk() {
+export function PropsDesk({
+  away,
+  home,
+  embedded = false,
+}: {
+  away?: string;
+  home?: string;
+  embedded?: boolean;
+} = {}) {
   const [slug, setSlug] = useState<string | null>(null);
+  const teams = [away, home].map((t) => (t || "").toUpperCase());
+  if ((away || home) && !(teams.includes("ATL") && teams.includes("NO"))) return null;
   const prop = PROPS.find((p) => p.slug === slug) ?? null;
-  return prop ? <Card prop={prop} onBack={() => setSlug(null)} /> : <Board onOpen={setSlug} />;
+  return prop ? (
+    <Card prop={prop} embedded={embedded} onBack={() => setSlug(null)} />
+  ) : (
+    <Board embedded={embedded} onOpen={setSlug} />
+  );
 }
 
-function Board({ onOpen }: { onOpen: (slug: string) => void }) {
+function Board({ onOpen, embedded }: { onOpen: (slug: string) => void; embedded: boolean }) {
+  const Shell = embedded ? "section" : "main";
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
+    <Shell className={embedded ? "flex w-full flex-col gap-3" : "mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6"}>
       <header>
-        <p className="text-xs uppercase tracking-widest text-accent">Build · not the member board</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">Falcons @ Saints</h1>
+        <p className="text-xs uppercase tracking-widest text-accent">{embedded ? "Player props" : "Build · not the member board"}</p>
+        {embedded ? (
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">Falcons @ Saints</h2>
+        ) : (
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Falcons @ Saints</h1>
+        )}
         <p className="mt-1 text-sm text-muted">Mon 8:15 PM ET · Week 4 · ESPN logs through Week 3. Lines are research bars, not book prices.</p>
       </header>
       <ul className="flex flex-col gap-3">
@@ -55,11 +74,12 @@ function Board({ onOpen }: { onOpen: (slug: string) => void }) {
           );
         })}
       </ul>
-    </main>
+    </Shell>
   );
 }
 
-function Card({ prop, onBack }: { prop: PropCard; onBack: () => void }) {
+function Card({ prop, onBack, embedded }: { prop: PropCard; onBack: () => void; embedded: boolean }) {
+  const Shell = embedded ? "section" : "main";
   const [line, setLine] = useState(prop.line);
   const foe: "ATL" | "NO" = prop.team === "ATL" ? "NO" : "ATL";
   const logged = useMemo(() => prop.chart.flatMap((b) => (b.value == null ? [] : [b.value])), [prop.chart]);
@@ -77,9 +97,9 @@ function Card({ prop, onBack }: { prop: PropCard; onBack: () => void }) {
   const maxLine = Math.max(line, ...logged, 40);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-4 pb-16">
+    <Shell className={embedded ? "flex w-full flex-col gap-3" : "mx-auto flex w-full max-w-3xl flex-col gap-3 px-4 py-4 pb-16"}>
       <button type="button" onClick={onBack} className="min-h-11 self-start text-sm font-medium">
-        ← Board
+        ← Props
       </button>
       <header className="card overflow-hidden">
         <div className="bg-accent/30 px-4 py-4">
@@ -155,7 +175,7 @@ function Card({ prop, onBack }: { prop: PropCard; onBack: () => void }) {
       </section>
       <Split title="Case for" tone="good" items={prop.bulletsFor} />
       <Split title="Case against" tone="danger" items={prop.bulletsAgainst} />
-    </main>
+    </Shell>
   );
 }
 
