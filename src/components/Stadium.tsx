@@ -56,6 +56,7 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
   const awaySkin = SKIN[awayKey] || { end: "#111", ink: "#ffffff" };
   const homeSkin = SKIN[homeKey] || { end: "#111", ink: "#ffffff" };
   const clubSkin = SKIN[club] || awaySkin;
+  const play = plays[open];
   const fieldX = 130;
   const fieldW = 740;
   return (
@@ -100,23 +101,25 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
           const on = open === i;
           return (
             <g key={i} onClick={() => setOpen(i)} style={{ cursor: "pointer" }}>
+              <circle cx={x} cy={y} r="18" fill="transparent" />
               <circle cx={x} cy={y} r={on ? 14 : 10} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={on ? 3 : 1.5} />
               <text x={x} y={y + 4} textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff">{i + 1}</text>
             </g>
           );
         })}
       </svg>
-      <div className="m-3 overflow-hidden rounded-lg bg-white text-[#1c1c1c]">
-        {plays.length === 0 && <p className="p-3 text-sm text-[#4b5563]">No charted plays for this player yet.</p>}
-        {plays.map((row, i) => (
-          <button key={`${row.week}-${row.time}-${i}`} type="button" onClick={() => setOpen(i)} className={`flex w-full gap-3 border-t border-[#e6e6e6] px-3 py-2 text-left first:border-t-0 ${open === i ? "bg-[#eef3ff]" : "bg-white"}`}>
-            <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[i % COLORS.length] }}>{i + 1}</span>
+      <div className="m-3 rounded-lg bg-white p-3 text-[#1c1c1c]">
+        {play ? (
+          <div className="flex gap-3">
+            <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[open % COLORS.length] }}>{open + 1}</span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold">vs {row.def} — Q{row.qtr || "?"}, {row.time || "—"} — {ORD[Number(row.down)] || "?"} & {row.togo || "?"} — {row.yards ?? "?"} yards — {row.from || "?"} to {row.to || "?"}</span>
-              <span className="mt-0.5 block text-xs text-[#4b5563]">Likely coverage: {(row.coverage || "estimate unavailable").replace("estimate: ", "")} | Likely concept: {(row.concept || "estimate unavailable").replace("estimate: ", "")}</span>
+              <span className="block text-sm font-semibold">vs {play.def} — Q{play.qtr || "?"}, {play.time || "—"} — {ORD[Number(play.down)] || "?"} & {play.togo || "?"} — {play.yards ?? "?"} yards — {play.from || "?"} to {play.to || "?"}</span>
+              <span className="mt-0.5 block text-xs text-[#4b5563]">Likely coverage: {(play.coverage || "estimate unavailable").replace("estimate: ", "")} | Likely concept: {(play.concept || "estimate unavailable").replace("estimate: ", "")}</span>
             </span>
-          </button>
-        ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[#4b5563]">Tap a dot.</p>
+        )}
       </div>
       <p className="px-3 pb-3 text-[11px] text-white/50">Dots are catch spots from the 2026 play file. Coverage lines are estimates, not charted film.</p>
     </div>
