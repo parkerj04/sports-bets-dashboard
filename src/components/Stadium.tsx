@@ -27,21 +27,21 @@ const SKIN: Record<string, { end: string; ink: string }> = {
   PHI: { end: "#004c54", ink: "#a5acaf" }, WAS: { end: "#5a1414", ink: "#ffb612" }, WSH: { end: "#5a1414", ink: "#ffb612" },
   CHI: { end: "#0b162a", ink: "#c83803" }, DET: { end: "#0076b6", ink: "#b0b7bc" },
   GB: { end: "#203731", ink: "#ffb612" }, MIN: { end: "#4f2683", ink: "#ffc62f" },
-  ATL: { end: "#a71930", ink: "#000000" }, CAR: { end: "#0085ca", ink: "#101820" },
-  NO: { end: "#101820", ink: "#d3bc8d" }, TB: { end: "#d50a0a", ink: "#ff7900" },
+  ATL: { end: "#a71930", ink: "#ffffff" }, CAR: { end: "#0085ca", ink: "#101820" },
+  NO: { end: "#101820", ink: "#d3bc8d" }, TB: { end: "#d50a0a", ink: "#ffffff" },
   ARI: { end: "#97233f", ink: "#ffb612" }, LA: { end: "#003594", ink: "#ffd100" }, LAR: { end: "#003594", ink: "#ffd100" },
-  SF: { end: "#aa0000", ink: "#b3995d" }, SEA: { end: "#002244", ink: "#69be28" },
+  SF: { end: "#aa0000", ink: "#ffffff" }, SEA: { end: "#002244", ink: "#69be28" },
 };
 
 function Post({ edge, dir }: { edge: number; dir: -1 | 1 }) {
   const mid = 123;
-  const stem = edge + dir * 16;
+  const upright = edge + dir * 10;
   return (
-    <g stroke="#f4d27a" strokeWidth="4" fill="none" strokeLinecap="square">
-      <line x1={edge} y1={mid} x2={stem} y2={mid} />
-      <line x1={stem} y1={mid - 22} x2={stem} y2={mid + 22} />
-      <line x1={stem} y1={mid - 22} x2={stem + dir * 14} y2={mid - 22} />
-      <line x1={stem} y1={mid + 22} x2={stem + dir * 14} y2={mid + 22} />
+    <g stroke="#f4d27a" strokeWidth="3" fill="none">
+      <line x1={edge} y1={mid} x2={upright} y2={mid} />
+      <line x1={upright} y1={mid - 28} x2={upright} y2={mid + 28} />
+      <path d={`M ${upright} ${mid - 28} q ${dir * 16} 0 ${dir * 16} 8`} />
+      <path d={`M ${upright} ${mid + 28} q ${dir * 16} 0 ${dir * 16} -8`} />
     </g>
   );
 }
@@ -56,63 +56,58 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
   const awaySkin = SKIN[awayKey] || { end: "#111", ink: "#ffffff" };
   const homeSkin = SKIN[homeKey] || { end: "#111", ink: "#ffffff" };
   const clubSkin = SKIN[club] || awaySkin;
-  const fieldX = 110;
-  const fieldW = 780;
+  const fieldX = 130;
+  const fieldW = 740;
   return (
     <div className="overflow-hidden rounded-lg border border-black bg-black text-white">
       <div className="flex items-center gap-3 px-3 py-3">
         <img src={playerLogo} alt={club} className="h-14 w-14 rounded-full bg-white object-contain p-1" />
         <div>
-          <div className="text-xl font-extrabold leading-tight"><span style={{ color: clubSkin.ink }}>{name || "Receiver"} Receptions</span> <span className="text-white">— 2026 Season</span></div>
-          <div className="mt-1 text-sm text-white/80">End-of-play locations for all {plays.length || rec} catches. {NAME[awayKey] || away} at {NAME[homeKey] || home}{venue ? ` · ${venue}` : ""}.</div>
+          <div className="text-xl font-extrabold leading-tight"><span style={{ color: clubSkin.ink }}>{name || "Player"}</span> <span className="text-white">— 2026</span></div>
+          <div className="mt-1 text-sm text-white/80">{plays.length || rec} charted plays. {NAME[awayKey] || away} at {NAME[homeKey] || home}{venue ? ` · ${venue}` : ""}.</div>
         </div>
       </div>
       <div className="h-1.5" style={{ background: homeSkin.ink }} />
       <svg viewBox="0 0 1040 280" className="w-full bg-[#1f7a34]">
-        <rect x="40" y="18" width="70" height="210" fill={clubSkin.end} stroke="#fff" strokeWidth="2" />
-        <rect x="890" y="18" width="70" height="210" fill="#111" stroke="#fff" strokeWidth="2" />
-        <text x="75" y="126" fill={clubSkin.ink} fontSize="11" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(-90 75 126)">{NAME[club] || club}</text>
-        <text x="925" y="126" fill="#fff" fontSize="11" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(90 925 126)">OPPONENT</text>
+        <rect x="36" y="18" width="94" height="210" fill={awaySkin.end} stroke="#fff" strokeWidth="2" />
+        <rect x="870" y="18" width="94" height="210" fill={homeSkin.end} stroke="#fff" strokeWidth="2" />
+        <text x="83" y="126" fill={awaySkin.ink} fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(-90 83 126)">{NAME[awayKey] || awayKey}</text>
+        <text x="917" y="126" fill={homeSkin.ink} fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(90 917 126)">{NAME[homeKey] || homeKey}</text>
         <rect x={fieldX} y="18" width={fieldW} height="210" fill="#21863c" stroke="#fff" strokeWidth="2" />
         {Array.from({ length: 21 }, (_, i) => fieldX + (i / 20) * fieldW).map((x, i) => (
-          <line key={i} x1={x} y1="18" x2={x} y2="228" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.5 : 0.7} />
+          <line key={i} x1={x} y1="18" x2={x} y2="228" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.6 : 0.6} />
         ))}
         {Array.from({ length: 20 }, (_, i) => fieldX + ((i + 0.5) / 20) * fieldW).map((x) => (
           <g key={x}>
-            <line x1={x - 6} y1="82" x2={x + 6} y2="82" stroke="#fff" strokeWidth="1.4" />
-            <line x1={x - 6} y1="164" x2={x + 6} y2="164" stroke="#fff" strokeWidth="1.4" />
+            <line x1={x - 7} y1="78" x2={x + 7} y2="78" stroke="#fff" strokeWidth="1.4" />
+            <line x1={x - 7} y1="168" x2={x + 7} y2="168" stroke="#fff" strokeWidth="1.4" />
           </g>
         ))}
         {Array.from({ length: 11 }, (_, i) => {
           const x = fieldX + (i / 10) * fieldW;
           const label = i <= 5 ? i * 10 : (10 - i) * 10;
-          return (
-            <g key={i}>
-              <line x1={x} y1="228" x2={x} y2="238" stroke="#fff" strokeWidth="1.2" />
-              <text x={x} y="256" fill="#fff" fontSize="13" fontWeight="700" textAnchor="middle">{label}</text>
-            </g>
-          );
+          return <text key={i} x={x} y="256" fill="#fff" fontSize="14" fontWeight="700" textAnchor="middle">{label}</text>;
         })}
-        <Post edge={40} dir={-1} />
-        <Post edge={960} dir={1} />
-        <circle cx={fieldX + fieldW / 2} cy="123" r="32" fill="#111" opacity="0.28" />
-        <image href={playerLogo} x={fieldX + fieldW / 2 - 24} y="99" width="48" height="48" />
+        <Post edge={36} dir={-1} />
+        <Post edge={964} dir={1} />
+        <circle cx={fieldX + fieldW / 2} cy="123" r="28" fill="#111" opacity="0.28" />
+        <image href={`https://a.espncdn.com/i/teamlogos/nfl/500/${homeKey.toLowerCase()}.png`} x={fieldX + fieldW / 2 - 18} y="105" width="36" height="36" />
         {plays.map((p, i) => {
           const lane = p.loc === "left" ? 58 : p.loc === "right" ? 188 : 123;
-          const y = lane + ((i % 5) - 2) * 10;
+          const y = lane + ((i % 5) - 2) * 8;
           const spot = p.x == null ? 8 + ((i * 17) % 84) : Number(p.x);
           const x = fieldX + (spot / 100) * fieldW;
           const on = open === i;
           return (
             <g key={i} onClick={() => setOpen(i)} style={{ cursor: "pointer" }}>
-              <circle cx={x} cy={y} r={on ? 15 : 11} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={on ? 3 : 1.5} />
-              <text x={x} y={y + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{i + 1}</text>
+              <circle cx={x} cy={y} r={on ? 14 : 10} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={on ? 3 : 1.5} />
+              <text x={x} y={y + 4} textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff">{i + 1}</text>
             </g>
           );
         })}
       </svg>
       <div className="m-3 overflow-hidden rounded-lg bg-white text-[#1c1c1c]">
-        {plays.length === 0 && <p className="p-3 text-sm text-[#4b5563]">No charted catches for this player yet.</p>}
+        {plays.length === 0 && <p className="p-3 text-sm text-[#4b5563]">No charted plays for this player yet.</p>}
         {plays.map((row, i) => (
           <button key={`${row.week}-${row.time}-${i}`} type="button" onClick={() => setOpen(i)} className={`flex w-full gap-3 border-t border-[#e6e6e6] px-3 py-2 text-left first:border-t-0 ${open === i ? "bg-[#eef3ff]" : "bg-white"}`}>
             <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[i % COLORS.length] }}>{i + 1}</span>
@@ -123,7 +118,7 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
           </button>
         ))}
       </div>
-      <p className="px-3 pb-3 text-[11px] text-white/50">Coverage and concept lines are estimates from the play shape, not charted film.</p>
+      <p className="px-3 pb-3 text-[11px] text-white/50">End zones are the two teams in this game. A dot without a charted spot is placed by side of the field, not a fake yard line.</p>
     </div>
   );
 }
