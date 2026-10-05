@@ -4,6 +4,7 @@ import { catches2026 } from "@/lib/rec2026";
 import { onRoster, rosterNames } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const FILE: Record<string, string> = { WSH: "WAS", LAR: "LA" };
 
