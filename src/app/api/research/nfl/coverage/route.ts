@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import coverage from "@/data/nfl-coverage.json";
 import { catches2026 } from "@/lib/rec2026";
-import { onRoster, rosterNames } from "@/lib/roster";
+import { onRoster, prettyName, rosterNames } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     .filter((p) => (p.team === awayFile || p.team === homeFile) && onRoster(p.name, roster));
   const catches = live.players
     .filter((p) => onRoster(p.name, roster))
-    .map((p) => ({ ...p, team: p.team === awayFile ? away : p.team === homeFile ? home : p.team }));
+    .map((p) => ({ ...p, name: prettyName(p.name, roster), team: p.team === awayFile ? away : p.team === homeFile ? home : p.team }));
   return NextResponse.json({
     source: "2025 chart kept for zone and man only. Names not on the live ESPN roster are removed.",
     liveSource: live.source,

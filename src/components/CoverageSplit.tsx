@@ -50,37 +50,40 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
   const active = list.find((p) => p.name === picked) || list[0];
   const back = backList.find((p) => p.name === backName) || backList[0];
   const heavy = (s: Side) => (s && s.zonePct >= 65 ? "zone-heavy" : s && s.zonePct <= 50 ? "man-leaning" : "mixed");
-  const backPlays = (back?.recent || []).map((p) => ({ week: p.week, def: p.def, loc: p.loc, yards: p.yards, down: p.down, togo: p.togo, td: p.td }));
   return (
-    <div className="card p-4 space-y-3">
-      <h3 className="font-semibold text-sm">Receivers, then backs</h3>
-      <div className="flex gap-2">
-        {[away, home].map((t) => (
-          <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); setBackName(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === t ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{t}</button>
-        ))}
+    <div className="card space-y-3 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold">Catch chart</h3>
+        <div className="flex gap-1 rounded-full bg-background p-1">
+          {[away, home].map((t) => (
+            <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); setBackName(""); }} className={`min-h-11 rounded-full px-3 text-sm ${side === t ? "bg-accent text-foreground" : "text-muted"}`}>{t}</button>
+          ))}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {list.map((p) => (
-          <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>
-            {p.name === plus?.name ? "+ " : ""}{p.name === star?.name ? "★ " : ""}{p.name} {p.rec}
+          <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${active?.name === p.name ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+            {p.name === plus?.name ? "+ " : ""}{p.name === star?.name ? "★ " : ""}{p.name}
           </button>
         ))}
       </div>
-      <Stadium venue={venue} home={home} away={away} team={active?.team || side} name={active?.name || ""} rec={active?.rec || 0} plays={active?.recent || []} />
-      <h3 className="font-semibold text-sm">Running backs</h3>
-      <div className="flex flex-wrap gap-2">
-        {backList.map((p) => (
-          <button key={p.name} type="button" onClick={() => setBackName(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${back?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>{p.name} · {p.role}</button>
-        ))}
-        {backList.length === 0 && <p className="text-xs text-muted">No back with 3 carries in the 2026 file for {side}.</p>}
-      </div>
-      {back && (
-        <div className="text-xs space-y-1">
-          <div className="font-mono">{back.carries} car, {back.rushYards} rush · {back.rec} rec, {back.recYards} rec yds · {back.thirdShare}% of carries on 3rd down</div>
-          <div className="font-mono">Run side: {back.left} left · {back.middle} middle · {back.right} right</div>
-        </div>
+      {active ? (
+        <Stadium venue={venue} home={home} away={away} team={active.team} name={active.name} rec={active.rec} plays={active.recent || []} />
+      ) : (
+        <p className="text-sm text-muted">No 2026 catches loaded for {side}.</p>
       )}
-      {back && <Stadium venue={venue} home={home} away={away} team={back.team} name={back.name} rec={back.carries} plays={backPlays} />}
+      <div>
+        <h3 className="font-semibold">Backs</h3>
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+          {backList.map((p) => (
+            <button key={p.name} type="button" onClick={() => setBackName(p.name)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${back?.name === p.name ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{p.name}</button>
+          ))}
+          {backList.length === 0 && <p className="text-sm text-muted">No back with 3 carries for {side}.</p>}
+        </div>
+        {back && (
+          <p className="mt-2 font-mono text-xs text-muted">{back.carries} car, {back.rushYards} rush · {back.rec} rec, {back.recYards} yds · {back.left} left, {back.middle} middle, {back.right} right</p>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <SideCard name={away} side={data.away} tag={heavy(data.away)} />
         <SideCard name={home} side={data.home} tag={heavy(data.home)} />
@@ -92,10 +95,11 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
 function SideCard({ name, side, tag }: { name: string; side: Side; tag: string }) {
   if (!side) return <div className="bg-white/5 rounded-lg p-2">{name}: no 2025 chart</div>;
   return (
-    <div className="bg-white/5 rounded-lg p-2">
-      <div className="font-medium">{name} defense · 2025</div>
-      <div className="font-mono">{side.zonePct}% zone · {side.manPct}% man</div>
-      <div className="text-muted">{tag} · {side.snaps} charted snaps</div>
+    <div className="rounded-xl bg-background p-3">
+      <div className="font-medium">{name} defense</div>
+      <div className="mt-1 font-mono">{side.zonePct}% zone</div>
+      <div className="font-mono">{side.manPct}% man</div>
+      <div className="mt-1 text-muted">{tag} · {side.snaps} snaps · 2025</div>
     </div>
   );
 }

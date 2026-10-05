@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { backs2026 } from "@/lib/backs2026";
-import { onRoster, rosterNames } from "@/lib/roster";
+import { onRoster, prettyName, rosterNames } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,8 @@ export async function GET(request: Request) {
   const roster = [...awayRoster, ...homeRoster];
   return NextResponse.json({
     ...live,
-    players: (live.players || []).filter((p: { name: string }) => onRoster(p.name, roster)),
+    players: (live.players || [])
+      .filter((p: { name: string }) => onRoster(p.name, roster))
+      .map((p: { name: string; team: string }) => ({ ...p, name: prettyName(p.name, roster), team: p.team === awayFile ? away : p.team === homeFile ? home : p.team })),
   });
 }
