@@ -41,39 +41,44 @@ function Inner() {
   const list = catchers.filter((l) => l.team === side);
   const active = list.find((l) => l.name === picked) || list[0];
   return (
-    <div className="space-y-4">
-      <Link href="/research" className="text-xs text-muted">← CFB slate</Link>
-      <h1 className="text-2xl font-bold">{game.away} <span className="text-muted">@</span> {game.home}</h1>
-      <p className="text-sm text-muted">{game.awayConf} vs {game.homeConf} · {game.spread} · O/U {game.total} · ML {game.mlAway}/{game.mlHome}</p>
-      <div className="grid sm:grid-cols-2 gap-3">
+    <div className="game space-y-6">
+      <div>
+        <Link href="/research" className="text-xs text-muted">← CFB slate</Link>
+        <h1 className="mt-2 text-2xl tracking-tight">{game.away} <span className="text-muted">@</span> {game.home}</h1>
+        <p className="text-sm text-muted">{game.awayConf} vs {game.homeConf}</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{game.spread}</div></div>
+        <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{game.total}</div></div>
+        <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{game.mlAway}/{game.mlHome}</div></div>
+      </div>
+      <section className="card space-y-3 p-4">
+        <h2 className="text-sm">Receivers</h2>
+        <p className="text-xs text-muted">{recSource || "Loading 2026 receptions…"}</p>
+        <div className="flex gap-2">
+          {[game.away, game.home].map((t) => (
+            <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); }} className={`min-h-11 rounded-full px-3 text-sm ${side === t ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{t}</button>
+          ))}
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {list.map((p) => (
+            <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${active?.name === p.name ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{p.name}</button>
+          ))}
+        </div>
+        {active && <p className="font-mono text-sm">{active.name} · {active.rec} rec · {active.yards} yards · {active.td} TD</p>}
+        {list.length === 0 && <p className="text-sm text-muted">No 2026 receptions in the player box for {side}.</p>}
+      </section>
+      <div className="grid gap-3 sm:grid-cols-2">
         <Qb team={game.away} conf={game.awayConf} record={game.awayRecord} name={game.awayQb} line={game.awayQbLine} />
         <Qb team={game.home} conf={game.homeConf} record={game.homeRecord} name={game.homeQb} line={game.homeQbLine} />
       </div>
-      <section className="card p-4 space-y-3">
-        <h3 className="font-semibold text-sm">Pick a receiver</h3>
-        <p className="text-[11px] text-muted">Season receptions, yards, and touchdowns from the 2026 player box. No plus or star. Those marks need a matchup, and this file does not have one.</p>
-        <p className="text-[11px] text-muted">{recSource || "Loading 2026 receptions…"}</p>
-        <div className="flex gap-2">
-          {[game.away, game.home].map((t) => (
-            <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); }} className={`text-xs px-3 py-1.5 rounded-full border ${side === t ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{t}</button>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {list.map((p) => (
-            <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${active?.name === p.name ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}>{p.name} {p.rec}</button>
-          ))}
-        </div>
-        {active && <div className="text-sm"><div className="font-semibold">{active.name}</div><div className="font-mono text-xs">{active.rec} rec · {active.yards} yards · {active.td} TD</div></div>}
-        {list.length === 0 && <p className="text-xs text-muted">No 2026 receptions in the player box for {side}.</p>}
-      </section>
-      <div className="card p-4">
-        <div className="text-xs text-muted uppercase">QB read</div>
-        <div className="flex justify-between gap-3">
+      <div className="card space-y-1 p-4">
+        <div className="text-xs uppercase tracking-widest text-muted">QB read</div>
+        <div className="flex items-start justify-between gap-3">
           <div className="font-semibold">{desk.pick}</div>
-          <div className={`text-2xl font-mono font-bold ${scoreTone(desk.score)}`}>{desk.score}</div>
+          <div className={`font-mono text-2xl font-semibold ${scoreTone(desk.score)}`}>{desk.score}</div>
         </div>
-        <p className="text-sm mt-2">{desk.why}</p>
-        <p className="text-xs text-muted mt-2">Season line is context. It is not the play.</p>
+        <p className="text-sm text-muted">{desk.why}</p>
       </div>
       {lab?.predHome && <div className="card p-4 text-sm">ESPN predictor: {game.away} {lab.predAway}% · {game.home} {lab.predHome}%</div>}
       {lab && lab.stats.length > 0 && (
@@ -102,7 +107,7 @@ function Inner() {
           ))}
         </div>
       )}
-      <h2 className="text-sm font-semibold pt-4">Picks</h2>
+      <h2 className="pt-2 text-sm">Picks</h2>
       <AgentDesk away={game.away} home={game.home} />
     </div>
   );
@@ -111,7 +116,7 @@ function Qb({ team, conf, record, name, line }: { team: string; conf: string; re
   return (
     <div className="card p-4">
       <div className="text-xs text-muted">{team} · {conf} · {record}</div>
-      <div className="text-xl font-bold mt-1">{name}</div>
+      <div className="text-xl tracking-tight">{name}</div>
       <div className="font-mono text-sm mt-2">{line}</div>
     </div>
   );

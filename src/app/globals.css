@@ -76,3 +76,21 @@ body {
 .status-won { color: #3dcca0; background: rgba(61, 204, 160, 0.14); }
 .status-lost { color: #ff5d73; background: rgba(255, 93, 115, 0.14); }
 .status-push, .status-void { color: #9b9bab; background: rgba(155, 155, 171, 0.12); }
+
+.game {
+  letter-spacing: -0.011em;
+}
+.game h1 {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+.game h2,
+.game h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.game :is(.text-\[10px\], .text-\[11px\]) {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
