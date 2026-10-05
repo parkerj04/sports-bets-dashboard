@@ -11,13 +11,12 @@ import { useDeskFacts } from "@/components/DeskFacts";
 import { StarterKs } from "@/components/StarterKs";
 import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
-import { StealBoard } from "@/components/StealBoard";
-import { SlipCheck, SlipTray } from "@/components/SlipTray";
+import { PlaySpot } from "@/components/PlaySpot";
+import { SlipTray } from "@/components/SlipTray";
 import { TicketDesk } from "@/components/TicketDesk";
 import { RosterCheck } from "@/components/RosterCheck";
 import { AgentDesk } from "@/components/AgentDesk";
 import { scoreTone } from "@/lib/score-color";
-import { isPlayable } from "@/lib/edges";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
   if (!p) {
@@ -142,31 +141,6 @@ function BatterTable({ title, rows }: { title: string; rows: BatterLine[] }) {
   );
 }
 
-function PlayCard({ e, live }: { e: Edge; live: boolean }) {
-  return (
-    <div className="card p-4 space-y-2">
-      <div className="flex justify-between gap-3">
-        <div>
-          <div className="text-xs text-muted uppercase">{e.market}{live ? "" : " · research only"}</div>
-          <div className="font-semibold">{e.pick}</div>
-        </div>
-        <div className={`text-2xl font-bold font-mono ${scoreTone(e.edgeScore)}`}>{e.edgeScore}</div>
-      </div>
-      <p className="text-sm">{e.reasoning}</p>
-      <SlipCheck item={{
-        id: `${e.gamePk}-${e.market}-${e.pick}`,
-        sport: "MLB",
-        game: e.game,
-        market: e.market,
-        pick: e.pick,
-        score: e.edgeScore,
-        why: e.reasoning,
-        playable: live,
-      }} />
-    </div>
-  );
-}
-
 function GameInner() {
   const params = useSearchParams();
   const id = params.get("id");
@@ -215,9 +189,6 @@ function GameInner() {
   if (loading) return <p className="text-muted text-center py-16">Loading game lab…</p>;
   if (error || !data) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
   const { game } = data;
-  const otherPlays = (data.edges || []).filter((e) => e.market !== "Stolen Bases");
-  const live = otherPlays.filter(isPlayable);
-  const watch = otherPlays.filter((e) => !isPlayable(e));
 
   return (
     <div className="game space-y-6 pb-24">
@@ -226,6 +197,15 @@ function GameInner() {
         <h1 className="mt-2 text-2xl tracking-tight">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
         <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
       </div>
+      <PlaySpot
+        away={game.awayTeam}
+        home={game.homeTeam}
+        hitters={[
+          ...data.awayHitters.slice(0, 9).map((b) => ({ id: b.id, name: b.name, team: game.awayTeam, avg: b.avg, hr: b.hr, rbi: b.rbi })),
+          ...data.homeHitters.slice(0, 9).map((b) => ({ id: b.id, name: b.name, team: game.homeTeam, avg: b.avg, hr: b.hr, rbi: b.rbi })),
+        ]}
+        notes={[...(data.edges || []), ...(data.steals || [])]}
+      />
       <StarterKs
         away={data.awayPitcher ? { id: data.awayPitcher.id, name: data.awayPitcher.name, hand: data.awayPitcher.hand, team: game.awayTeam, foe: game.homeTeam, wins: data.awayPitcher.wins, losses: data.awayPitcher.losses, gs: data.awayPitcher.gamesStarted, ip: data.awayPitcher.inningsPitched, k9: data.awayPitcher.k9, era: data.awayPitcher.era, so: data.awayPitcher.strikeOuts } : null}
         home={data.homePitcher ? { id: data.homePitcher.id, name: data.homePitcher.name, hand: data.homePitcher.hand, team: game.homeTeam, foe: game.awayTeam, wins: data.homePitcher.wins, losses: data.homePitcher.losses, gs: data.homePitcher.gamesStarted, ip: data.homePitcher.inningsPitched, k9: data.homePitcher.k9, era: data.homePitcher.era, so: data.homePitcher.strikeOuts } : null}
@@ -235,13 +215,6 @@ function GameInner() {
         situation={facts?.situation}
         crew={facts?.crew}
       />
-      <section className="space-y-3">
-        <h2 className="text-sm text-good">Playable</h2>
-        {live.map((e, i) => <PlayCard key={`l${i}`} e={e} live />)}
-        {!live.length && <p className="text-xs text-muted">Nothing cleared the bar in this game.</p>}
-        <h2 className="pt-2 text-sm text-danger">Research only</h2>
-        {watch.map((e, i) => <PlayCard key={`w${i}`} e={e} live={false} />)}
-      </section>
       <section className="grid gap-3 sm:grid-cols-2">
         <PitcherCard p={data.awayPitcher} label="Away starter" deep={data.awayDeep} />
         <PitcherCard p={data.homePitcher} label="Home starter" deep={data.homeDeep} />
@@ -279,7 +252,6 @@ function GameInner() {
       <HitterForm rows={data.form || []} />
       <BatterTable title={`${game.awayTeam} hitters`} rows={data.awayHitters} />
       <BatterTable title={`${game.homeTeam} hitters`} rows={data.homeHitters} />
-      <StealBoard edges={data.steals || []} />
       <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
       {data.ticket && <TicketDesk ticket={data.ticket} />}
       <AgentDesk away={game.awayTeam} home={game.homeTeam} />
