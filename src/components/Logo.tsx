@@ -21,11 +21,25 @@ export function Logo({ size = 28 }: { size?: number }) {
   );
 }
 
-export function BrandMark({ className = "" }: { className?: string }) {
+export function BrandMark({ wide = false, className = "" }: { wide?: boolean; className?: string }) {
+  if (!wide) {
+    return (
+      <span className={`inline-flex items-center gap-2 ${className}`}>
+        <Logo size={26} />
+        <span className="font-semibold tracking-tight">The Locksmith</span>
+      </span>
+    );
+  }
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <Logo size={26} />
-      <span className="font-semibold tracking-tight">The Locksmith</span>
+    <span className={`flex min-w-0 items-center gap-3 ${className}`}>
+      <span className="relative grid size-11 shrink-0 place-items-center">
+        <span className="absolute inset-1 rounded-2xl bg-accent/25 blur-md" />
+        <Logo size={36} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-semibold uppercase tracking-[0.18em] sm:text-sm sm:tracking-[0.28em]">The Locksmith</span>
+        <span className="mt-1.5 block h-px bg-gradient-to-r from-accent via-accent/45 to-transparent" />
+      </span>
     </span>
   );
 }
