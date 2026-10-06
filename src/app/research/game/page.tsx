@@ -17,6 +17,7 @@ import { TicketDesk } from "@/components/TicketDesk";
 import { RosterCheck } from "@/components/RosterCheck";
 import { AgentDesk } from "@/components/AgentDesk";
 import { ModelCall } from "@/components/ModelCall";
+import { SimHundred } from "@/components/SimHundred";
 import { scoreTone } from "@/lib/score-color";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
@@ -246,6 +247,18 @@ function GameInner() {
       <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
       {data.ticket && <TicketDesk ticket={data.ticket} />}
       <AgentDesk away={game.awayTeam} home={game.homeTeam} />
+      {data.line ? (
+        <SimHundred
+          sport="MLB"
+          away={game.awayTeam}
+          home={game.homeTeam}
+          awayTag={game.awayAbbr || "AWY"}
+          homeTag={game.homeAbbr || "HOME"}
+          spread={data.line.spread}
+          total={data.line.total}
+          seed={String(game.gamePk || id || game.awayTeam)}
+        />
+      ) : null}
       <SlipTray />
     </div>
   );

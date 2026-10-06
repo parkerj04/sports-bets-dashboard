@@ -12,6 +12,7 @@ import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
 import { ModelCall } from "@/components/ModelCall";
+import { SimHundred } from "@/components/SimHundred";
 
 function Inner() {
   const id = useSearchParams().get("id") || "";
@@ -111,6 +112,16 @@ function Inner() {
           ))}
         </div>
       )}
+      <SimHundred
+        sport="NFL"
+        away={lab.away}
+        home={lab.home}
+        awayTag={lab.awayAbbr}
+        homeTag={lab.homeAbbr}
+        spread={String(card?.spread || lab.spread || "")}
+        total={card?.total ?? lab.total ?? ""}
+        seed={id || `${lab.away}-${lab.home}`}
+      />
     </div>
   );
 }
