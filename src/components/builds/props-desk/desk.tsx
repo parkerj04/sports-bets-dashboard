@@ -5,6 +5,7 @@ import {
   DVP,
   FALCONS_RUSH,
   FALCONS_TARGETS,
+  SAINTS_TARGETS,
   PROPS,
   headshot,
   one,
@@ -376,15 +377,18 @@ function Defense({ foe, pos, market }: { foe: "ATL" | "NO"; pos: Pos; market: st
 
 function Share({ player, onOpen }: { player: string; onOpen: (slug: string) => void }) {
   const [mode, setMode] = useState<"targets" | "rush">("targets");
-  const total = mode === "targets" ? FALCONS_TARGETS.reduce((a, m) => a + m.targets, 0) : FALCONS_RUSH.reduce((a, m) => a + m.yards, 0);
+  const [club, setClub] = useState<"ATL" | "NO">("ATL");
+  const mates = club === "ATL" ? FALCONS_TARGETS : SAINTS_TARGETS;
+  const total = mode === "targets" ? mates.reduce((a, m) => a + m.targets, 0) : FALCONS_RUSH.reduce((a, m) => a + m.yards, 0);
   const stops =
     mode === "targets"
-      ? conic(FALCONS_TARGETS.map((m) => ({ value: m.targets, color: m.color })))
+      ? conic(mates.filter((m) => m.targets > 0).map((m) => ({ value: m.targets, color: m.color })))
       : conic(FALCONS_RUSH.map((m) => ({ value: m.yards, color: m.color })));
+  const title = mode === "rush" ? "Falcons rush" : club === "ATL" ? "Falcons receivers" : "Saints receivers";
   return (
     <section className="card p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold">Falcons share</h2>
+        <h2 className="font-semibold">{title}</h2>
         <div className="flex gap-1 rounded-full bg-background p-1">
           <button type="button" className={`min-h-11 rounded-full px-3 text-sm ${mode === "targets" ? "bg-accent" : "text-muted"}`} onClick={() => setMode("targets")}>
             Targets
@@ -394,6 +398,15 @@ function Share({ player, onOpen }: { player: string; onOpen: (slug: string) => v
           </button>
         </div>
       </div>
+      {mode === "targets" ? (
+        <div className="mt-3 flex gap-2">
+          {(["ATL", "NO"] as const).map((t) => (
+            <button key={t} type="button" onClick={() => setClub(t)} className={`min-h-11 rounded-full px-3 text-sm ${club === t ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+              {t === "ATL" ? "Falcons" : "Saints"}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="relative mx-auto mt-4 size-56 rounded-full" style={{ background: stops }}>
         <div className="absolute inset-8 grid place-items-center rounded-full bg-card text-center">
           <div>
@@ -404,8 +417,8 @@ function Share({ player, onOpen }: { player: string; onOpen: (slug: string) => v
       </div>
       {mode === "targets" ? (
         <ul className="mt-4">
-          {FALCONS_TARGETS.map((m) => {
-            const match = PROPS.find((p) => p.player === m.name);
+          {mates.map((m) => {
+            const match = PROPS.find((p) => p.player === m.name && p.market.startsWith("Receiving"));
             const on = m.name === player;
             return (
               <li key={m.name}>
@@ -413,16 +426,16 @@ function Share({ player, onOpen }: { player: string; onOpen: (slug: string) => v
                   type="button"
                   disabled={!match}
                   onClick={() => match && onOpen(match.slug)}
-                  className={`flex w-full items-center gap-2 rounded-xl px-1 py-1.5 text-left ${on ? "bg-accent/25" : ""} ${match ? "" : "opacity-70"}`}
+                  className={`flex w-full items-center gap-2 rounded-xl px-1 py-1.5 text-left ${on ? "bg-accent/25" : ""} ${match ? "" : "opacity-80"}`}
                 >
                   <span className="size-2 shrink-0 rounded-full" style={{ background: m.color }} />
                   <Head id={m.espnId} name={m.name} compact />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{m.name}</span>
-                    <span className="text-xs text-muted">{m.pos}{match ? " · open" : ""}</span>
+                    <span className="text-xs text-muted">{m.pos} · {m.rec} rec, {m.yards} yds{match ? " · open" : ""}</span>
                   </span>
                   <span className="font-mono text-sm">{m.targets}</span>
-                  <span className="w-14 text-right font-mono text-sm text-muted">{pct(m.targets / total)}</span>
+                  <span className="w-14 text-right font-mono text-sm text-muted">{total ? pct(m.targets / total) : "0%"}</span>
                 </button>
               </li>
             );
@@ -447,7 +460,13 @@ function Share({ player, onOpen }: { player: string; onOpen: (slug: string) => v
           })}
         </ul>
       )}
-      <p className="mt-3 text-xs text-muted">Player logs sum to 76 targets. ESPN’s Falcons team total is 75. Not red zone.</p>
+      <p className="mt-3 text-xs text-muted">
+        {mode === "rush"
+          ? "Falcons rush share. Not red zone."
+          : club === "ATL"
+            ? "Falcons list keeps the earlier target count, plus Nick Muse at zero. ESPN’s team total was 75. Not red zone."
+            : "Saints wide receivers and tight ends, nflverse through Week 3. A zero means he was active and was not targeted."}
+      </p>
     </section>
   );
 }
