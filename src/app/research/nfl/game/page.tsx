@@ -11,6 +11,7 @@ import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
+import { ModelCall } from "@/components/ModelCall";
 
 function Inner() {
   const id = useSearchParams().get("id") || "";
@@ -68,13 +69,11 @@ function Inner() {
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
       <FactLine text={facts?.open} />
-      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded pending={!/final/i.test(lab.status)} />
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{String(card?.spread || lab.spread || "NL")}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{String(card?.total ?? lab.total ?? "NL")}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{String(card?.mlAway || lab.mlAway || "—")}/{String(card?.mlHome || lab.mlHome || "—")}</div></div>
       </div>
-      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <div className="card space-y-1 p-4">
         <div className="text-xs uppercase tracking-widest text-muted">Researched side</div>
         <div className="flex items-start justify-between gap-3">
@@ -83,7 +82,10 @@ function Inner() {
         </div>
         <p className="text-sm text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
         <FactLine text={facts?.situation} />
+        <ModelCall away={lab.away} home={lab.home} spread={String(card?.spread || lab.spread || "")} total={card?.total ?? lab.total ?? ""} />
       </div>
+      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded pending={!/final/i.test(lab.status)} />
+      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <div className="card overflow-x-auto p-4">
         <h3 className="mb-2 text-sm font-semibold">Season</h3>
         <table className="w-full text-xs">
