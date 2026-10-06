@@ -3,12 +3,14 @@ import { unstable_cache } from "next/cache";
 const FILE = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv";
 const NFL: Record<string, string> = { WSH: "WAS", LAR: "LA" };
 
-export type ScorerWeek = { week: number; td: number; opp: string };
+export type ScorerWeek = { week: number; td: number; rec: number; rush: number; opp: string };
 export type Scorer = {
   name: string;
   team: string;
   pos: string;
   id: string;
+  rec: number;
+  rush: number;
   total: number;
   scored: number;
   weeks: ScorerWeek[];
@@ -39,7 +41,8 @@ const load = unstable_cache(async (): Promise<Raw[]> => {
   const i = {
     name: col("player_display_name"), team: col("team"), pos: col("position"),
     type: col("season_type"), week: col("week"), opp: col("opponent_team"),
-    rush: col("rushing_tds"), rec: col("receiving_tds"),
+    rushTd: col("rushing_tds"), recTd: col("receiving_tds"),
+    rushYds: col("rushing_yards"), recYds: col("receiving_yards"),
   };
   const grouped = new Map<string, Raw>();
   for (const line of lines.slice(1)) {
@@ -47,14 +50,16 @@ const load = unstable_cache(async (): Promise<Raw[]> => {
     const c = split(line);
     if (c[i.type] !== "REG") continue;
     if (!["WR", "TE", "RB", "QB"].includes(c[i.pos])) continue;
-    const td = (Number(c[i.rush]) || 0) + (Number(c[i.rec]) || 0);
+    const td = (Number(c[i.rushTd]) || 0) + (Number(c[i.recTd]) || 0);
+    const rec = Number(c[i.recYds]) || 0;
+    const rush = Number(c[i.rushYds]) || 0;
     const key = `${c[i.team]}|${c[i.name]}`;
     const row = grouped.get(key) || { name: c[i.name], team: c[i.team], pos: c[i.pos], weeks: [] };
-    row.weeks.push({ week: Number(c[i.week]) || 0, td, opp: c[i.opp] || "" });
+    row.weeks.push({ week: Number(c[i.week]) || 0, td, rec, rush, opp: c[i.opp] || "" });
     grouped.set(key, row);
   }
   return Array.from(grouped.values());
-}, ["nfl-scorers-2026"], { revalidate: 3600 });
+}, ["nfl-player-weeks-2026"], { revalidate: 3600 });
 
 function keyOf(name: string) {
   return name.toLowerCase().replace(/[^a-z]/g, "");
@@ -93,15 +98,17 @@ export async function gameScorers(away: string, home: string) {
         team: want.get(r.team) || r.team,
         pos: r.pos,
         id: ids.get(keyOf(r.name)) || "",
+        rec: weeks.reduce((s, w) => s + w.rec, 0),
+        rush: weeks.reduce((s, w) => s + w.rush, 0),
         total,
         scored: weeks.filter((w) => w.td > 0).length,
         weeks,
       };
     })
-    .filter((p) => p.total > 0)
-    .sort((a, b) => b.total - a.total || b.scored - a.scored || a.name.localeCompare(b.name));
+    .filter((p) => p.rec > 0 || p.rush > 0 || p.total > 0)
+    .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. Rushing and receiving touchdowns only. A week with no row is missing, not a zero. Not a sportsbook price.",
+    source: "nflverse 2026. A week with no row is missing, not a zero. Lines are research bars, not sportsbook prices.",
     players,
   };
 }

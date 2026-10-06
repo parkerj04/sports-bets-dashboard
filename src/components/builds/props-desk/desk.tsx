@@ -17,24 +17,30 @@ import {
   type Pos,
   type PropCard,
 } from "./data";
+import { AnytimeSection, LiveBoard } from "./live";
 
 export function PropsDesk({
   away,
   home,
   embedded = false,
+  pending = false,
 }: {
   away?: string;
   home?: string;
   embedded?: boolean;
+  pending?: boolean;
 } = {}) {
   const [slug, setSlug] = useState<string | null>(null);
   const teams = [away, home].map((t) => (t || "").toUpperCase());
-  if ((away || home) && !(teams.includes("ATL") && teams.includes("NO"))) return null;
+  if ((away || home) && !(teams.includes("ATL") && teams.includes("NO"))) {
+    if (!away || !home) return null;
+    return <LiveBoard away={teams[0]} home={teams[1]} pending={pending} />;
+  }
   const prop = PROPS.find((p) => p.slug === slug) ?? null;
   return prop ? (
-    <Card key={prop.slug} prop={prop} embedded={embedded} onBack={() => setSlug(null)} onOpen={setSlug} />
+    <Card key={prop.slug} prop={prop} embedded={embedded} onBack={() => setSlug(null)} onOpen={setSlug} away={away || "ATL"} home={home || "NO"} />
   ) : (
-    <Board embedded={embedded} onOpen={setSlug} />
+    <Board embedded={embedded} onOpen={setSlug} away={away || "ATL"} home={home || "NO"} />
   );
 }
 
@@ -74,7 +80,7 @@ function PropMenu({ current, onOpen }: { current: string | null; onOpen: (slug: 
   );
 }
 
-function Board({ onOpen, embedded }: { onOpen: (slug: string) => void; embedded: boolean }) {
+function Board({ onOpen, embedded, away, home }: { onOpen: (slug: string) => void; embedded: boolean; away: string; home: string }) {
   const Shell = embedded ? "section" : "main";
   return (
     <Shell className={embedded ? "flex w-full flex-col gap-3" : "mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6"}>
@@ -88,11 +94,12 @@ function Board({ onOpen, embedded }: { onOpen: (slug: string) => void; embedded:
         <p className="mt-1 text-sm text-muted">Mon 8:15 PM ET · Week 4 · ESPN logs through Week 3. Lines are research bars, not book prices.</p>
       </header>
       <PropMenu current={null} onOpen={onOpen} />
+      <AnytimeSection away={away} home={home} />
     </Shell>
   );
 }
 
-function Card({ prop, onBack, onOpen, embedded }: { prop: PropCard; onBack: () => void; onOpen: (slug: string) => void; embedded: boolean }) {
+function Card({ prop, onBack, onOpen, embedded, away, home }: { prop: PropCard; onBack: () => void; onOpen: (slug: string) => void; embedded: boolean; away: string; home: string }) {
   const Shell = embedded ? "section" : "main";
   const [line, setLine] = useState(prop.line);
   const [win, setWin] = useState<"L5" | "L10" | "L15" | "2026" | "H2H">("L10");
@@ -232,6 +239,7 @@ function Card({ prop, onBack, onOpen, embedded }: { prop: PropCard; onBack: () =
       </section>
       <Split title="Case for" tone="good" items={prop.bulletsFor} />
       <Split title="Case against" tone="danger" items={prop.bulletsAgainst} />
+      <AnytimeSection away={away} home={home} />
     </Shell>
   );
 }
