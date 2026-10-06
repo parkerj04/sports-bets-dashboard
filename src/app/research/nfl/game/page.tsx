@@ -22,12 +22,12 @@ function Inner() {
   useEffect(() => {
     if (!id) { setError("Missing game"); setLoading(false); return; }
     fetch(`/api/research/nfl/game?id=${id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) setError(d.error);
-        else { setLab(d.lab); setCard(d.card); }
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d?.lab) setError(d?.error || "Could not load this game");
+        else { setLab(d.lab); setCard(d.card || null); }
       })
-      .catch(() => setError("Could not load NFL game"))
+      .catch(() => setError("Could not load this game"))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -35,10 +35,13 @@ function Inner() {
 
   if (loading) return <p className="text-muted text-center py-16">Loading NFL lab…</p>;
   if (error || !lab) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
-  const awayInj = lab.injuries.filter((i) => i.team === lab.away);
-  const homeInj = lab.injuries.filter((i) => i.team === lab.home);
+  const injuries = lab.injuries || [];
+  const lastFive = lab.lastFive || [];
+  const stats = lab.stats || [];
+  const awayInj = injuries.filter((i) => i.team === lab.away);
+  const homeInj = injuries.filter((i) => i.team === lab.home);
   const out = (rows: typeof awayInj) => rows.filter((r) => /out|doubt/i.test(r.status)).map((r) => `${r.name} ${r.status}`);
-  const yards = lab.stats.find((s) => /total yards/i.test(s.label));
+  const yards = stats.find((s) => /total yards/i.test(s.label));
   const notes = newsFor(lab.away, lab.home);
   const desk = footballRegistry({
     away: lab.away,
@@ -49,8 +52,8 @@ function Inner() {
     mlHome: card?.mlHome || lab.mlHome,
     awayOuts: out(awayInj),
     homeOuts: out(homeInj),
-    awayL5: lab.lastFive.filter((g) => g.team === lab.away).map((g) => g.result),
-    homeL5: lab.lastFive.filter((g) => g.team === lab.home).map((g) => g.result),
+    awayL5: lastFive.filter((g) => g.team === lab.away).map((g) => g.result),
+    homeL5: lastFive.filter((g) => g.team === lab.home).map((g) => g.result),
     awayYards: yards?.away,
     homeYards: yards?.home,
     predAway: lab.predAway,
@@ -66,9 +69,9 @@ function Inner() {
       </div>
       <Scorers away={lab.awayAbbr} home={lab.homeAbbr} />
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{card?.spread || lab.spread}</div></div>
-        <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{card?.total || lab.total}</div></div>
-        <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{card?.mlAway || lab.mlAway}/{card?.mlHome || lab.mlHome}</div></div>
+        <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{String(card?.spread || lab.spread || "NL")}</div></div>
+        <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{String(card?.total ?? lab.total ?? "NL")}</div></div>
+        <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{String(card?.mlAway || lab.mlAway || "—")}/{String(card?.mlHome || lab.mlHome || "—")}</div></div>
       </div>
       <FactLine text={facts?.open} />
       <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
@@ -87,7 +90,7 @@ function Inner() {
         <table className="w-full text-xs">
           <thead className="text-muted"><tr><th className="pb-2 text-left">Stat</th><th>{lab.awayAbbr}</th><th>{lab.homeAbbr}</th></tr></thead>
           <tbody>
-            {lab.stats.slice(0, 8).map((s) => (
+            {stats.slice(0, 8).map((s) => (
               <tr key={s.label} className="border-t border-card-border font-mono">
                 <td className="py-1.5 pr-2 font-sans">{s.label}</td><td>{s.away}</td><td>{s.home}</td>
               </tr>
@@ -99,10 +102,10 @@ function Inner() {
         <Inj title={`${lab.away} injuries`} rows={awayInj.slice(0, 6)} />
         <Inj title={`${lab.home} injuries`} rows={homeInj.slice(0, 6)} />
       </div>
-      {lab.lastFive.length > 0 && (
+      {lastFive.length > 0 && (
         <div className="card p-4 text-xs">
           <h3 className="mb-2 text-sm font-semibold">Last 5</h3>
-          {lab.lastFive.map((g, i) => (
+          {lastFive.map((g, i) => (
             <div key={i} className="border-t border-card-border py-1 font-mono">{g.team} {g.result} {g.score} {g.opp}</div>
           ))}
         </div>
