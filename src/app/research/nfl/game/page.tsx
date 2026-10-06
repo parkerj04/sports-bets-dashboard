@@ -10,6 +10,7 @@ import { PropsDesk } from "@/components/builds/props-desk";
 import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
+import { FactLine, useDeskFacts } from "@/components/DeskFacts";
 import { Scorers } from "@/components/Scorers";
 
 function Inner() {
