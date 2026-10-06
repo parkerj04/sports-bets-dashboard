@@ -100,13 +100,6 @@ const UNIT: Record<ModelMarket, string> = {
   td: "anytime touchdowns",
 };
 
-const POS_WORD: Record<string, string> = {
-  QB: "Quarterbacks",
-  RB: "Running backs",
-  WR: "Wide receivers",
-  TE: "Tight ends",
-};
-
 const CLUB: Record<string, string> = {
   ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears",
   CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers",
@@ -124,74 +117,118 @@ function weekStat(w: ScorerWeek, market: ModelMarket) {
   return w[market];
 }
 
+function roleKey(pos: string, market: ModelMarket): "rec" | "rush" | "pass" {
+  if (pos === "QB") return "pass";
+  if (pos === "RB" && (market === "rush" || market === "td")) return "rush";
+  return "rec";
+}
+
+function roleName(pos: string, rank: number) {
+  const slot = Math.min(rank, 3);
+  if (pos === "QB") return slot === 1 ? "the starting quarterback" : "a backup quarterback";
+  if (pos === "RB") return slot === 1 ? "the lead back" : slot === 2 ? "the second back" : "a depth back";
+  if (pos === "TE") return slot === 1 ? "the top tight end" : "a second tight end";
+  return slot === 1 ? "the top receiver" : slot === 2 ? "the second receiver" : "a depth receiver";
+}
+
 function protect(rows: Raw[], away: string, home: string) {
-  const sums = new Map<string, { pos: string; n: number; sum: Record<ModelMarket, number> }>();
-  const bucket = new Map<string, number>();
+  type App = ScorerWeek & { team: string; pos: string; name: string };
+  const apps: App[] = [];
   for (const r of rows) {
-    const key = `${r.pos}|${r.team}|${r.name}`;
-    const cur = sums.get(key) || { pos: r.pos, n: 0, sum: { rec: 0, catches: 0, rush: 0, pass: 0, passTd: 0, td: 0 } };
-    for (const w of r.weeks) {
-      cur.n += 1;
-      for (const market of MODEL_MARKETS) {
-        const value = weekStat(w, market);
-        cur.sum[market] += value;
-        const slot = `${w.opp}|${w.week}|${r.pos}|${market}`;
-        bucket.set(slot, (bucket.get(slot) || 0) + value);
-      }
-    }
-    sums.set(key, cur);
+    for (const w of r.weeks) apps.push({ ...w, team: r.team, pos: r.pos, name: r.name });
   }
-  const priorSum: Record<string, Record<ModelMarket, number>> = {};
-  const priorN: Record<string, number> = {};
-  for (const cur of sums.values()) {
-    if (cur.n < 3) continue;
-    priorN[cur.pos] = (priorN[cur.pos] || 0) + 1;
-    const bag = priorSum[cur.pos] || { rec: 0, catches: 0, rush: 0, pass: 0, passTd: 0, td: 0 };
-    for (const market of MODEL_MARKETS) bag[market] += cur.sum[market] / cur.n;
-    priorSum[cur.pos] = bag;
+  const season = new Map<string, { pos: string; rec: number; rush: number; pass: number }>();
+  for (const a of apps) {
+    const key = `${a.team}|${a.pos}|${a.name}`;
+    const cur = season.get(key) || { pos: a.pos, rec: 0, rush: 0, pass: 0 };
+    cur.rec += a.rec;
+    cur.rush += a.rush;
+    cur.pass += a.pass;
+    season.set(key, cur);
+  }
+  const ranks = new Map<string, number>();
+  for (const stat of ["rec", "rush", "pass"] as const) {
+    const groups = new Map<string, { key: string; value: number }[]>();
+    for (const [key, cur] of season) {
+      const [team, pos] = key.split("|");
+      const g = groups.get(`${team}|${pos}|${stat}`) || [];
+      g.push({ key, value: cur[stat] });
+      groups.set(`${team}|${pos}|${stat}`, g);
+    }
+    for (const list of groups.values()) {
+      list.sort((a, b) => b.value - a.value);
+      list.forEach((item, i) => ranks.set(`${item.key}|${stat}`, i + 1));
+    }
   }
   const league = new Map<string, number[]>();
-  const opp = new Map<string, number[]>();
-  for (const [slot, value] of bucket) {
-    const [defense, , pos, market] = slot.split("|");
-    const key = `${pos}|${market}`;
-    const list = league.get(key) || [];
-    list.push(value);
-    league.set(key, list);
-    const okey = `${defense}|${key}`;
-    const olist = opp.get(okey) || [];
-    olist.push(value);
-    opp.set(okey, olist);
+  const defense = new Map<string, number[]>();
+  const weeks = new Map<string, App[]>();
+  for (const a of apps) {
+    const g = weeks.get(`${a.team}|${a.week}|${a.pos}`) || [];
+    g.push(a);
+    weeks.set(`${a.team}|${a.week}|${a.pos}`, g);
+  }
+  for (const group of weeks.values()) {
+    for (const stat of ["rec", "rush", "pass"] as const) {
+      const ordered = [...group].sort((a, b) => b[stat] - a[stat]);
+      ordered.slice(0, 3).forEach((a, i) => {
+        const rank = i + 1;
+        for (const market of MODEL_MARKETS) {
+          if (roleKey(a.pos, market) !== stat) continue;
+          const value = weekStat(a, market);
+          const lkey = `${a.pos}|${stat}|${rank}|${market}`;
+          const l = league.get(lkey) || [];
+          l.push(value);
+          league.set(lkey, l);
+          const dkey = `${a.opp}|${lkey}`;
+          const d = defense.get(dkey) || [];
+          d.push(value);
+          defense.set(dkey, d);
+        }
+      });
+    }
   }
   const mean = (xs?: number[]) => (xs && xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-  return (player: { name: string; pos: string; team: string }, weeks: ScorerWeek[]) => {
+  return (player: { name: string; pos: string; team: string }, weeksPlayed: ScorerWeek[]) => {
     const foe = player.team === away ? home : away;
     const foeFile = NFL[foe] || foe;
+    const mine = NFL[player.team] || player.team;
     const models: Scorer["models"] = {};
-    const n = weeks.length;
+    const n = weeksPlayed.length;
     if (!n) return models;
     for (const market of MODEL_MARKETS) {
-      const rate = weeks.reduce((s, w) => s + weekStat(w, market), 0) / n;
-      const samples = priorN[player.pos] || 0;
-      if (!samples) continue;
-      const prior = priorSum[player.pos][market] / samples;
-      const shrunk = (n * rate + 3 * prior) / (n + 3);
-      const oppVals = opp.get(`${foeFile}|${player.pos}|${market}`);
-      const leagueVals = league.get(`${player.pos}|${market}`);
-      const oppPer = mean(oppVals);
-      const leaguePer = mean(leagueVals);
-      const raw = leaguePer ? oppPer / leaguePer : 1;
-      const short = !oppVals || oppVals.length < 3;
-      const factor = short ? 1 : Math.min(1.15, Math.max(0.85, raw));
-      const value = tenth(shrunk * factor);
+      const stat = roleKey(player.pos, market);
+      const rank = Math.min(ranks.get(`${mine}|${player.pos}|${player.name}|${stat}`) || 3, 3);
+      const values = weeksPlayed.map((w) => weekStat(w, market));
+      const rate = values.reduce((a, b) => a + b, 0) / n;
+      const usual = mean(league.get(`${player.pos}|${stat}|${rank}|${market}`));
+      const allowed = defense.get(`${foeFile}|${player.pos}|${stat}|${rank}|${market}`);
+      const oppPer = mean(allowed);
+      const shortLog = n < 3;
+      const base = shortLog ? (rate + usual) / 2 : rank === 1 ? rate : rate * 0.7 + usual * 0.3;
+      const gap = allowed && allowed.length >= 3 && usual ? oppPer - usual : 0;
+      const cap = market === "td" || market === "passTd" ? 0.5 : Math.max(usual * 0.25, 0.5);
+      const move = Math.max(-cap, Math.min(cap, gap));
+      const value = tenth(Math.max(0, base + move));
       const club = CLUB[foe] || foe;
-      const move = short
-        ? `${club} have fewer than 3 games on file at this position, so the defense does not move the number.`
-        : `${club} have allowed ${tenth(oppPer).toFixed(1)} per game to the position. A typical defense game is ${tenth(leaguePer).toFixed(1)}. That ratio is capped at 15 percent, so the factor used is ${factor.toFixed(2)}.`;
+      const job = roleName(player.pos, rank);
+      const matchup = !allowed || allowed.length < 3
+        ? `${club} do not have 3 games on file against ${job}, so the defense does not move the number.`
+        : move > 0.05 && value > rate
+          ? `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job}. A normal defense allows ${tenth(usual).toFixed(1)}. That is why the number clears that rate.`
+          : move < -0.05 && value < rate
+            ? `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job}. A normal defense allows ${tenth(usual).toFixed(1)}. That is why the number sits under that rate.`
+            : `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job}, close to the normal ${tenth(usual).toFixed(1)}, so the matchup barely moves it.`;
+      const total = values.reduce((a, b) => a + b, 0);
+      const spike = Math.max(...values);
+      const against = (market === "td" || market === "passTd") && spike >= 2 && spike * 2 > total
+        ? ` One game was ${tenth(spike).toFixed(0)} of the ${tenth(total).toFixed(0)} scores.`
+        : "";
+      const sample = shortLog ? " The log is under 3 games, so it is pulled halfway to the normal player in that role." : "";
       models[market] = {
         value,
-        text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]} against the ${club}. The 2026 rate is ${tenth(rate).toFixed(1)} over ${n} games. ${POS_WORD[player.pos] || "Players"} with at least 3 games average ${tenth(prior).toFixed(1)}. ${move} Not a book price.`,
+        text: `${player.name} is ${job} and projects to ${value.toFixed(1)} ${UNIT[market]} against the ${club}. The 2026 rate is ${tenth(rate).toFixed(1)} over ${n} games. ${matchup}${sample}${against} Not a book price.`,
       };
     }
     return models;
@@ -231,7 +268,7 @@ export async function gameScorers(away: string, home: string) {
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. The protected model pulls a short log toward players with at least 3 games, then caps the opponent at 15 percent. Not a sportsbook price.",
+    source: "nflverse 2026. The model starts at the player's own rate, then adds the gap between what this defense allows that role and what a normal defense allows. A top receiver is not pulled down to the backup average. Not a sportsbook price.",
     players,
   };
 }
