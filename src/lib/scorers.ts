@@ -1,9 +1,10 @@
 import { unstable_cache } from "next/cache";
 
 const FILE = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv";
+const SCHED = "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv";
 const NFL: Record<string, string> = { WSH: "WAS", LAR: "LA" };
 
-export type ScorerWeek = { week: number; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
+export type ScorerWeek = { week: number; date: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
 export type Scorer = {
   name: string;
   team: string;
@@ -36,15 +37,29 @@ function split(line: string) {
 }
 
 const load = unstable_cache(async (): Promise<Raw[]> => {
-  const res = await fetch(FILE);
+  const [res, sched] = await Promise.all([fetch(FILE), fetch(SCHED)]);
   if (!res.ok) return [];
+  const days = new Map<string, string>();
+  if (sched.ok) {
+    const book = (await sched.text()).split("\n");
+    const head = split(book[0]);
+    const id = head.indexOf("game_id");
+    const day = head.indexOf("gameday");
+    const season = head.indexOf("season");
+    for (const line of book.slice(1)) {
+      if (!line) continue;
+      const c = split(line);
+      if (c[season] !== "2026" || !c[id] || !c[day]) continue;
+      days.set(c[id], c[day]);
+    }
+  }
   const text = await res.text();
   const lines = text.split("\n");
   const header = split(lines[0]);
   const col = (name: string) => header.indexOf(name);
   const i = {
     name: col("player_display_name"), team: col("team"), pos: col("position"),
-    type: col("season_type"), week: col("week"), opp: col("opponent_team"),
+    type: col("season_type"), week: col("week"), opp: col("opponent_team"), game: col("game_id"),
     rushTd: col("rushing_tds"), recTd: col("receiving_tds"),
     rushYds: col("rushing_yards"), recYds: col("receiving_yards"),
     catches: col("receptions"), passYds: col("passing_yards"), passTd: col("passing_tds"),
@@ -63,11 +78,16 @@ const load = unstable_cache(async (): Promise<Raw[]> => {
     const passTd = Number(c[i.passTd]) || 0;
     const key = `${c[i.team]}|${c[i.name]}`;
     const row = grouped.get(key) || { name: c[i.name], team: c[i.team], pos: c[i.pos], weeks: [] };
-    row.weeks.push({ week: Number(c[i.week]) || 0, td, rec, rush, catches, pass, passTd, opp: c[i.opp] || "" });
+    row.weeks.push({
+      week: Number(c[i.week]) || 0,
+      date: days.get(c[i.game]) || "",
+      td, rec, rush, catches, pass, passTd,
+      opp: c[i.opp] || "",
+    });
     grouped.set(key, row);
   }
   return Array.from(grouped.values());
-}, ["nfl-player-weeks-2026-pass"], { revalidate: 3600 });
+}, ["nfl-player-weeks-2026-dates"], { revalidate: 3600 });
 
 function keyOf(name: string) {
   return name.toLowerCase().replace(/[^a-z]/g, "");

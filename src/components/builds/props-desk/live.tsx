@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { headshot, one, pct, summarize, teamLogo } from "./data";
 
-type Week = { week: number; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
+type Week = { week: number; date?: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
 type Player = {
   name: string;
   team: string;
@@ -27,6 +27,16 @@ const MARKETS: { key: Market; label: string }[] = [
   { key: "pass", label: "Passing yards" },
   { key: "passTd", label: "Passing TDs" },
 ];
+
+const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function playedOn(date?: string, week?: number) {
+  if (date && date.includes("-")) {
+    const [, m, d] = date.split("-");
+    return `${MONTHS[Number(m)] || ""} ${Number(d)}`.trim();
+  }
+  return week ? `W${week}` : "";
+}
 
 const LOGO: Record<string, string> = { WAS: "WSH", LA: "LAR" };
 
@@ -94,7 +104,7 @@ function Bars({ weeks, values, line, pendingOpp }: { weeks: { label: string; abb
   return (
     <div>
       <div className="overflow-x-auto pb-1">
-        <div className="relative" style={{ width: Math.max(bars.length * 52, 280) }}>
+        <div className="relative" style={{ width: Math.max(bars.length * 58, 280) }}>
           <div className="relative h-52">
             <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground" style={{ bottom: `${linePct}%` }}>
               <span className="absolute -top-3 right-0 rounded-full bg-foreground px-2 py-0.5 font-mono text-xs font-semibold text-background">{one(line)}</span>
@@ -106,9 +116,9 @@ function Bars({ weeks, values, line, pendingOpp }: { weeks: { label: string; abb
                 const over = !empty && b.value! > line;
                 const inside = !empty && height > 24;
                 return (
-                  <button key={`${b.label}-${i}`} type="button" onClick={() => setPicked(i)} className="relative h-full w-12 shrink-0">
+                  <button key={`${b.label}-${i}`} type="button" onClick={() => setPicked(i)} className="relative h-full w-14 shrink-0">
                     {!empty && !inside ? <span className={`absolute inset-x-0 text-center font-mono text-xs font-semibold ${over ? "text-good" : "text-danger"}`} style={{ bottom: `calc(${height}% + 2px)` }}>{b.value}</span> : null}
-                    <span className={`absolute inset-x-1 bottom-0 rounded-md ${empty ? "border border-dashed border-muted" : over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-foreground" : ""}`} style={{ height: `${height}%` }}>
+                    <span className={`absolute inset-x-1.5 bottom-0 rounded-md ${empty ? "border border-dashed border-accent/50" : over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-accent" : ""}`} style={{ height: `${height}%` }}>
                       {empty ? <span className="grid h-full place-items-center text-sm text-muted">?</span> : inside ? <span className="block pt-1 text-center font-mono text-xs font-semibold text-background">{b.value}</span> : null}
                     </span>
                   </button>
@@ -116,11 +126,13 @@ function Bars({ weeks, values, line, pendingOpp }: { weeks: { label: string; abb
               })}
             </div>
           </div>
-          <div className="mt-2 flex">
+          <div className="mt-3 flex">
             {bars.map((b, i) => (
-              <div key={`${b.label}-m-${i}`} className="flex w-12 shrink-0 flex-col items-center">
-                <img src={mark(b.abbr)} alt="" className="size-6" />
-                <span className="mt-1 text-center text-xs leading-none text-muted">{b.label}</span>
+              <div key={`${b.label}-m-${i}`} className="flex w-14 shrink-0 flex-col items-center">
+                <span className={`grid size-8 place-items-center rounded-full bg-background ring-1 ${picked === i ? "ring-accent" : "ring-card-border"}`}>
+                  <img src={mark(b.abbr)} alt="" className="size-5 object-contain" />
+                </span>
+                <span className="mt-1 text-center font-mono text-[10px] leading-none text-muted">{b.label}</span>
               </div>
             ))}
           </div>
@@ -198,7 +210,7 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
               line={line}
               values={values}
               pendingOpp={pending ? (active.team === away ? home : away) : undefined}
-              weeks={active.weeks.map((w) => ({ label: `W${w.week}`, abbr: w.opp, value: w.td }))}
+              weeks={active.weeks.map((w) => ({ label: playedOn(w.date, w.week), abbr: w.opp, value: w.td }))}
             />
           </div>
           {note ? <p className="mt-2 text-sm text-muted">{note.call}. {note.against}</p> : null}
@@ -305,7 +317,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
               line={line}
               values={values}
               pendingOpp={pending ? (active.team === away ? home : away) : undefined}
-              weeks={active.weeks.map((w) => ({ label: `W${w.week}`, abbr: w.opp, value: statOf(w, market) }))}
+              weeks={active.weeks.map((w) => ({ label: playedOn(w.date, w.week), abbr: w.opp, value: statOf(w, market) }))}
             />
           </div>
           <div className="mt-4 flex items-center gap-2">

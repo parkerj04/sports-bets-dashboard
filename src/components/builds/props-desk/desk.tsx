@@ -251,7 +251,7 @@ function LineLog({ bars, line, active, picked, onPick }: { bars: ChartBar[]; lin
   const on = new Set(active);
   return (
     <div className="overflow-x-auto pb-1">
-      <div className="relative" style={{ width: Math.max(bars.length * 52, 320) }}>
+      <div className="relative" style={{ width: Math.max(bars.length * 58, 320) }}>
         <div className="relative h-52">
           <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground" style={{ bottom: `${linePct}%` }}>
             <span className="absolute -top-3 right-0 rounded-full bg-foreground px-2 py-0.5 font-mono text-xs font-semibold text-background">
@@ -266,7 +266,7 @@ function LineLog({ bars, line, active, picked, onPick }: { bars: ChartBar[]; lin
               const inside = !pending && height > 24;
               const dim = !pending && !on.has(i);
               return (
-                <button key={`${b.date}-${b.abbr}-${i}`} type="button" onClick={() => onPick(i)} aria-pressed={picked === i} className={`relative h-full w-12 shrink-0 ${dim ? "opacity-30" : ""}`}>
+                <button key={`${b.date}-${b.abbr}-${i}`} type="button" onClick={() => onPick(i)} aria-pressed={picked === i} className={`relative h-full w-14 shrink-0 ${dim ? "opacity-30" : ""}`}>
                   {!pending && !inside ? (
                     <span
                       className={`absolute inset-x-0 text-center font-mono text-xs font-semibold ${over ? "text-good" : "text-danger"}`}
@@ -276,7 +276,7 @@ function LineLog({ bars, line, active, picked, onPick }: { bars: ChartBar[]; lin
                     </span>
                   ) : null}
                   <span
-                    className={`absolute inset-x-1 bottom-0 rounded-md ${pending ? "border border-dashed border-muted" : over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-foreground" : ""}`}
+                    className={`absolute inset-x-1.5 bottom-0 rounded-md ${pending ? "border border-dashed border-accent/50" : over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-accent" : ""}`}
                     style={{ height: `${height}%` }}
                   >
                     {pending ? (
@@ -290,11 +290,13 @@ function LineLog({ bars, line, active, picked, onPick }: { bars: ChartBar[]; lin
             })}
           </div>
         </div>
-        <div className="mt-2 flex">
+        <div className="mt-3 flex">
           {bars.map((b) => (
-            <div key={`${b.date}-${b.abbr}-m`} className="flex w-12 shrink-0 flex-col items-center">
-              <img src={teamLogo(b.abbr)} alt="" className="size-6" />
-              <span className="mt-1 text-center text-xs leading-none text-muted">{b.date}</span>
+            <div key={`${b.date}-${b.abbr}-m`} className="flex w-14 shrink-0 flex-col items-center">
+              <span className="grid size-8 place-items-center rounded-full bg-background ring-1 ring-card-border">
+                <img src={teamLogo(b.abbr)} alt="" className="size-5 object-contain" />
+              </span>
+              <span className="mt-1 text-center font-mono text-[10px] leading-none text-muted">{b.date}</span>
             </div>
           ))}
         </div>

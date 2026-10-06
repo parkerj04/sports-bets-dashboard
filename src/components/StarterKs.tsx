@@ -36,6 +36,10 @@ const ABBR: Record<string, string> = {
 function abbr(name: string) {
   return ABBR[name] || name.split(" ").pop()?.slice(0, 3).toUpperCase() || name;
 }
+function mlbLogo(abbrCode: string) {
+  const fix: Record<string, string> = { ATH: "oak", CWS: "chw", CHW: "chw" };
+  return `https://a.espncdn.com/i/teamlogos/mlb/500/${(fix[abbrCode] || abbrCode).toLowerCase()}.png`;
+}
 function when(date: string) {
   const [, m, d] = date.split("-");
   return `${MONTHS[Number(m)] || m} ${Number(d)}`;
@@ -285,7 +289,7 @@ function KChart({ rows, line, picked, onPick }: { rows: Start[]; line: number; p
   const linePct = (line / scale) * 100;
   return (
     <div className="overflow-x-auto pb-1">
-      <div className="relative" style={{ width: Math.max(rows.length * 52, 280) }}>
+      <div className="relative" style={{ width: Math.max(rows.length * 58, 280) }}>
         <div className="relative h-44">
           <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground" style={{ bottom: `${linePct}%` }}>
             <span className="absolute -top-3 right-0 rounded-full bg-foreground px-2 py-0.5 font-mono text-xs font-semibold text-background">{one(line)}</span>
@@ -295,8 +299,8 @@ function KChart({ rows, line, picked, onPick }: { rows: Start[]; line: number; p
               const height = Math.max((row.k / scale) * 100, row.k === 0 ? 3 : 8);
               const over = row.k > line;
               return (
-                <button key={`${row.date}-${i}`} type="button" onClick={() => onPick(i)} className="relative h-full w-12 shrink-0" aria-pressed={picked === i}>
-                  <span className={`absolute inset-x-1 bottom-0 rounded-md ${over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-foreground" : ""}`} style={{ height: `${height}%` }}>
+                <button key={`${row.date}-${i}`} type="button" onClick={() => onPick(i)} className="relative h-full w-14 shrink-0" aria-pressed={picked === i}>
+                  <span className={`absolute inset-x-1.5 bottom-0 rounded-md ${over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-accent" : ""}`} style={{ height: `${height}%` }}>
                     <span className="block pt-1 text-center font-mono text-xs font-semibold text-background">{row.k}</span>
                   </span>
                 </button>
@@ -304,11 +308,13 @@ function KChart({ rows, line, picked, onPick }: { rows: Start[]; line: number; p
             })}
           </div>
         </div>
-        <div className="mt-2 flex">
+        <div className="mt-3 flex">
           {rows.map((row, i) => (
-            <div key={`${row.date}-l-${i}`} className="flex w-12 shrink-0 flex-col items-center">
-              <span className="text-center text-[10px] leading-none text-muted">{abbr(row.opp)}</span>
-              <span className="mt-1 text-center text-[10px] leading-none text-muted">{when(row.date).split(" ")[0]}</span>
+            <div key={`${row.date}-l-${i}`} className="flex w-14 shrink-0 flex-col items-center">
+              <span className={`grid size-8 place-items-center rounded-full bg-background ring-1 ${picked === i ? "ring-accent" : "ring-card-border"}`}>
+                <img src={mlbLogo(abbr(row.opp))} alt="" className="size-5 object-contain" />
+              </span>
+              <span className="mt-1 text-center font-mono text-[10px] leading-none text-muted">{when(row.date)}</span>
             </div>
           ))}
         </div>
