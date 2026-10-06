@@ -48,6 +48,24 @@ function valueOf(row: Log, market: BatMarket) {
   if (market === "SB") return row.sb;
   return row.h + row.r + row.rbi;
 }
+function face(id: number) {
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_180,q_auto:best/v1/people/${id}/headshot/67/current`;
+}
+
+function project(rows: Log[] | undefined, market: BatMarket) {
+  if (!rows?.length) return null;
+  const total = rows.reduce((sum, row) => sum + valueOf(row, market), 0);
+  return total / rows.length;
+}
+
+function Face({ id, name, className }: { id: number; name: string; className: string }) {
+  const [bad, setBad] = useState(false);
+  if (bad) {
+    return <span className={`grid place-items-center rounded-full bg-card text-[10px] font-semibold ${className}`}>{lastName(name).slice(0, 1)}</span>;
+  }
+  return <img src={face(id)} alt="" className={`rounded-full object-cover object-top ${className}`} onError={() => setBad(true)} />;
+}
+
 function researchLine(values: number[], market: BatMarket) {
   if (market === "HR" || market === "SB") return 0.5;
   if (!values.length) return 0.5;
@@ -99,17 +117,19 @@ export function PlaySpot({
   const [win, setWin] = useState<"L5" | "L10" | "2026">("L10");
 
   const roster = hitters.filter((h) => h.team === side);
+  const rosterKey = roster.map((h) => h.id).join(",");
   const player = roster.find((h) => h.id === playerId) || roster[0] || null;
 
   useEffect(() => {
-    if (!player) return;
-    if (logs[player.id]) return;
+    const ids = rosterKey ? rosterKey.split(",").map(Number) : [];
     let live = true;
-    hittingLog(player.id)
-      .then((rows) => { if (live) setLogs((cur) => ({ ...cur, [player.id]: rows })); })
-      .catch(() => { if (live) setFailed(true); });
+    for (const id of ids) {
+      hittingLog(id)
+        .then((rows) => { if (live) setLogs((cur) => (cur[id] ? cur : { ...cur, [id]: rows })); })
+        .catch(() => { if (live) setFailed(true); });
+    }
     return () => { live = false; };
-  }, [player, logs]);
+  }, [rosterKey]);
 
   const starts = player ? logs[player.id] : undefined;
   const values = useMemo(() => (starts || []).map((row) => valueOf(row, batMarket)), [starts, batMarket]);
@@ -157,25 +177,37 @@ export function PlaySpot({
         <>
           <div className="flex gap-2">
             {[away, home].map((team) => (
-              <button key={team} type="button" onClick={() => { setSide(team); setPlayerId(null); }} className={`min-h-11 truncate rounded-full px-3 text-sm ${side === team ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+              <button key={team} type="button" onClick={() => { setSide(team); setPlayerId(null); }} className={`flex min-h-11 items-center gap-2 truncate rounded-full px-3 text-sm ${side === team ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+                <img src={mlbLogo(team)} alt="" className="size-5 object-contain" />
                 {lastName(team)}
               </button>
             ))}
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {roster.map((h) => (
-              <button key={h.id} type="button" onClick={() => setPlayerId(h.id)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${player?.id === h.id ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
-                {lastName(h.name)}
-              </button>
-            ))}
+            {roster.map((h) => {
+              const proj = project(logs[h.id], batMarket);
+              return (
+                <button key={h.id} type="button" onClick={() => setPlayerId(h.id)} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm ${player?.id === h.id ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+                  <Face id={h.id} name={h.name} className="size-8" />
+                  <span>{lastName(h.name)}</span>
+                  <span className="font-mono text-xs">{proj == null ? "—" : one(proj)}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="flex gap-2 overflow-x-auto">
-            {(["Hits", "HR", "H+R+RBI", "SB"] as const).map((key) => (
-              <button key={key} type="button" onClick={() => setBatMarket(key)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${batMarket === key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
-                {key === "SB" ? "Steals" : key === "HR" ? "Home runs" : key}
-              </button>
-            ))}
+            {(["Hits", "HR", "H+R+RBI", "SB"] as const).map((key) => {
+              const proj = player ? project(logs[player.id], key) : null;
+              const label = key === "SB" ? "Steals" : key === "HR" ? "Home runs" : key;
+              return (
+                <button key={key} type="button" onClick={() => setBatMarket(key)} className={`flex min-h-14 shrink-0 flex-col items-center justify-center rounded-2xl px-3 text-sm ${batMarket === key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+                  <span>{label}</span>
+                  <span className="font-mono text-xs font-semibold">{proj == null ? "—" : one(proj)}</span>
+                </button>
+              );
+            })}
           </div>
+          <p className="text-xs text-muted">Each number is that stat per game in 2026. Not a sportsbook price.</p>
           {!player ? <p className="text-sm text-muted">No hitters posted for {side}.</p> : null}
           {player && starts == null && !failed ? <p className="text-sm text-muted">Loading the 2026 log…</p> : null}
           {failed ? <p className="text-sm text-danger">The 2026 log did not load.</p> : null}
@@ -208,8 +240,13 @@ function BatterCard({
   const scale = Math.max(line, ...nums, 1) * 1.25;
   return (
     <div className="rounded-xl bg-background p-3">
-      <div className="text-lg font-semibold">{cleanName(player.name)}</div>
-      <p className="text-sm text-muted">{label} · {player.avg} AVG · {player.hr} HR · {player.rbi} RBI on the season</p>
+      <div className="flex items-center gap-3">
+        <Face id={player.id} name={player.name} className="size-12" />
+        <div>
+          <div className="text-lg font-semibold">{cleanName(player.name)}</div>
+          <p className="text-sm text-muted">{label} · {player.avg} AVG · {player.hr} HR · {player.rbi} RBI on the season</p>
+        </div>
+      </div>
       <div className="mt-3 flex items-end justify-between">
         <div>
           <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
