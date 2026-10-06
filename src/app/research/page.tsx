@@ -6,6 +6,7 @@ import type { GameMatchup } from "@/lib/mlb";
 import type { MlbLine } from "@/lib/mlb-odds";
 import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
+import { ModelStrip } from "@/components/ModelCall";
 import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
@@ -15,6 +16,26 @@ import { TrendBoard } from "@/components/TrendBoard";
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
 type ResultNote = { id: string; game: string; scoreline: string; cards: string[] };
+
+function firstPitch(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).format(d)} ET`;
+}
+
+function slateDay(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "America/New_York" }).format(d);
+}
+
+function boardPrice(spread: string) {
+  const n = Math.abs(parseFloat((String(spread).match(/-?\d+(?:\.\d+)?/) || [""])[0]));
+  if (!Number.isFinite(n)) return spread;
+  return n >= 100 ? `ML ${spread}` : `RL ${spread}`;
+}
 
 export default function ResearchPage() {
   const [sport, setSport] = useState<Sport>("MLB");
@@ -46,10 +67,10 @@ export default function ResearchPage() {
 
   return (
     <div className="min-h-screen pb-28">
-      <header className="border-b border-card-border sticky top-0 z-10 bg-background/90 backdrop-blur">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/dashboard"><BrandMark /></Link>
-          <Link href="/research/desk" className="text-sm text-accent hover:underline">Desk review</Link>
+      <header className="sticky top-0 z-10 border-b border-card-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 pr-16">
+          <Link href="/dashboard" className="min-w-0 flex-1"><BrandMark wide /></Link>
+          <Link href="/research/desk" className="shrink-0 text-sm text-accent hover:underline">Desk review</Link>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
@@ -86,6 +107,7 @@ export default function ResearchPage() {
                   </div>
                 </div>
                 {g.leanML ? <p className="mt-3 truncate text-sm text-accent">{g.leanML}</p> : null}
+                <ModelStrip away={g.away} home={g.home} spread={g.spread} total={g.total} />
               </Link>
             ))}
             {(nfl.results || []).length > 0 && (
@@ -113,7 +135,7 @@ export default function ResearchPage() {
         {sport === "MLB" && (
           <section className="space-y-3">
             <h1 className="text-xl font-semibold tracking-tight">MLB slate</h1>
-            <p className="text-sm text-muted">Tap a game. The lab is inside.</p>
+            <p className="text-sm text-muted">{slateDay(games[0]?.gameDate) || "Today"}. Tap a game. The lab is inside.</p>
             {loading && <p className="text-sm text-muted">Loading slate…</p>}
             {error && !loading && <p className="text-sm text-danger">{error}</p>}
             {games.map((g) => (
@@ -122,15 +144,17 @@ export default function ResearchPage() {
                   <div className="min-w-0">
                     <div className="font-semibold">{g.awayTeam}</div>
                     <div className="text-sm text-muted">at {g.homeTeam}</div>
+                    {firstPitch(g.gameDate) ? <div className="mt-1 text-xs text-accent">{firstPitch(g.gameDate)}</div> : null}
                     <div className="mt-2 truncate text-sm">{g.awayPitcher || "TBD"} <span className="text-muted">vs</span> {g.homePitcher || "TBD"}</div>
                   </div>
                   {g.line ? (
                     <div className="text-right font-mono text-sm">
-                      <div>{g.line.spread}</div>
+                      <div>{boardPrice(g.line.spread)}</div>
                       <div className="text-muted">O/U {g.line.total}</div>
                     </div>
                   ) : null}
                 </div>
+                {g.line ? <ModelStrip away={g.awayTeam} home={g.homeTeam} spread={g.line.spread} total={g.line.total} sport="MLB" /> : null}
               </Link>
             ))}
             {mlbResults.length > 0 && (

@@ -84,7 +84,7 @@ export function AccountMark() {
 
   return (
     <div ref={box} className="fixed top-2 right-3 z-50">
-      <button type="button" onClick={() => { setReady(false); setOpen((v) => !v); }} aria-label="Account" aria-expanded={open} className="grid size-10 place-items-center rounded-full border border-card-border bg-card text-foreground">
+      <button type="button" onClick={() => { setReady(false); setOpen((v) => !v); }} aria-label="Account" aria-expanded={open} className="grid size-10 place-items-center rounded-full border border-accent/50 bg-card text-accent">
         <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <circle cx="12" cy="8" r="3.2" />
           <path d="M5 19.2c1.4-3 3.8-4.5 7-4.5s5.6 1.5 7 4.5" strokeLinecap="round" />
