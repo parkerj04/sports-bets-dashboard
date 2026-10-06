@@ -80,9 +80,10 @@ export default function ResearchPage() {
                 </div>
               )}
               {nfl.games.map((g) => (
-                <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className="card p-4 space-y-2 block hover:border-accent/40">
+                <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className={`card block space-y-2 p-4 hover:border-accent/40 ${g.broadcast === "Prime Video" ? "ring-1 ring-accent" : ""}`}>
                   <div className="flex justify-between gap-3">
                     <div>
+                      {g.broadcast === "Prime Video" ? <div className="text-xs text-accent">Thursday night</div> : null}
                       <div className="font-semibold">{g.away} ({g.awayRecord})</div>
                       <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
                     </div>

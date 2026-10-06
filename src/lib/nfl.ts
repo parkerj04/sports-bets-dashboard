@@ -69,12 +69,29 @@ function deskCards(away: string, home: string, awayScore: string, homeScore: str
 }
 
 export async function getNflWeek(): Promise<{ week: number; games: NflGame[]; results: SlateResult[]; checked: string }> {
-  const res = await fetch(
-    "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2",
-    { next: { revalidate: 120 } }
-  );
-  if (!res.ok) return { week: 0, games: [], results: [], checked: "ESPN NFL scoreboard unavailable" };
-  const data = await res.json();
+  const board = async (week?: number) => {
+    const url = week
+      ? `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${week}`
+      : "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2";
+    const res = await fetch(url, { next: { revalidate: 120 } });
+    if (!res.ok) return null;
+    return res.json();
+  };
+  let data = await board();
+  if (!data) return { week: 0, games: [], results: [], checked: "ESPN NFL scoreboard unavailable" };
+  const done = (e: { competitions?: { status?: { type?: { name?: string } } }[]; status?: { type?: { name?: string } } }) => {
+    const c = e.competitions?.[0];
+    const state = c?.status?.type?.name || e.status?.type?.name || "";
+    return state === "STATUS_FINAL" || state === "STATUS_FINAL_OVERTIME";
+  };
+  const events = data.events || [];
+  let rolled = 0;
+  if (events.length > 0 && events.every(done)) {
+    rolled = (data.week?.number || 0) + 1;
+    const next = await board(rolled);
+    if (next?.events?.length) data = next;
+    else rolled = 0;
+  }
   const week = data.week?.number || 0;
   const games: NflGame[] = [];
   const results: SlateResult[] = [];
@@ -123,5 +140,8 @@ export async function getNflWeek(): Promise<{ week: number; games: NflGame[]; re
     );
   }
   games.sort((a, b) => a.date.localeCompare(b.date));
-  return { week, games, results, checked: "ESPN NFL scoreboard, Week 4. Finals removed from the slate." };
+  const checked = rolled
+    ? `Week ${rolled - 1} is final. Showing Week ${week}. Thursday night is the first game.`
+    : `ESPN NFL scoreboard, Week ${week}. Finals removed from the slate.`;
+  return { week, games, results, checked };
 }
