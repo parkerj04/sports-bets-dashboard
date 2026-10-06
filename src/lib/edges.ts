@@ -17,7 +17,10 @@ export function dedupeEdges(list: Edge[]): Edge[] {
   const seen = new Set<string>();
   const out: Edge[] = [];
   for (const e of list) {
-    const k = `${e.gamePk || e.game}|${e.market}|${nameKey(e)}`;
+    const market = e.market || "";
+    const k = market === "Moneyline" || market === "Game Total"
+      ? `${e.gamePk || e.game}|${market}`
+      : `${e.gamePk || e.game}|${market}|${nameKey(e)}`;
     if (seen.has(k)) continue;
     seen.add(k);
     out.push(e);
@@ -27,6 +30,7 @@ export function dedupeEdges(list: Edge[]): Edge[] {
 
 export function isPlayable(e: Edge) {
   if (e.playable === false) return false;
+  if (e.market === "Moneyline" && e.edgeScore >= 70) return false;
   if (e.playable === true) return e.edgeScore >= 64;
   const flagged = /flags \(/i.test(e.reasoning) || /case against: last /i.test(e.reasoning);
   return e.edgeScore >= 64 && !flagged;
