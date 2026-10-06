@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07070c;
-  --foreground: #f3f3f6;
-  --card: #12121a;
-  --card-border: #2a2a36;
-  --accent: #8b5cf6;
-  --accent-dim: #6d28d9;
+  --background: #0c0b09;
+  --foreground: #f6f1e4;
+  --card: #16140f;
+  --card-border: #3a3428;
+  --accent: #e4b53a;
+  --accent-dim: #b8881e;
   --good: #3dcca0;
   --danger: #ff5d73;
   --warning: #e6b450;
-  --muted: #9b9bab;
+  --muted: #a89f90;
 }
 
 @theme inline {
@@ -44,9 +44,9 @@ header.border-b > div {
 
 .bg-grid {
   background-image:
-    radial-gradient(900px 420px at 80% -10%, rgba(139, 92, 246, 0.22), transparent 60%),
-    linear-gradient(rgba(139, 92, 246, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 92, 246, 0.05) 1px, transparent 1px);
+    radial-gradient(900px 420px at 80% -10%, rgba(228, 181, 58, 0.2), transparent 60%),
+    linear-gradient(rgba(228, 181, 58, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(228, 181, 58, 0.05) 1px, transparent 1px);
   background-size: auto, 48px 48px, 48px 48px;
 }
 
@@ -58,7 +58,7 @@ header.border-b > div {
 
 .btn-primary {
   background: var(--accent);
-  color: #f3f3f6;
+  color: #1a1408;
   font-weight: 600;
   border-radius: 999px;
   transition: background 0.15s, transform 0.1s;
@@ -67,7 +67,7 @@ header.border-b > div {
 .btn-primary:active { transform: scale(0.98); }
 
 .input {
-  background: #0c0c12;
+  background: #100e0a;
   border: 1px solid var(--card-border);
   border-radius: 10px;
   color: var(--foreground);
