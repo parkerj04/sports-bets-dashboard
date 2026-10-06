@@ -11,7 +11,6 @@ import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
-import { Scorers } from "@/components/Scorers";
 
 function Inner() {
   const id = useSearchParams().get("id") || "";
@@ -68,14 +67,13 @@ function Inner() {
         <h1 className="mt-2 text-2xl tracking-tight">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
-      <Scorers away={lab.awayAbbr} home={lab.homeAbbr} pending={!/final/i.test(lab.status)} />
+      <FactLine text={facts?.open} />
+      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded pending={!/final/i.test(lab.status)} />
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{String(card?.spread || lab.spread || "NL")}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{String(card?.total ?? lab.total ?? "NL")}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{String(card?.mlAway || lab.mlAway || "—")}/{String(card?.mlHome || lab.mlHome || "—")}</div></div>
       </div>
-      <FactLine text={facts?.open} />
-      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <div className="card space-y-1 p-4">
         <div className="text-xs uppercase tracking-widest text-muted">Researched side</div>
