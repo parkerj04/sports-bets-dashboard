@@ -46,6 +46,7 @@ export function BvPPicker({
   const [form, setForm] = useState<HitterLog | null>(null);
   const [error, setError] = useState("");
   const [openSide, setOpenSide] = useState<"away" | "home">("away");
+  const [menu, setMenu] = useState(false);
 
   async function tap(row: Opt) {
     setPicked(row);
@@ -87,44 +88,52 @@ export function BvPPicker({
 
   const vsPitcherId = openSide === "away" ? homePitcherId : awayPitcherId;
   const vsPitcherName = openSide === "away" ? homePitcherName : awayPitcherName;
+  const sideName = openSide === "away" ? awayTeam : homeTeam;
+  const showing = picked?.side === sideName ? picked : null;
 
   return (
-    <div className="card p-4 space-y-3">
-      <h3 className="font-semibold text-sm">Pick any batter vs the starter</h3>
-      <p className="text-[11px] text-muted">Star is the best season-power matchup on this side (OPS, then HR). Zones first, then career vs this starter, then last 5.</p>
+    <div className="card space-y-3 p-4">
+      <div>
+        <h3 className="text-sm font-semibold">Batter vs starter</h3>
+        <p className="mt-1 text-xs text-muted">One hitter at a time. Zone, then career against this starter, then the last 5.</p>
+      </div>
       <div className="flex gap-2">
-        <button type="button" onClick={() => setOpenSide("away")} className={`text-xs px-3 py-1.5 rounded-full border ${openSide === "away" ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{awayTeam}</button>
-        <button type="button" onClick={() => setOpenSide("home")} className={`text-xs px-3 py-1.5 rounded-full border ${openSide === "home" ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{homeTeam}</button>
+        {([["away", awayTeam], ["home", homeTeam]] as const).map(([side, label]) => (
+          <button key={side} type="button" onClick={() => { setOpenSide(side); setMenu(false); }} className={`min-h-11 flex-1 rounded-full px-3 text-sm ${openSide === side ? "bg-accent text-background" : "bg-background text-muted"}`}>{label}</button>
+        ))}
       </div>
-      <div className="grid sm:grid-cols-2 gap-4 items-start">
-        <div className="flex flex-wrap gap-2">
-          {list.map((b) => (
-            <button
-              type="button"
-              key={`${b.side}-${b.id}`}
-              onClick={() => tap(b)}
-              className={`text-xs px-2.5 py-1.5 rounded-lg border ${picked?.id === b.id && picked?.side === b.side ? "border-accent text-accent bg-accent/10" : "border-card-border"}`}
-            >
-              {b.id === starId ? "★ " : ""}{b.name}
-            </button>
-          ))}
-          {list.length === 0 && <p className="text-xs text-muted">No hitters loaded for this side.</p>}
-        </div>
-        <div className="space-y-3">
-          <PitcherZones id={vsPitcherId} name={vsPitcherName || "Starter"} />
-          {picked && <BatterZones id={picked.id} name={picked.name} />}
-        </div>
+      <div>
+        <button type="button" onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="flex min-h-11 w-full items-center gap-3 rounded-xl bg-background px-3 py-2 text-left">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-semibold">{showing ? showing.name : "Choose a batter"}</span>
+            <span className="text-xs text-muted">
+              {showing
+                ? `${showing.avg} · ${showing.hr} HR · vs ${showing.vsName}`
+                : `${list.length} hitters${starId ? " · star is the best OPS" : ""}`}
+            </span>
+          </span>
+          <span className="text-sm text-muted">{menu ? "Close" : "Open"}</span>
+        </button>
+        {menu ? (
+          <ul className="mt-2 max-h-72 overflow-y-auto rounded-xl bg-background p-1">
+            {list.map((b) => (
+              <li key={`${b.side}-${b.id}`}>
+                <button type="button" onClick={() => { setMenu(false); tap(b); }} className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left ${picked?.id === b.id ? "bg-accent/20" : ""}`}>
+                  <span className="min-w-0 truncate text-sm font-medium">{b.id === starId ? "★ " : ""}{b.name}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted">{b.avg} · {b.hr} HR</span>
+                </button>
+              </li>
+            ))}
+            {list.length === 0 ? <li className="px-2 py-3 text-xs text-muted">No hitters loaded for this side.</li> : null}
+          </ul>
+        ) : null}
       </div>
+      <PitcherZones id={vsPitcherId} name={vsPitcherName || "Starter"} />
+      {showing ? <BatterZones id={showing.id} name={showing.name} /> : null}
       <div className="space-y-2 border-t border-card-border pt-3">
-        <div className="text-xs text-muted uppercase tracking-wide">Career vs this starter</div>
-        {picked && (
-          <p className="text-xs text-muted">
-            {picked.name} vs {picked.vsName} · season {picked.avg} / {picked.ops}
-          </p>
-        )}
-        {loading && <p className="text-xs text-muted">Loading matchup…</p>}
-        {error && <p className="text-xs text-danger">{error}</p>}
-        {bvp && (
+        {loading ? <p className="text-xs text-muted">Loading matchup…</p> : null}
+        {error ? <p className="text-xs text-danger">{error}</p> : null}
+        {showing && bvp ? (
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <Stat k="AB" v={bvp.ab} />
             <Stat k="H" v={bvp.h} />
@@ -133,19 +142,22 @@ export function BvPPicker({
             <Stat k="AVG" v={bvp.avg} />
             <Stat k="OPS" v={bvp.ops} />
           </div>
-        )}
-        {picked && !loading && !bvp && !error && (
-          <p className="text-xs text-muted">No career sample vs this pitcher.</p>
-        )}
-        {!picked && <p className="text-xs text-muted">Tap a batter to load career vs the starter.</p>}
-        <div className="text-xs text-muted uppercase tracking-wide pt-1">Last 5</div>
-        {form && form.games.length > 0 ? (
-          <p className="text-xs font-mono text-muted">
-            {form.l5h}/{form.l5ab} · {form.l5hr} HR · {form.games.map((g) => `${g.h}/${g.ab}`).join(" · ")}
-          </p>
-        ) : (
-          <p className="text-xs text-muted">{picked && !loading ? "No last-5 row yet." : "Shows after you pick a batter."}</p>
-        )}
+        ) : null}
+        {showing && !loading && !bvp && !error ? <p className="text-xs text-muted">No career sample vs this pitcher.</p> : null}
+        {!showing ? <p className="text-xs text-muted">Open the list and pick a batter.</p> : null}
+        {showing && form && form.games.length > 0 ? (
+          <div>
+            <div className="mb-2 text-xs uppercase tracking-wide text-muted">Last 5 · {form.l5h}/{form.l5ab} · {form.l5hr} HR</div>
+            <div className="flex gap-2">
+              {form.games.map((g) => (
+                <div key={g.date} className="min-w-14 flex-1 rounded-xl bg-background py-2 text-center">
+                  <div className="font-mono text-sm">{g.h}/{g.ab}</div>
+                  <div className="text-[10px] text-muted">{g.hr ? `${g.hr} HR` : g.date.slice(5)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

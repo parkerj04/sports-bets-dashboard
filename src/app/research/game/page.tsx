@@ -9,7 +9,6 @@ import type { HitterLog } from "@/lib/hitter-form";
 import type { Ticket } from "@/lib/ticket";
 import { useDeskFacts } from "@/components/DeskFacts";
 import { StarterKs } from "@/components/StarterKs";
-import { HitterForm } from "@/components/HitterForm";
 import { BvPPicker } from "@/components/BvPPicker";
 import { PlaySpot } from "@/components/PlaySpot";
 import { SlipTray } from "@/components/SlipTray";
@@ -229,27 +228,6 @@ function GameInner() {
         homeTeam={game.homeTeam}
         awayTeam={game.awayTeam}
       />
-      {data.bvp?.length > 0 && (
-        <div className="card overflow-x-auto p-4">
-          <h3 className="mb-2 text-sm">Batter vs this starter</h3>
-          <table className="w-full text-xs">
-            <thead className="text-muted">
-              <tr className="text-left">
-                <th className="pb-2">Batter</th><th>AB</th><th>H</th><th>HR</th><th>SO</th><th>AVG</th><th>OPS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.bvp.map((r) => (
-                <tr key={r.batterId} className="border-t border-card-border font-mono">
-                  <td className="py-1.5 pr-2 font-sans font-medium">{r.batter}</td>
-                  <td>{r.ab}</td><td>{r.h}</td><td>{r.hr}</td><td>{r.so}</td><td>{r.avg}</td><td>{r.ops}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <HitterForm rows={data.form || []} />
       <BatterTable title={`${game.awayTeam} hitters`} rows={data.awayHitters} />
       <BatterTable title={`${game.homeTeam} hitters`} rows={data.homeHitters} />
       <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
