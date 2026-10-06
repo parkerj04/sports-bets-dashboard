@@ -12,6 +12,8 @@ const DESK: Play[] = [
   { id: "sun-det", away: "DET", home: "CAR", pick: "Carolina +3.5", score: 52, status: "published", why: "Detroit -3.5, total 51, 8:20. Bank of America is cloudy, 65 degrees, wind 2 mph, 0 percent precip. No weather flag. Lions are 2-1, Panthers 1-2. A field goal on the road at night is a short number. The case against is Detroit's offense can clear 3.5 without a blowout. This is the dog at a field goal, not a moneyline." },
 ];
 
+const CLOSED = new Set(["published", "archived_superseded", "superseded", "won", "lost", "final", "graded"]);
+
 function marketOf(pick: string) {
   return pick.toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9.+-]+/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -59,7 +61,7 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
       .then((r) => r.json()).then((d) => setRows(d.plays || [])).catch(() => setRows([]));
   }, [away, home]);
   const desk = DESK.filter((p) => onGame(away, home, p));
-  const review = rows.filter((p) => p.status !== "published" && p.status !== "archived_superseded" && p.status !== "superseded");
+  const review = rows.filter((p) => !CLOSED.has(String(p.status || "intake").toLowerCase()));
   if (!desk.length && !review.length) return null;
   return (
     <>
