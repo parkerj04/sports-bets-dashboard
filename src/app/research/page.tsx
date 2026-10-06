@@ -11,8 +11,6 @@ import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
 import { SlipTray } from "@/components/SlipTray";
 import { TrendBoard } from "@/components/TrendBoard";
-import { ModelCall } from "@/components/ModelCall";
-import { scoreTone } from "@/lib/score-color";
 
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
@@ -57,96 +55,102 @@ export default function ResearchPage() {
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
         <div className="flex gap-2">
           {(["MLB", "NFL", "CFB"] as const).map((s) => (
-            <button key={s} onClick={() => setSport(s)} className={`px-4 py-1.5 rounded-full text-sm border ${sport === s ? "border-accent text-accent bg-accent/10" : "border-card-border text-muted"}`}>{s}</button>
+            <button key={s} onClick={() => setSport(s)} className={`min-h-11 flex-1 rounded-full text-sm ${sport === s ? "bg-accent text-[#1a1408]" : "bg-card text-muted"}`}>{s}</button>
           ))}
         </div>
-        <p className="text-xs text-muted">Scoreboards checked 2:11 AM ET, Saturday Oct 3. Finals are off the slate. The model score is the posted number split, not a private model.</p>
-        {sport === "CFB" && (<><CfbBoard /><SportPicks sport="CFB" /></>)}
-        {sport === "NFL" && (
+        {sport === "CFB" && (
           <>
-            <section className="space-y-3">
-              <h1 className="text-xl font-bold">NFL Week {nfl.week || "—"}</h1>
-              <p className="text-sm text-muted">Tap a game for researched plays. Finals are off this slate. {nfl.checked}</p>
-              {loading && <p className="text-muted text-sm">Loading NFL…</p>}
-              {(nfl.results || []).length > 0 && (
-                <div className="card p-4 space-y-2">
-                  <h2 className="font-semibold text-sm">Results</h2>
+            <CfbBoard />
+            <details className="card p-4">
+              <summary className="cursor-pointer text-sm font-semibold">Researched picks</summary>
+              <div className="mt-3"><SportPicks sport="CFB" /></div>
+            </details>
+          </>
+        )}
+        {sport === "NFL" && (
+          <section className="space-y-3">
+            <h1 className="text-xl font-semibold tracking-tight">NFL Week {nfl.week || "—"}</h1>
+            <p className="text-sm text-muted">Tap a game. The writeup is inside.</p>
+            {loading && <p className="text-sm text-muted">Loading NFL…</p>}
+            {nfl.games.map((g) => (
+              <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className={`card block p-4 ${g.broadcast === "Prime Video" ? "ring-1 ring-accent" : ""}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    {g.broadcast === "Prime Video" ? <div className="mb-1 text-xs text-accent">Thursday night</div> : null}
+                    <div className="font-semibold">{g.away} <span className="font-normal text-muted">{g.awayRecord}</span></div>
+                    <div className="text-sm text-muted">at {g.home} {g.homeRecord}</div>
+                  </div>
+                  <div className="text-right font-mono text-sm">
+                    <div>{g.spread}</div>
+                    <div className="text-muted">O/U {g.total}</div>
+                  </div>
+                </div>
+                {g.leanML ? <p className="mt-3 truncate text-sm text-accent">{g.leanML}</p> : null}
+              </Link>
+            ))}
+            {(nfl.results || []).length > 0 && (
+              <details className="card p-4">
+                <summary className="cursor-pointer text-sm font-semibold">Results</summary>
+                <div className="mt-3 space-y-2">
                   {(nfl.results || []).map((r) => (
-                    <div key={r.id} className="text-sm border-t border-card-border pt-2">
+                    <div key={r.id} className="border-t border-card-border pt-2 text-sm">
                       <div className="font-medium">{r.scoreline}</div>
-                      {r.cards.map((c) => <p key={c} className="text-xs text-muted mt-1">{c}</p>)}
+                      {r.cards.map((c) => <p key={c} className="mt-1 text-xs text-muted">{c}</p>)}
                     </div>
                   ))}
                 </div>
-              )}
-              {nfl.games.map((g) => (
-                <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className={`card block space-y-2 p-4 hover:border-accent/40 ${g.broadcast === "Prime Video" ? "ring-1 ring-accent" : ""}`}>
-                  <div className="flex justify-between gap-3">
-                    <div>
-                      {g.broadcast === "Prime Video" ? <div className="text-xs text-accent">Thursday night</div> : null}
-                      <div className="font-semibold">{g.away} ({g.awayRecord})</div>
-                      <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-2xl font-mono font-bold ${scoreTone(g.leanScore || 0)}`}>{g.leanScore || "—"}</div>
-                      <div className="text-[10px] text-accent">Open game →</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.spread}</div></div>
-                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.total}</div></div>
-                    <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.mlAway}/{g.mlHome}</div></div>
-                  </div>
-                  <ModelCall away={g.away} home={g.home} spread={g.spread} total={g.total} />
-                  <div className="text-sm"><span className="text-accent font-medium">{g.leanML}</span>{" · "}<span className="text-accent font-medium">Total: {g.leanTotal}</span></div>
-                  <p className="text-xs text-muted">{g.leanWhy}</p>
-                </Link>
-              ))}
-            </section>
-            <TrendBoard />
-            <SportPicks sport="NFL" />
-          </>
+              </details>
+            )}
+            <details className="card p-4">
+              <summary className="cursor-pointer text-sm font-semibold">Trends and picks</summary>
+              <div className="mt-4 space-y-6">
+                <TrendBoard />
+                <SportPicks sport="NFL" />
+              </div>
+            </details>
+          </section>
         )}
         {sport === "MLB" && (
           <section className="space-y-3">
-            <h1 className="text-xl font-bold">MLB slate</h1>
-            <p className="text-sm text-muted">Tap a game for the lab. Finals are off the slate. The model score is a run score from the posted total.</p>
-            {loading && <p className="text-muted text-sm">Loading slate…</p>}
-            {error && !loading && <p className="text-danger text-sm">{error}</p>}
-            <div className="card p-4 space-y-2">
-              <h2 className="font-semibold text-sm">Results</h2>
-              <p className="text-xs text-muted">{mlbNote || "Checking ESPN…"}</p>
-              {mlbResults.map((r) => (
-                <div key={r.id} className="text-sm border-t border-card-border pt-2">
-                  <div className="font-medium">{r.scoreline}</div>
-                  {r.cards.map((c) => <p key={c} className="text-xs text-muted mt-1">{c}</p>)}
-                </div>
-              ))}
-            </div>
+            <h1 className="text-xl font-semibold tracking-tight">MLB slate</h1>
+            <p className="text-sm text-muted">Tap a game. The lab is inside.</p>
+            {loading && <p className="text-sm text-muted">Loading slate…</p>}
+            {error && !loading && <p className="text-sm text-danger">{error}</p>}
             {games.map((g) => (
-              <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card p-4 space-y-2 block hover:border-accent/40">
-                <div className="flex justify-between gap-3">
-                  <div>
+              <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card block p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <div className="font-semibold">{g.awayTeam}</div>
                     <div className="text-sm text-muted">at {g.homeTeam}</div>
-                    <div className="text-[11px] text-muted mt-1">{g.status}{g.venue ? ` · ${g.venue}` : ""}</div>
+                    <div className="mt-2 truncate text-sm">{g.awayPitcher || "TBD"} <span className="text-muted">vs</span> {g.homePitcher || "TBD"}</div>
                   </div>
-                  <div className="text-right text-[10px] text-accent">Open game →</div>
-                </div>
-                <div className="text-sm"><span className="text-muted">SP</span> {g.awayPitcher || "TBD"} <span className="text-muted">vs</span> {g.homePitcher || "TBD"}</div>
-                {g.line && (
-                  <>
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Spread</div><div className="font-mono">{g.line.spread}</div></div>
-                      <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">Total</div><div className="font-mono">{g.line.total}</div></div>
-                      <div className="bg-white/5 rounded-lg py-2"><div className="text-muted">ML</div><div className="font-mono">{g.line.mlAway}/{g.line.mlHome}</div></div>
+                  {g.line ? (
+                    <div className="text-right font-mono text-sm">
+                      <div>{g.line.spread}</div>
+                      <div className="text-muted">O/U {g.line.total}</div>
                     </div>
-                    <ModelCall away={g.awayTeam} home={g.homeTeam} spread={g.line.spread} total={g.line.total} sport="MLB" />
-                  </>
-                )}
+                  ) : null}
+                </div>
               </Link>
             ))}
-            <PropBoards sport="MLB" />
+            {mlbResults.length > 0 && (
+              <details className="card p-4">
+                <summary className="cursor-pointer text-sm font-semibold">Results</summary>
+                <p className="mt-2 text-xs text-muted">{mlbNote}</p>
+                <div className="mt-3 space-y-2">
+                  {mlbResults.map((r) => (
+                    <div key={r.id} className="border-t border-card-border pt-2 text-sm">
+                      <div className="font-medium">{r.scoreline}</div>
+                      {r.cards.map((c) => <p key={c} className="mt-1 text-xs text-muted">{c}</p>)}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+            <details className="card p-4">
+              <summary className="cursor-pointer text-sm font-semibold">Home run board</summary>
+              <div className="mt-4"><PropBoards sport="MLB" /></div>
+            </details>
           </section>
         )}
       </main>

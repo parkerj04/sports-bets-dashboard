@@ -8,6 +8,7 @@ import { footballRegistry } from "@/lib/football-desk";
 import { scoreTone } from "@/lib/score-color";
 import { AgentDesk } from "@/components/AgentDesk";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
+import { ModelCall } from "@/components/ModelCall";
 
 type Catcher = { name: string; team: string; rec: number; yards: number; td: number };
 
@@ -54,6 +55,7 @@ function Inner() {
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{game.total}</div></div>
         <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{game.mlAway}/{game.mlHome}</div></div>
       </div>
+      <ModelCall away={game.away} home={game.home} spread={game.spread} total={game.total} />
       <FactLine text={facts?.open} />
       <section className="card space-y-3 p-4">
         <h2 className="text-sm">Receivers</h2>

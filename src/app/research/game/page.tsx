@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { BatterLine, Edge, GameMatchup, PitcherStats, TeamKStats } from "@/lib/mlb";
+import type { MlbLine } from "@/lib/mlb-odds";
 import type { BvP, PitcherDeep } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
 import type { Ticket } from "@/lib/ticket";
@@ -15,6 +16,7 @@ import { SlipTray } from "@/components/SlipTray";
 import { TicketDesk } from "@/components/TicketDesk";
 import { RosterCheck } from "@/components/RosterCheck";
 import { AgentDesk } from "@/components/AgentDesk";
+import { ModelCall } from "@/components/ModelCall";
 import { scoreTone } from "@/lib/score-color";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
@@ -158,6 +160,7 @@ function GameInner() {
     awayDeep: PitcherDeep | null;
     bvp: BvP[];
     form: HitterLog[];
+    line?: MlbLine | null;
   } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -196,6 +199,16 @@ function GameInner() {
         <h1 className="mt-2 text-2xl tracking-tight">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
         <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
       </div>
+      {data.line ? (
+        <>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{data.line.spread}</div></div>
+            <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{data.line.total}</div></div>
+            <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{data.line.mlAway || "—"}/{data.line.mlHome || "—"}</div></div>
+          </div>
+          <ModelCall away={game.awayTeam} home={game.homeTeam} spread={data.line.spread} total={data.line.total} sport="MLB" />
+        </>
+      ) : null}
       <PlaySpot
         away={game.awayTeam}
         home={game.homeTeam}

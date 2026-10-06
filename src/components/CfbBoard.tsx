@@ -2,8 +2,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CfbGame } from "@/lib/cfb";
-import { scoreTone } from "@/lib/score-color";
-import { ModelCall } from "@/components/ModelCall";
 
 export function CfbBoard() {
   const [week, setWeek] = useState(0);
@@ -15,38 +13,37 @@ export function CfbBoard() {
   }, []);
   return (
     <section className="space-y-3">
-      <h1 className="text-xl font-bold">College football week {week || "—"}</h1>
-      <p className="text-sm text-muted">SEC, Big Ten, Big 12, ACC, plus Notre Dame. Finals are off the slate. The score on a card is the posted number, not a private model.</p>
+      <h1 className="text-xl font-semibold tracking-tight">College football week {week || "—"}</h1>
+      <p className="text-sm text-muted">Tap a game. The quarterbacks are inside.</p>
       {loading && <p className="text-muted text-sm">Loading college…</p>}
-      {results.length > 0 && (
-        <div className="card p-4 space-y-2">
-          <h2 className="font-semibold text-sm">Results</h2>
-          {results.map((r) => (
-            <div key={r.id} className="text-sm border-t border-card-border pt-2">
-              <div className="font-medium">{r.scoreline}</div>
-              {r.cards.map((c) => <p key={c} className="text-xs text-muted mt-1">{c}</p>)}
-            </div>
-          ))}
-        </div>
-      )}
       {games.map((g) => (
-        <Link key={g.id} href={`/research/cfb/game?id=${g.id}`} className="card p-4 space-y-2 block hover:border-accent/40">
-          <div className="flex justify-between gap-3">
-            <div>
-              <div className="font-semibold">{g.away} ({g.awayRecord})</div>
-              <div className="text-sm text-muted">at {g.home} ({g.homeRecord})</div>
-              <div className="text-[11px] text-muted">{g.awayConf} / {g.homeConf}</div>
+        <Link key={g.id} href={`/research/cfb/game?id=${g.id}`} className="card block p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-semibold">{g.away} <span className="font-normal text-muted">{g.awayRecord}</span></div>
+              <div className="text-sm text-muted">at {g.home} {g.homeRecord}</div>
+              <p className="mt-2 truncate text-sm">{g.awayQb} <span className="text-muted">vs</span> {g.homeQb}</p>
             </div>
-            <div className="text-right">
-              <div className={`font-mono text-2xl ${scoreTone(g.score)}`}>{g.score}</div>
-              <div className="text-[10px] text-accent">QBs →</div>
+            <div className="text-right font-mono text-sm">
+              <div>{g.spread}</div>
+              <div className="text-muted">O/U {g.total}</div>
             </div>
           </div>
-          <div className="text-xs font-mono text-muted">{g.spread} · O/U {g.total}</div>
-          <ModelCall away={g.away} home={g.home} spread={g.spread} total={g.total} />
-          <div className="text-sm">{g.awayQb} vs {g.homeQb}</div>
         </Link>
       ))}
+      {results.length > 0 && (
+        <details className="card p-4">
+          <summary className="cursor-pointer text-sm font-semibold">Results</summary>
+          <div className="mt-3 space-y-2">
+            {results.map((r) => (
+              <div key={r.id} className="border-t border-card-border pt-2 text-sm">
+                <div className="font-medium">{r.scoreline}</div>
+                {r.cards.map((c) => <p key={c} className="mt-1 text-xs text-muted">{c}</p>)}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </section>
   );
 }
