@@ -4,7 +4,20 @@ import { useEffect, useState } from "react";
 import { headshot, one, pct, summarize, teamLogo } from "./data";
 
 type Week = { week: number; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
-type Player = { name: string; team: string; pos: string; id: string; rec: number; rush: number; catches: number; pass: number; passTd: number; total: number; weeks: Week[] };
+type Player = {
+  name: string;
+  team: string;
+  pos: string;
+  id: string;
+  rec: number;
+  rush: number;
+  catches: number;
+  pass: number;
+  passTd: number;
+  total: number;
+  weeks: Week[];
+  models?: Partial<Record<Market | "td", { value: number; text: string }>>;
+};
 type Market = "rec" | "catches" | "rush" | "pass" | "passTd";
 
 const MARKETS: { key: Market; label: string }[] = [
@@ -47,6 +60,17 @@ function lineFor(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
   return Math.round(mid * 2) / 2;
+}
+
+function ModelBox({ model }: { model?: { value: number; text: string } }) {
+  if (!model) return null;
+  return (
+    <div className="mt-4 rounded-xl bg-background p-3">
+      <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
+      <div className="font-mono text-3xl font-semibold">{model.value.toFixed(1)}</div>
+      <p className="mt-1 text-sm text-muted">{model.text}</p>
+    </div>
+  );
 }
 
 function read(values: number[], line: number) {
@@ -178,6 +202,7 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
             />
           </div>
           {note ? <p className="mt-2 text-sm text-muted">{note.call}. {note.against}</p> : null}
+          <ModelBox model={active.models?.td} />
         </>
       ) : null}
     </section>
@@ -289,6 +314,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
             <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
           </div>
           <p className="mt-3 text-sm text-muted">{shown.call}. {shown.against}</p>
+          <ModelBox model={active.models?.[market]} />
         </section>
       ) : null}
       <AnytimeSection away={away} home={home} pending={pending} />

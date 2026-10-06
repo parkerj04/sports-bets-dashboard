@@ -17,6 +17,7 @@ export type Scorer = {
   total: number;
   scored: number;
   weeks: ScorerWeek[];
+  models: Partial<Record<"rec" | "catches" | "rush" | "pass" | "passTd" | "td", { value: number; text: string }>>;
 };
 
 type Raw = { name: string; team: string; pos: string; weeks: ScorerWeek[] };
@@ -87,6 +88,116 @@ async function rosterIds(abbr: string) {
   return map;
 }
 
+const MODEL_MARKETS = ["rec", "catches", "rush", "pass", "passTd", "td"] as const;
+type ModelMarket = (typeof MODEL_MARKETS)[number];
+
+const UNIT: Record<ModelMarket, string> = {
+  rec: "receiving yards",
+  catches: "receptions",
+  rush: "rushing yards",
+  pass: "passing yards",
+  passTd: "passing touchdowns",
+  td: "anytime touchdowns",
+};
+
+const POS_WORD: Record<string, string> = {
+  QB: "Quarterbacks",
+  RB: "Running backs",
+  WR: "Wide receivers",
+  TE: "Tight ends",
+};
+
+const CLUB: Record<string, string> = {
+  ARI: "Cardinals", ATL: "Falcons", BAL: "Ravens", BUF: "Bills", CAR: "Panthers", CHI: "Bears",
+  CIN: "Bengals", CLE: "Browns", DAL: "Cowboys", DEN: "Broncos", DET: "Lions", GB: "Packers",
+  HOU: "Texans", IND: "Colts", JAX: "Jaguars", KC: "Chiefs", LV: "Raiders", LAC: "Chargers",
+  LAR: "Rams", LA: "Rams", MIA: "Dolphins", MIN: "Vikings", NE: "Patriots", NO: "Saints",
+  NYG: "Giants", NYJ: "Jets", PHI: "Eagles", PIT: "Steelers", SF: "49ers", SEA: "Seahawks",
+  TB: "Buccaneers", TEN: "Titans", WAS: "Commanders", WSH: "Commanders",
+};
+
+function tenth(n: number) {
+  return Math.round(n * 10) / 10;
+}
+
+function weekStat(w: ScorerWeek, market: ModelMarket) {
+  return w[market];
+}
+
+function protect(rows: Raw[], away: string, home: string) {
+  const sums = new Map<string, { pos: string; n: number; sum: Record<ModelMarket, number> }>();
+  const bucket = new Map<string, number>();
+  for (const r of rows) {
+    const key = `${r.pos}|${r.team}|${r.name}`;
+    const cur = sums.get(key) || { pos: r.pos, n: 0, sum: { rec: 0, catches: 0, rush: 0, pass: 0, passTd: 0, td: 0 } };
+    for (const w of r.weeks) {
+      cur.n += 1;
+      for (const market of MODEL_MARKETS) {
+        const value = weekStat(w, market);
+        cur.sum[market] += value;
+        const slot = `${w.opp}|${w.week}|${r.pos}|${market}`;
+        bucket.set(slot, (bucket.get(slot) || 0) + value);
+      }
+    }
+    sums.set(key, cur);
+  }
+  const priorSum: Record<string, Record<ModelMarket, number>> = {};
+  const priorN: Record<string, number> = {};
+  for (const cur of sums.values()) {
+    if (cur.n < 3) continue;
+    priorN[cur.pos] = (priorN[cur.pos] || 0) + 1;
+    const bag = priorSum[cur.pos] || { rec: 0, catches: 0, rush: 0, pass: 0, passTd: 0, td: 0 };
+    for (const market of MODEL_MARKETS) bag[market] += cur.sum[market] / cur.n;
+    priorSum[cur.pos] = bag;
+  }
+  const league = new Map<string, number[]>();
+  const opp = new Map<string, number[]>();
+  for (const [slot, value] of bucket) {
+    const [defense, , pos, market] = slot.split("|");
+    const key = `${pos}|${market}`;
+    const list = league.get(key) || [];
+    list.push(value);
+    league.set(key, list);
+    const okey = `${defense}|${key}`;
+    const olist = opp.get(okey) || [];
+    olist.push(value);
+    opp.set(okey, olist);
+  }
+  const mean = (xs?: number[]) => (xs && xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+  return (player: { name: string; pos: string; team: string }, weeks: ScorerWeek[]) => {
+    const foe = player.team === away ? home : away;
+    const foeFile = NFL[foe] || foe;
+    const models: Scorer["models"] = {};
+    const n = weeks.length;
+    if (!n) return models;
+    for (const market of MODEL_MARKETS) {
+      const rate = weeks.reduce((s, w) => s + weekStat(w, market), 0) / n;
+      const samples = priorN[player.pos] || 0;
+      if (!samples) continue;
+      const prior = priorSum[player.pos][market] / samples;
+      const shrunk = (n * rate + 3 * prior) / (n + 3);
+      const oppVals = opp.get(`${foeFile}|${player.pos}|${market}`);
+      const leagueVals = league.get(`${player.pos}|${market}`);
+      const oppPer = mean(oppVals);
+      const leaguePer = mean(leagueVals);
+      const raw = leaguePer ? oppPer / leaguePer : 1;
+      const short = !oppVals || oppVals.length < 3;
+      const factor = short ? 1 : Math.min(1.15, Math.max(0.85, raw));
+      const value = tenth(shrunk * factor);
+      const club = CLUB[foe] || foe;
+      const move = short
+        ? `${club} have fewer than 3 games on file at this position, so the defense does not move the number.`
+        : `${club} have allowed ${tenth(oppPer).toFixed(1)} per game to the position. A typical defense game is ${tenth(leaguePer).toFixed(1)}. That ratio is capped at 15 percent, so the factor used is ${factor.toFixed(2)}.`;
+      models[market] = {
+        value,
+        text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]} against the ${club}. The 2026 rate is ${tenth(rate).toFixed(1)} over ${n} games. ${POS_WORD[player.pos] || "Players"} with at least 3 games average ${tenth(prior).toFixed(1)}. ${move} Not a book price.`,
+      };
+    }
+    return models;
+  };
+}
+
 export async function gameScorers(away: string, home: string) {
   const want = new Map([away, home].map((t) => [NFL[t] || t, t]));
   const [rows, awayIds, homeIds] = await Promise.all([
@@ -95,6 +206,7 @@ export async function gameScorers(away: string, home: string) {
     rosterIds(NFL[home] || home),
   ]);
   const ids = new Map([...awayIds, ...homeIds]);
+  const score = protect(rows, away, home);
   const players: Scorer[] = rows
     .filter((r) => want.has(r.team))
     .map((r) => {
@@ -113,12 +225,13 @@ export async function gameScorers(away: string, home: string) {
         total,
         scored: weeks.filter((w) => w.td > 0).length,
         weeks,
+        models: score({ name: r.name, pos: r.pos, team: want.get(r.team) || r.team }, weeks),
       };
     })
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. A week with no row is missing, not a zero. Lines are research bars, not sportsbook prices.",
+    source: "nflverse 2026. The protected model pulls a short log toward players with at least 3 games, then caps the opponent at 15 percent. Not a sportsbook price.",
     players,
   };
 }
