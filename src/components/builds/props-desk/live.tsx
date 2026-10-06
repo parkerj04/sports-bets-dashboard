@@ -3,14 +3,43 @@
 import { useEffect, useState } from "react";
 import { headshot, one, pct, summarize, teamLogo } from "./data";
 
-type Week = { week: number; td: number; rec: number; rush: number; opp: string };
-type Player = { name: string; team: string; pos: string; id: string; rec: number; rush: number; total: number; weeks: Week[] };
-type Market = "rec" | "rush";
+type Week = { week: number; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
+type Player = { name: string; team: string; pos: string; id: string; rec: number; rush: number; catches: number; pass: number; passTd: number; total: number; weeks: Week[] };
+type Market = "rec" | "catches" | "rush" | "pass" | "passTd";
+
+const MARKETS: { key: Market; label: string }[] = [
+  { key: "rec", label: "Receiving yards" },
+  { key: "catches", label: "Receptions" },
+  { key: "rush", label: "Rushing yards" },
+  { key: "pass", label: "Passing yards" },
+  { key: "passTd", label: "Passing TDs" },
+];
 
 const LOGO: Record<string, string> = { WAS: "WSH", LA: "LAR" };
 
 function mark(abbr: string) {
   return teamLogo(LOGO[abbr] || abbr);
+}
+
+function statOf(week: Week, market: Market) {
+  if (market === "rec") return week.rec;
+  if (market === "catches") return week.catches;
+  if (market === "rush") return week.rush;
+  if (market === "pass") return week.pass;
+  return week.passTd;
+}
+
+function totalOf(player: Player, market: Market) {
+  if (market === "rec") return player.rec;
+  if (market === "catches") return player.catches;
+  if (market === "rush") return player.rush;
+  if (market === "pass") return player.pass;
+  return player.passTd;
+}
+
+function inMarket(player: Player, market: Market) {
+  if (market === "pass" || market === "passTd") return player.pass > 0 || player.passTd > 0;
+  return totalOf(player, market) > 0;
 }
 
 function lineFor(values: number[]) {
@@ -173,10 +202,10 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
   }, [away, home]);
 
   const list = (players || [])
-    .filter((p) => (market === "rec" ? p.rec > 0 : p.rush > 0))
-    .sort((a, b) => (market === "rec" ? b.rec - a.rec : b.rush - a.rush));
+    .filter((p) => inMarket(p, market))
+    .sort((a, b) => totalOf(b, market) - totalOf(a, market));
   const active = list.find((p) => p.name === name) || null;
-  const values = active ? active.weeks.map((w) => (market === "rec" ? w.rec : w.rush)) : [];
+  const values = active ? active.weeks.map((w) => statOf(w, market)) : [];
   const shown = active ? read(values, line) : null;
 
   function pickMarket(next: Market) {
@@ -187,7 +216,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
   }
 
   function pickPlayer(player: Player) {
-    const nums = player.weeks.map((w) => (market === "rec" ? w.rec : w.rush));
+    const nums = player.weeks.map((w) => statOf(w, market));
     setName(player.name);
     setOpen(false);
     setLine(lineFor(nums));
@@ -198,11 +227,11 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
       <header>
         <p className="text-xs uppercase tracking-widest text-accent">Player props</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{away} @ {home}</h2>
-        <p className="mt-1 text-sm text-muted">Receiving and rushing yards. The line is the median of the 2026 games, snapped to .5.</p>
+        <p className="mt-1 text-sm text-muted">Receiving, rushing, and passing. The line is the median of the 2026 games, snapped to .5.</p>
       </header>
-      <div className="flex gap-2">
-        {([["rec", "Receiving yards"], ["rush", "Rushing yards"]] as const).map(([key, label]) => (
-          <button key={key} type="button" onClick={() => pickMarket(key)} className={`min-h-11 rounded-full px-3 text-sm ${market === key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{label}</button>
+      <div className="flex flex-wrap gap-2">
+        {MARKETS.map((item) => (
+          <button key={item.key} type="button" onClick={() => pickMarket(item.key)} className={`min-h-11 rounded-full px-3 text-sm ${market === item.key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{item.label}</button>
         ))}
       </div>
       {!players ? <p className="text-sm text-muted">Loading the prop board…</p> : null}
@@ -212,7 +241,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
             {active?.id ? <img src={headshot(active.id)} alt="" className="size-11 rounded-full object-cover object-top" /> : <span className="size-11 shrink-0 rounded-full bg-background" />}
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{active ? active.name : "Choose a player"}</span>
-              <span className="text-sm text-muted">{active ? `${active.team} · ${active.pos} · ${market === "rec" ? "Receiving yards" : "Rushing yards"}` : `${list.length} players`}</span>
+              <span className="text-sm text-muted">{active ? `${active.team} · ${active.pos} · ${MARKETS.find((m) => m.key === market)?.label}` : `${list.length} players`}</span>
             </span>
             <span className="text-sm text-muted">{open ? "Close" : "Open"}</span>
           </button>
@@ -226,7 +255,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
                       <span className="block truncate text-sm font-medium">{p.name}</span>
                       <span className="text-xs text-muted">{p.team} · {p.pos}</span>
                     </span>
-                    <span className="font-mono text-sm">{market === "rec" ? p.rec : p.rush}</span>
+                    <span className="font-mono text-sm">{totalOf(p, market)}</span>
                   </button>
                 </li>
               ))}
@@ -251,7 +280,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
               line={line}
               values={values}
               pendingOpp={pending ? (active.team === away ? home : away) : undefined}
-              weeks={active.weeks.map((w) => ({ label: `W${w.week}`, abbr: w.opp, value: market === "rec" ? w.rec : w.rush }))}
+              weeks={active.weeks.map((w) => ({ label: `W${w.week}`, abbr: w.opp, value: statOf(w, market) }))}
             />
           </div>
           <div className="mt-4 flex items-center gap-2">
