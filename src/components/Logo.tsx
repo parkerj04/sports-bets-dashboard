@@ -31,14 +31,16 @@ export function BrandMark({ wide = false, className = "" }: { wide?: boolean; cl
     );
   }
   return (
-    <span className={`flex min-w-0 items-center gap-3 ${className}`}>
+    <span className={`flex w-full min-w-0 items-center gap-3 ${className}`}>
       <span className="relative grid size-11 shrink-0 place-items-center">
         <span className="absolute inset-1 rounded-2xl bg-accent/25 blur-md" />
         <Logo size={36} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-semibold uppercase tracking-[0.18em] sm:text-sm sm:tracking-[0.28em]">The Locksmith</span>
-        <span className="mt-1.5 block h-px bg-gradient-to-r from-accent via-accent/45 to-transparent" />
+      <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.18em] sm:text-sm sm:tracking-[0.22em]">The Locksmith</span>
+      <span className="flex min-w-8 flex-1 items-center">
+        <span className="h-px flex-1 bg-accent" />
+        <span className="mx-2 size-1.5 shrink-0 rotate-45 bg-accent" />
+        <span className="h-px flex-1 bg-gradient-to-r from-accent to-accent/20" />
       </span>
     </span>
   );
