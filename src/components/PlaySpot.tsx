@@ -7,13 +7,26 @@ import { isPlayable } from "@/lib/edges";
 import { SlipCheck } from "@/components/SlipTray";
 
 type Hitter = { id: number; name: string; team: string; avg: string; hr: number; rbi: number };
-type Log = { date: string; h: number; hr: number; r: number; rbi: number; sb: number };
+type Log = { date: string; opp: string; h: number; hr: number; r: number; rbi: number; sb: number };
 type Spot = "game" | "batter";
 type GameMarket = "ML" | "Total";
 type BatMarket = "Hits" | "HR" | "H+R+RBI" | "SB";
 
 const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+function mlbLogo(name: string) {
+  const code = name.toLowerCase();
+  const map: [string, string][] = [
+    ["diamondbacks", "ari"], ["braves", "atl"], ["orioles", "bal"], ["red sox", "bos"], ["white sox", "chw"],
+    ["cubs", "chc"], ["reds", "cin"], ["guardians", "cle"], ["rockies", "col"], ["tigers", "det"],
+    ["astros", "hou"], ["royals", "kc"], ["angels", "laa"], ["dodgers", "lad"], ["marlins", "mia"],
+    ["brewers", "mil"], ["twins", "min"], ["mets", "nym"], ["yankees", "nyy"], ["athletics", "oak"],
+    ["phillies", "phi"], ["pirates", "pit"], ["padres", "sd"], ["giants", "sf"], ["mariners", "sea"],
+    ["cardinals", "stl"], ["rays", "tb"], ["rangers", "tex"], ["blue jays", "tor"], ["nationals", "wsh"],
+  ];
+  const hit = map.find(([k]) => code.includes(k));
+  return `https://a.espncdn.com/i/teamlogos/mlb/500/${hit ? hit[1] : "mlb"}.png`;
+}
 function when(date: string) {
   const [, m, d] = date.split("-");
   return `${MONTHS[Number(m)] || m} ${Number(d)}`;
@@ -54,6 +67,7 @@ async function hittingLog(id: number): Promise<Log[]> {
     const st = s.stat || {};
     rows.push({
       date: s.date || "",
+      opp: s.opponent?.name || "",
       h: st.hits || 0,
       hr: st.homeRuns || 0,
       r: st.runs || 0,
@@ -210,15 +224,20 @@ function BatterCard({
           </button>
         ))}
       </div>
-      <div className="mt-3 flex h-36 items-end overflow-x-auto">
+      <div className="mt-3 flex h-44 items-end overflow-x-auto">
         {rows.slice(-12).map((row) => {
           const n = valueOf(row, market);
           const height = Math.max((n / scale) * 100, n === 0 ? 4 : 10);
           const over = n > line;
           return (
-            <div key={row.date} className="flex w-12 shrink-0 flex-col items-center justify-end h-full">
+            <div key={row.date} className="flex h-full w-14 shrink-0 flex-col items-center justify-end">
               <span className={`flex w-8 items-start justify-center rounded-md font-mono text-xs font-semibold text-background ${over ? "bg-good" : "bg-danger"}`} style={{ height: `${height}%` }}>{n}</span>
-              <span className="mt-1 text-[10px] text-muted">{when(row.date).split(" ")[0]}</span>
+              {row.opp ? (
+                <span className="mt-2 grid size-8 place-items-center rounded-full bg-card ring-1 ring-accent/40">
+                  <img src={mlbLogo(row.opp)} alt="" className="size-5 object-contain" />
+                </span>
+              ) : null}
+              <span className="mt-1 font-mono text-[10px] leading-none text-muted">{when(row.date)}</span>
             </div>
           );
         })}
