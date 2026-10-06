@@ -40,6 +40,21 @@ export const FALCONS_TARGETS: Mate[] = [
   { name: "Chris Blair", pos: "WR", espnId: "4369886", targets: 3, rec: 1, yards: 6, color: "#c3e86a" },
   { name: "Brian Robinson Jr.", pos: "RB", espnId: "4241474", targets: 2, rec: 2, yards: 16, color: "#e879f9" },
   { name: "Charlie Woerner", pos: "TE", espnId: "4035020", targets: 1, rec: 0, yards: 0, color: "#94a3b8" },
+  { name: "Nick Muse", pos: "TE", espnId: "4249624", targets: 0, rec: 0, yards: 0, color: "#64748b" },
+];
+
+/** nflverse 2026 weeks 1–3. Active wide receivers and tight ends, including zeros. */
+export const SAINTS_TARGETS: Mate[] = [
+  { name: "Chris Olave", pos: "WR", espnId: "4361370", targets: 36, rec: 27, yards: 375, color: "#5b8cff" },
+  { name: "Devaughn Vele", pos: "WR", espnId: "4569559", targets: 22, rec: 15, yards: 172, color: "#3dcca0" },
+  { name: "Juwan Johnson", pos: "TE", espnId: "3929645", targets: 19, rec: 15, yards: 173, color: "#e6b450" },
+  { name: "Noah Fant", pos: "TE", espnId: "4036131", targets: 12, rec: 8, yards: 66, color: "#f472b6" },
+  { name: "Bryce Lance", pos: "WR", espnId: "4879276", targets: 8, rec: 4, yards: 50, color: "#22d3ee" },
+  { name: "Oscar Delp", pos: "TE", espnId: "4702559", targets: 1, rec: 1, yards: 8, color: "#a78bfa" },
+  { name: "Kevin Austin Jr.", pos: "WR", espnId: "4372758", targets: 1, rec: 1, yards: 7, color: "#c3e86a" },
+  { name: "Treyton Welch", pos: "TE", espnId: "4430684", targets: 0, rec: 0, yards: 0, color: "#94a3b8" },
+  { name: "Barion Brown", pos: "WR", espnId: "4698597", targets: 0, rec: 0, yards: 0, color: "#64748b" },
+  { name: "Jalen Moreno-Cropper", pos: "WR", espnId: "4426990", targets: 0, rec: 0, yards: 0, color: "#78716c" },
 ];
 
 export const FALCONS_RUSH = [
