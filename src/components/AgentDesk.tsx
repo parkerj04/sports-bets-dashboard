@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 type Play = { id: string; pick: string; score: number; why: string; status?: string; game?: string; away?: string; home?: string };
 
 const DESK: Play[] = [
+  { id: "tue-lad-atl", away: "Dodgers", home: "Braves", pick: "First 5 under 3.5, Yamamoto and Sale only", score: 58, status: "published", why: "NLDS Game 3, 6:08 PM ET, series tied 1-1. MLB lists Yoshinobu Yamamoto (14-9, 2.53) and Chris Sale (14-9, 2.16). This is not Skubal. He started Game 1. Truist is clear, 0 percent precip, about 75 degrees and 12 mph at first pitch. Weather is not the path. The path is two confirmed starters and a full-game total of 6, so the first 5 isolates them and leaves the bullpens out. On Aug. 27 at Truist, Sale threw a 5-hit shutout and Yamamoto allowed one run. That is one game, not a law. Sale threw the ninth in the Wild Card clincher on Oct. 2, so rest is a flag. Atlanta won 5 of 6 regular-season meetings. One Sale mistake beats 3.5. Jarvis posted 71. That is a cap, not a keep. Play the first 5 under only. No moneyline." },
   { id: "sun-buf", away: "NE", home: "BUF", pick: "Buffalo -6.5, do not lay -7.5", score: 56, status: "published", why: "Bills are 3-0. Patriots are 1-2. Posted number on the board was Buffalo -6.5 to -7.5, total 49.5 to 50.5. Highmark is cloudy, 67 degrees, wind about 12 mph, 0 percent precip at the last check. That is a wind note, not a rain flag. The case against is the price and the unconfirmed injury list: A.J. Brown was listed with an ankle and TreVeyon Henderson was on the report, with no final inactive. A 3-0 home side is not an 80. Shop -6.5. If it is -7.5, pass." },
   { id: "sun-ten", away: "TEN", home: "BAL", pick: "Tennessee +11.5, shop the largest number", score: 54, status: "published", why: "Baltimore -11.5 is the number on the board, total 42. M&T has a light-rain report, about 15 percent, wind 6 mph. That is not a downpour, so it does not kill a side. It does say not to lay 11.5. Titans are 0-3. The case against is that a bad team can lose by 12 to a better one, and 0-3 is not a cover by itself. This is a price card. If the number is back to -13, it is gone." },
   { id: "sun-min-u", away: "MIA", home: "MIN", pick: "Under 38.5, indoor, do not chase a lower number", score: 54, status: "published", why: "U.S. Bank is a dome. Weather is not the reason. Posted total is 38.5, Minnesota -9.5, Miami 0-3. A total already this low is the market saying the game is small. The case against is a dome can still produce a late score, and a 0-3 side getting 9.5 can be live without the under cashing. Take 38.5 only. If it is 36.5, pass." },
@@ -46,7 +47,7 @@ function teamHit(page: string, code: string) {
   const map: Record<string, string[]> = {
     NE: ["PATRIOT", "NE"], BUF: ["BILL", "BUF"], TEN: ["TITAN", "TEN"], BAL: ["RAVEN", "BAL"],
     MIA: ["DOLPHIN", "MIA"], MIN: ["VIKING", "MIN"], KC: ["CHIEF", "KC"], LV: ["RAIDER", "LV"],
-    DET: ["LION", "DET"], CAR: ["PANTHER", "CAR"],
+    DET: ["LION", "DET"], CAR: ["PANTHER", "CAR"], LAD: ["DODGER", "LAD"], ATL: ["BRAVE", "ATL"],
   };
   return (map[c] || [c]).some((w) => t.includes(w));
 }
@@ -68,5 +69,5 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
       <Board title="F.R.I.D.A.Y.'s picks" rows={desk} />
       <Board title="In review" rows={review} />
     </>
-  );
+n  );
 }
