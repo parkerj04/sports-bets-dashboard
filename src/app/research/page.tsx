@@ -73,11 +73,11 @@ export default function ResearchPage() {
           <Link href="/dashboard" className="flex min-w-0 flex-1"><BrandMark wide /></Link>
           <Link href="/research/desk" className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-accent/40 bg-card px-2.5 text-xs font-medium text-accent">
             <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
-              <g transform="rotate(-32 12 13)">
-                <rect x="5.2" y="3.1" width="13.6" height="4.3" rx="2.15" />
-                <rect x="11.05" y="6.8" width="1.9" height="8.4" rx="0.95" />
-                <rect x="4" y="16.4" width="16" height="1.35" rx="0.4" />
-                <rect x="4.8" y="18.1" width="14.4" height="2.7" rx="0.7" />
+              <rect x="2" y="19.2" width="20" height="3.2" rx="0.7" />
+              <rect x="3.2" y="17.8" width="17.6" height="1.6" rx="0.4" />
+              <g transform="translate(0.6 -3.2) rotate(-50 12 16)">
+                <rect x="6" y="13.6" width="12.4" height="4.4" rx="2.2" />
+                <rect x="10.6" y="2.2" width="2.6" height="11.8" rx="1.3" />
               </g>
             </svg>
             Desk review
