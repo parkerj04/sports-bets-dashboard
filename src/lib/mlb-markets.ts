@@ -28,8 +28,8 @@ export function gameMarketEdges(
       game,
       market: "Game Total",
       pick: "Under runs",
-      edgeScore: Math.min(90, underScore),
-      reasoning: `Both starters check in at ${awayP.era} and ${homeP.era} ERA. Combined opponent K% is ${combinedK.toFixed(1)}%. Lean under unless weather/lineups scream otherwise.`,
+      edgeScore: Math.min(64, underScore),
+      reasoning: `Both starters check in at ${awayP.era} and ${homeP.era} ERA. Combined opponent K% is ${combinedK.toFixed(1)}%. This is a starter shape, not a final total. Weather is not in this card.`,
       stats: { "SP ERAs": `${awayP.era} / ${homeP.era}`, "Comb K%": combinedK.toFixed(1), "Comb OPS": combinedOps.toFixed(3) },
     });
   } else if (overScore >= 40) {
@@ -38,27 +38,11 @@ export function gameMarketEdges(
       game,
       market: "Game Total",
       pick: "Over runs",
-      edgeScore: Math.min(90, overScore),
-      reasoning: `Starter ERAs ${awayP.era} and ${homeP.era} with combined OPS ${combinedOps.toFixed(3)}. Contact and damage tilt the total over.`,
+      edgeScore: Math.min(64, overScore),
+      reasoning: `Starter ERAs ${awayP.era} and ${homeP.era} with combined OPS ${combinedOps.toFixed(3)}. Contact and damage tilt the total over. Weather is not in this card.`,
       stats: { "SP ERAs": `${awayP.era} / ${homeP.era}`, "Comb OPS": combinedOps.toFixed(3), "Comb K%": combinedK.toFixed(1) },
     });
   }
 
-  const gap = awayP.era - homeP.era;
-  if (Math.abs(gap) >= 0.6) {
-    const homeBetter = gap > 0;
-    const team = homeBetter ? g.homeTeam : g.awayTeam;
-    const ace = homeBetter ? homeP : awayP;
-    const other = homeBetter ? awayP : homeP;
-    edges.push({
-      gamePk: g.gamePk,
-      game,
-      market: "Moneyline",
-      pick: `${team} ML`,
-      edgeScore: Math.min(88, Math.round(45 + Math.abs(gap) * 12)),
-      reasoning: `${ace.name} (${ace.era} ERA, ${ace.k9} K/9) is the clearer starter vs ${other.name} (${other.era} ERA). Lean ${team} on the moneyline if the price is not wild.`,
-      stats: { "Ace ERA": ace.era, "Other ERA": other.era, "Ace K/9": ace.k9 },
-    });
-  }
   return edges;
 }
