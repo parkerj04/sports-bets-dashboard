@@ -38,6 +38,42 @@ export function PropsDesk({
   );
 }
 
+function PropMenu({ current, onOpen }: { current: string | null; onOpen: (slug: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const prop = PROPS.find((p) => p.slug === current) ?? null;
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="card flex w-full items-center gap-3 p-3 text-left">
+        {prop ? <Head id={prop.espnId} name={prop.player} /> : <span className="size-11 shrink-0 rounded-full bg-background" />}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold">{prop ? prop.player : "Choose a player"}</span>
+          <span className="text-sm text-muted">{prop ? `${prop.team} · ${prop.pos} · ${prop.market}` : `${PROPS.length} props`}</span>
+        </span>
+        <span className="text-sm text-muted">{open ? "Close" : "Open"}</span>
+      </button>
+      {open ? (
+        <ul className="card mt-2 max-h-80 overflow-y-auto p-1">
+          {PROPS.map((p) => (
+            <li key={p.slug}>
+              <button
+                type="button"
+                onClick={() => { onOpen(p.slug); setOpen(false); }}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${p.slug === current ? "bg-accent/30" : ""}`}
+              >
+                <Head id={p.espnId} name={p.player} compact />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{p.player}</span>
+                  <span className="text-xs text-muted">{p.team} · {p.pos} · {p.market}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function Board({ onOpen, embedded }: { onOpen: (slug: string) => void; embedded: boolean }) {
   const Shell = embedded ? "section" : "main";
   return (
@@ -51,30 +87,7 @@ function Board({ onOpen, embedded }: { onOpen: (slug: string) => void; embedded:
         )}
         <p className="mt-1 text-sm text-muted">Mon 8:15 PM ET · Week 4 · ESPN logs through Week 3. Lines are research bars, not book prices.</p>
       </header>
-      <ul className="flex flex-col gap-3">
-        {PROPS.map((prop) => {
-          const season = summarize(prop.games, prop.line);
-          return (
-            <li key={prop.slug}>
-              <button type="button" onClick={() => onOpen(prop.slug)} className="card flex w-full items-center gap-3 p-3 text-left">
-                <Head id={prop.espnId} name={prop.player} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{prop.player}</span>
-                  <span className="text-sm text-muted">
-                    {prop.pos} · {prop.market} · {one(prop.line)}
-                  </span>
-                </span>
-                <span className="text-right">
-                  <span className={`block font-mono text-sm ${season.pct >= 0.5 ? "text-good" : "text-danger"}`}>
-                    {season.hits}/{season.n}
-                  </span>
-                  <span className="block text-xs text-muted">{prop.call}</span>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <PropMenu current={null} onOpen={onOpen} />
     </Shell>
   );
 }
@@ -110,18 +123,7 @@ function Card({ prop, onBack, onOpen, embedded }: { prop: PropCard; onBack: () =
       <button type="button" onClick={onBack} className="min-h-11 self-start text-sm font-medium">
         ← Props
       </button>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {PROPS.map((p) => (
-          <button
-            key={p.slug}
-            type="button"
-            onClick={() => onOpen(p.slug)}
-            className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${p.slug === prop.slug ? "bg-accent text-foreground" : "bg-card text-muted"}`}
-          >
-            {p.player.split(" ")[0]} · {p.market.split(" ")[0]}
-          </button>
-        ))}
-      </div>
+      <PropMenu current={prop.slug} onOpen={onOpen} />
       <header className="card overflow-hidden">
         <div className="bg-accent/30 px-4 py-4">
           <p className="text-xs text-muted">ATL @ NO · Mon 8:15 PM ET</p>
