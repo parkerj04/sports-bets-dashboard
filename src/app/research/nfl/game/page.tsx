@@ -68,7 +68,7 @@ function Inner() {
         <h1 className="mt-2 text-2xl tracking-tight">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
         <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
       </div>
-      <Scorers away={lab.awayAbbr} home={lab.homeAbbr} />
+      <Scorers away={lab.awayAbbr} home={lab.homeAbbr} pending={!/final/i.test(lab.status)} />
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{String(card?.spread || lab.spread || "NL")}</div></div>
         <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{String(card?.total ?? lab.total ?? "NL")}</div></div>
