@@ -208,7 +208,7 @@ function protect(rows: Raw[], away: string, home: string) {
       const shortLog = n < 3;
       const base = shortLog ? (rate + usual) / 2 : rank === 1 ? rate : rate * 0.7 + usual * 0.3;
       const gap = allowed && allowed.length >= 3 && usual ? oppPer - usual : 0;
-      const cap = market === "td" || market === "passTd" ? 0.5 : Math.max(usual * 0.25, 0.5);
+      const cap = market === "td" || market === "passTd" ? 0.5 : Math.max(usual, 1);
       const move = Math.max(-cap, Math.min(cap, gap));
       const value = tenth(Math.max(0, base + move));
       const club = CLUB[foe] || foe;
@@ -268,7 +268,7 @@ export async function gameScorers(away: string, home: string) {
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. The model starts at the player's own rate, then adds the gap between what this defense allows that role and what a normal defense allows. A top receiver is not pulled down to the backup average. Not a sportsbook price.",
+    source: "nflverse 2026. The model starts at the player's own rate, then adds the full gap between what this defense allows that role and what a normal defense allows. Touchdowns can move by up to half a score. Yards can move by up to one normal game. Not a sportsbook price.",
     players,
   };
 }
