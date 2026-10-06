@@ -6,6 +6,7 @@ import type { GameMatchup } from "@/lib/mlb";
 import type { MlbLine } from "@/lib/mlb-odds";
 import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
+import { AccountMark } from "@/components/AccountMark";
 import { ModelStrip } from "@/components/ModelCall";
 import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
@@ -68,9 +69,15 @@ export default function ResearchPage() {
   return (
     <div className="min-h-screen pb-28">
       <header className="sticky top-0 z-10 border-b border-card-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 pr-16">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
           <Link href="/dashboard" className="flex min-w-0 flex-1"><BrandMark wide /></Link>
-          <Link href="/research/desk" className="shrink-0 text-sm text-accent hover:underline">Desk review</Link>
+          <Link href="/research/desk" className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-accent/40 bg-card px-2.5 text-xs font-medium text-accent">
+            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M4 8h16M7 8v7M17 8v7M4 15h16" strokeLinecap="round" />
+            </svg>
+            Desk review
+          </Link>
+          <AccountMark inline />
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
