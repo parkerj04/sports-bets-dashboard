@@ -72,10 +72,13 @@ export default function ResearchPage() {
         <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
           <Link href="/dashboard" className="flex min-w-0 flex-1"><BrandMark wide /></Link>
           <Link href="/research/desk" className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-accent/40 bg-card px-2.5 text-xs font-medium text-accent">
-            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M14.2 8.6 18.4 4.4l2.9 2.9-4.2 4.2z" />
-              <path d="M15.6 10.2 8.2 17.6" />
-              <path d="M4.5 18.2h8" />
+            <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
+              <g transform="rotate(-32 12 13)">
+                <rect x="5.2" y="3.1" width="13.6" height="4.3" rx="2.15" />
+                <rect x="11.05" y="6.8" width="1.9" height="8.4" rx="0.95" />
+                <rect x="4" y="16.4" width="16" height="1.35" rx="0.4" />
+                <rect x="4.8" y="18.1" width="14.4" height="2.7" rx="0.7" />
+              </g>
             </svg>
             Desk review
           </Link>
