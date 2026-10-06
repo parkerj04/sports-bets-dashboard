@@ -216,7 +216,7 @@ export function StarterKs({
             {windows.map((w) => {
               const s = summarize(w.rows.map((r) => r.k), line);
               return (
-                <button key={w.key} type="button" onClick={() => { setWin(w.key); setPicked(null); }} className={`min-h-11 min-w-16 shrink-0 rounded-xl px-2 py-2 text-center ${win === w.key ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}>
+                <button key={w.key} type="button" onClick={() => { setWin(w.key); setPicked(null); }} className={`flex size-24 shrink-0 flex-col items-center justify-center gap-0.5 rounded-3xl px-1 text-center leading-none ${win === w.key ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}>
                   <div className="text-xs text-muted">{w.label}</div>
                   <div className={`font-mono text-sm font-semibold ${s.n && s.pct >= 0.5 ? "text-good" : "text-danger"}`}>{s.n ? pct(s.pct) : "—"}</div>
                   <div className="font-mono text-xs text-muted">{s.n ? `Avg ${one(s.avg)}` : "No starts"}</div>

@@ -219,7 +219,7 @@ function BatterCard({
       </div>
       <div className="mt-3 flex gap-2">
         {(["L5", "L10", "2026"] as const).map((key) => (
-          <button key={key} type="button" onClick={() => setWin(key)} className={`min-h-11 rounded-xl px-3 text-sm ${win === key ? "bg-accent/30 ring-1 ring-accent" : "bg-card"}`}>
+          <button key={key} type="button" onClick={() => setWin(key)} className={`flex size-16 shrink-0 items-center justify-center rounded-3xl text-sm ${win === key ? "bg-accent/30 ring-1 ring-accent" : "bg-card"}`}>
             {key}
           </button>
         ))}
