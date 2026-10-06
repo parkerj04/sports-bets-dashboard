@@ -37,6 +37,11 @@ body {
   min-height: 100vh;
 }
 
+header.sticky > div,
+header.border-b > div {
+  padding-right: 4.25rem;
+}
+
 .bg-grid {
   background-image:
     radial-gradient(900px 420px at 80% -10%, rgba(139, 92, 246, 0.22), transparent 60%),
