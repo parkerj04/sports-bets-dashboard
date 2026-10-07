@@ -69,5 +69,5 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
       <Board title="F.R.I.D.A.Y.'s picks" rows={desk} />
       <Board title="In review" rows={review} />
     </>
-n  );
+  );
 }
