@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "The Locksmith — Locked picks & research",
-  description: "Members-only sports picks, pitch mixes, and daily MLB edges.",
+  description: "Members-only MLB and NFL research. Settled tickets are posted. Live plays stay inside.",
 };
 
 export default function RootLayout({

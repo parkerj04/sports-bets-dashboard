@@ -58,13 +58,15 @@ async function settledBook() {
 
 export default async function HomePage() {
   const book = await settledBook();
-  const units = book ? `${book.units >= 0 ? "+" : ""}${book.units.toFixed(2)}` : "Posted";
+  const units = book ? `${book.units >= 0 ? "+" : ""}${book.units.toFixed(2)}` : "+18.93u";
   const record = book ? `${book.wins}-${book.losses}` : "2-0";
-  const roi = book?.roi == null ? "On card" : `${book.roi >= 0 ? "+" : ""}${book.roi.toFixed(1)}%`;
+  const roi = book?.roi == null ? "$103.76" : `${book.roi >= 0 ? "+" : ""}${book.roi.toFixed(1)}%`;
+  const unitLabel = book ? "Units" : "Cash";
+  const roiLabel = book ? "ROI" : "Bonus";
 
   return (
     <div className="min-h-screen bg-grid">
-      <header className="border-b border-card-border/80">
+      <header className="door border-b border-card-border/80">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
           <BrandMark />
           <div className="flex items-center gap-3 text-sm">
@@ -95,18 +97,18 @@ export default async function HomePage() {
             <div className="mt-1 font-mono text-2xl font-semibold">{record}</div>
           </div>
           <div className="card px-3 py-4 text-center">
-            <div className="text-[10px] uppercase tracking-widest text-muted sm:text-xs">Units</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted sm:text-xs">{unitLabel}</div>
             <div className="mt-1 font-mono text-2xl font-semibold text-accent">{units}</div>
           </div>
           <div className="card px-3 py-4 text-center">
-            <div className="text-[10px] uppercase tracking-widest text-muted sm:text-xs">ROI</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted sm:text-xs">{roiLabel}</div>
             <div className="mt-1 font-mono text-2xl font-semibold">{roi}</div>
           </div>
         </section>
         <p className="mt-3 text-xs text-muted">
           {book
             ? "Settled public picks only. Pending plays are not on this page."
-            : "Two posted tickets, both won. The member book is the live units number. This page does not invent one."}
+            : "The 3u ticket returned 18.93 units at +631. The bonus ticket paid $103.76. That is not a lifetime ROI."}
         </p>
 
         <section className="mt-10 grid gap-3 lg:grid-cols-2">
@@ -149,6 +151,10 @@ export default async function HomePage() {
             </div>
           ))}
         </section>
+
+        <div className="mt-8">
+          <Link href="/auth/signup" className="btn-primary inline-block px-6 py-3 text-sm">Request a key</Link>
+        </div>
 
         <p className="mt-12 text-xs text-muted">
           21+ only. Gambling is not a paycheck. If it stops being fun, call 1-800-GAMBLER.

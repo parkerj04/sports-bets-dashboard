@@ -41,6 +41,10 @@ header.sticky > div,
 header.border-b > div {
   padding-right: 4.25rem;
 }
+header.door > div,
+header.desk > div {
+  padding-right: 1rem;
+}
 
 .bg-grid {
   background-image:
