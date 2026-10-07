@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Edge } from "@/lib/mlb";
 import { scoreTone } from "@/lib/score-color";
+import { mergeLogs, personLogUrls, readSplits } from "@/lib/mlb-log";
 import { isPlayable } from "@/lib/edges";
 import { SlipCheck } from "@/components/SlipTray";
 
@@ -76,24 +77,23 @@ function researchLine(values: number[], market: BatMarket) {
 }
 
 async function hittingLog(id: number): Promise<Log[]> {
-  const res = await fetch(`https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=gameLog&group=hitting&season=2026`);
-  if (!res.ok) return [];
-  const data = await res.json();
+  const payloads = await Promise.all(
+    personLogUrls(id, "hitting").map((url) => fetch(url, { cache: "no-store" }).then((res) => (res.ok ? res.json() : null)).catch(() => null))
+  );
   const rows: Log[] = [];
-  for (const s of data?.stats?.[0]?.splits || []) {
-    if (s.gameType === "S") continue;
+  for (const s of mergeLogs(payloads.map(readSplits))) {
     const st = s.stat || {};
     rows.push({
       date: s.date || "",
       opp: s.opponent?.name || "",
-      h: st.hits || 0,
-      hr: st.homeRuns || 0,
-      r: st.runs || 0,
-      rbi: st.rbi || 0,
-      sb: st.stolenBases || 0,
+      h: Number(st.hits) || 0,
+      hr: Number(st.homeRuns) || 0,
+      r: Number(st.runs) || 0,
+      rbi: Number(st.rbi) || 0,
+      sb: Number(st.stolenBases) || 0,
     });
   }
-  return rows.sort((a, b) => a.date.localeCompare(b.date));
+  return rows;
 }
 
 export function PlaySpot({

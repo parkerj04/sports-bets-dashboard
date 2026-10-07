@@ -1,3 +1,5 @@
+import { mergeLogs, personLogUrls, readSplits } from "./mlb-log";
+
 const BASE = "https://statsapi.mlb.com/api/v1";
 
 export type StartLog = {
@@ -33,25 +35,25 @@ export type PitcherDeep = {
 };
 
 async function json(url: string) {
-  const res = await fetch(url, { next: { revalidate: 900 } });
+  const res = await fetch(url, { next: { revalidate: 300 } });
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function getPitcherLogs(playerId: number, season = 2026): Promise<StartLog[]> {
-  const data = await json(`${BASE}/people/${playerId}/stats?stats=gameLog&group=pitching&season=${season}`);
+  const payloads = await Promise.all(personLogUrls(playerId, "pitching", season).map((url) => json(url)));
   const rows: StartLog[] = [];
-  for (const s of data?.stats?.[0]?.splits || []) {
+  for (const s of mergeLogs(payloads.map(readSplits))) {
     const st = s.stat || {};
     if (!(st.gamesStarted || st.inningsPitched)) continue;
     rows.push({
       date: s.date || "",
       opp: s.opponent?.abbreviation || s.opponent?.name || "",
       ip: String(st.inningsPitched || ""),
-      k: st.strikeOuts || 0,
-      er: st.earnedRuns || 0,
-      h: st.hits || 0,
-      bb: st.baseOnBalls || 0,
+      k: Number(st.strikeOuts) || 0,
+      er: Number(st.earnedRuns) || 0,
+      h: Number(st.hits) || 0,
+      bb: Number(st.baseOnBalls) || 0,
     });
   }
   return rows.slice(-5).reverse();
