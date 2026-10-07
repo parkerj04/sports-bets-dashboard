@@ -40,12 +40,13 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-grid flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex mb-4"><Logo size={56} /></div>
-          <h1 className="text-2xl font-bold tracking-tight">Invite only</h1>
-          <p className="text-muted mt-1 text-sm">You need a code from the owner</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-accent">The Locksmith</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Request a key</h1>
+          <p className="text-muted mt-2 text-sm">The desk stays closed unless you already have a code.</p>
         </div>
         <form onSubmit={handleSignup} className="card p-6 space-y-4 shadow-xl shadow-black/40">
           <div>
@@ -67,12 +68,13 @@ export default function SignupPage() {
           {error && <p className="text-sm text-danger bg-danger/10 rounded-lg px-3 py-2">{error}</p>}
           {message && <p className="text-sm text-accent bg-accent/10 rounded-lg px-3 py-2">{message}</p>}
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm disabled:opacity-60">
-            {loading ? "Creating…" : "Create account"}
+            {loading ? "Creating…" : "Request a key"}
           </button>
         </form>
         <p className="text-center text-sm text-muted mt-6">
           Already have an account? <Link href="/auth/login" className="text-accent hover:underline">Sign in</Link>
         </p>
+        <p className="mt-6 text-center text-xs text-muted">21+ only. If it stops being fun, call 1-800-GAMBLER.</p>
       </div>
     </div>
   );

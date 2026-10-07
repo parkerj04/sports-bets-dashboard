@@ -124,6 +124,6 @@ export function AccountMark({ inline = false }: { inline?: boolean }) {
 
 export function AccountSlot() {
   const path = usePathname();
-  if (path === "/research") return null;
+  if (path === "/" || path === "/research" || path.startsWith("/auth")) return null;
   return <AccountMark />;
 }

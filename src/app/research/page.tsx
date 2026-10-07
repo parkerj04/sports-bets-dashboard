@@ -68,7 +68,7 @@ export default function ResearchPage() {
 
   return (
     <div className="min-h-screen pb-28">
-      <header className="sticky top-0 z-10 border-b border-card-border bg-background/90 backdrop-blur">
+      <header className="desk sticky top-0 z-10 border-b border-card-border bg-background/90 backdrop-blur">
         <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
           <Link href="/dashboard" className="flex min-w-0 flex-1"><BrandMark wide /></Link>
           <Link href="/research/desk" className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-accent/40 bg-card px-2.5 text-xs font-medium text-accent">
