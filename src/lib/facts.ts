@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { mergeLogs, personLogUrls, readSplits } from "./mlb-log";
 
 export type ArmUse = { name: string; g: number; k9: number };
 export type Crew = {
@@ -171,9 +172,9 @@ async function situation(ask: Ask, game: Event | undefined) {
 }
 
 async function lastStart(id: number) {
-  const data = await getJson(`https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=2026`);
+  const payloads = await Promise.all(personLogUrls(id, "pitching").map((url) => getJson(url)));
   let last = "";
-  for (const row of data?.stats?.[0]?.splits || []) {
+  for (const row of mergeLogs(payloads.map(readSplits))) {
     if (!row?.stat?.gamesStarted || !row.date) continue;
     if (row.date > last) last = row.date;
   }
@@ -181,7 +182,8 @@ async function lastStart(id: number) {
 }
 
 const plateGames = unstable_cache(async () => {
-  const data = await getJson("https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=2026-08-01&endDate=2026-10-06&hydrate=officials&gameTypes=R,F,D,L,W");
+  const end = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const data = await getJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=2026-08-01&endDate=${end}&hydrate=officials&gameTypes=R,F,D,L,W`);
   const rows: { pk: number; date: string; hp: string; final: boolean }[] = [];
   for (const day of data?.dates || []) {
     for (const game of day.games || []) {

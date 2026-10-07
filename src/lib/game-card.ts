@@ -5,6 +5,7 @@ import { lessonLine } from "./calibrate";
 import type { StartLog } from "./propdesk";
 import type { MlbLine } from "./mlb-odds";
 import { bullpen } from "./pen";
+import { mergeLogs, readSplits, teamLogUrls } from "./mlb-log";
 
 function lastVs(logs: StartLog[], abbr?: string) {
   if (!abbr) return null;
@@ -24,17 +25,18 @@ function priceOf(raw?: string) {
 type Bats = { hits: number; ab: number; runs: number; avg: number };
 
 async function recentBats(teamId: number): Promise<Bats | null> {
-  const res = await fetch(
-    `https://statsapi.mlb.com/api/v1/teams/${teamId}/stats?stats=gameLog&group=hitting&season=2026&sportId=1`,
-    { next: { revalidate: 1800 } }
+  const payloads = await Promise.all(
+    teamLogUrls(teamId).map(async (url) => {
+      const res = await fetch(url, { next: { revalidate: 300 } });
+      if (!res.ok) return null;
+      return res.json();
+    })
   );
-  if (!res.ok) return null;
-  const data = await res.json();
-  const rows = (data.stats?.[0]?.splits || []).slice(-5);
+  const rows = mergeLogs(payloads.map(readSplits)).slice(-5);
   if (!rows.length) return null;
-  const hits = rows.reduce((s: number, r: { stat?: { hits?: number } }) => s + (r.stat?.hits || 0), 0);
-  const ab = rows.reduce((s: number, r: { stat?: { atBats?: number } }) => s + (r.stat?.atBats || 0), 0);
-  const runs = rows.reduce((s: number, r: { stat?: { runs?: number } }) => s + (r.stat?.runs || 0), 0);
+  const hits = rows.reduce((s, r) => s + (Number(r.stat?.hits) || 0), 0);
+  const ab = rows.reduce((s, r) => s + (Number(r.stat?.atBats) || 0), 0);
+  const runs = rows.reduce((s, r) => s + (Number(r.stat?.runs) || 0), 0);
   return { hits, ab, runs, avg: ab ? hits / ab : 0 };
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Crew } from "@/lib/facts";
+import { mergeLogs, personLogUrls, readSplits } from "@/lib/mlb-log";
 
 type Start = { date: string; opp: string; k: number; ip: string };
 type Arm = {
@@ -64,22 +65,21 @@ function researchLine(values: number[]) {
 }
 
 async function seasonLog(id: number): Promise<Start[]> {
-  const res = await fetch(`https://statsapi.mlb.com/api/v1/people/${id}/stats?stats=gameLog&group=pitching&season=2026`);
-  if (!res.ok) return [];
-  const data = await res.json();
+  const payloads = await Promise.all(
+    personLogUrls(id, "pitching").map((url) => fetch(url, { cache: "no-store" }).then((res) => (res.ok ? res.json() : null)).catch(() => null))
+  );
   const rows: Start[] = [];
-  for (const s of data?.stats?.[0]?.splits || []) {
+  for (const s of mergeLogs(payloads.map(readSplits))) {
     const st = s.stat || {};
-    if (s.gameType === "S") continue;
     if (!st.gamesStarted) continue;
     rows.push({
       date: s.date || "",
       opp: s.opponent?.name || "",
-      k: st.strikeOuts || 0,
+      k: Number(st.strikeOuts) || 0,
       ip: String(st.inningsPitched || ""),
     });
   }
-  return rows.sort((a, b) => a.date.localeCompare(b.date));
+  return rows;
 }
 
 export function StarterKs({
