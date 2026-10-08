@@ -172,20 +172,23 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
   const [name, setName] = useState("");
   const [open, setOpen] = useState(false);
   const [line, setLine] = useState(0.5);
+  const [side, setSide] = useState(away);
 
   useEffect(() => {
     if (!away || !home) return;
+    setSide(away);
     fetch(`/api/research/nfl/scorers?away=${away}&home=${home}`)
       .then((r) => r.json())
       .then((d) => {
         const rows: Player[] = (d.players || []).filter((p: Player) => p.total > 0);
         setPlayers(rows);
-        setName(rows[0]?.name || "");
+        setName(rows.find((p) => p.team === away)?.name || "");
       })
       .catch(() => setPlayers([]));
   }, [away, home]);
 
-  const active = players?.find((p) => p.name === name) || players?.[0];
+  const roster = (players || []).filter((p) => p.team === side).sort((a, b) => a.name.localeCompare(b.name));
+  const active = roster.find((p) => p.name === name) || null;
   const values = active ? active.weeks.map((w) => w.td) : [];
   const shown = summarize(values, line);
   const note = values.length ? read(values, line) : null;
@@ -195,21 +198,29 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
       <p className="text-xs uppercase tracking-widest text-accent">Subsection</p>
       <h3 className="mt-1 font-semibold">Anytime TD</h3>
       <p className="mt-1 text-sm text-muted">Same players, rushing plus receiving scores. The line starts at 0.5, which is one touchdown.</p>
+      <div className="mt-3 flex gap-2">
+        {[away, home].map((team) => (
+          <button key={team} type="button" onClick={() => { setSide(team); setName(""); setOpen(true); }} className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm ${side === team ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+            <img src={mark(team)} alt="" className="size-5 object-contain" />
+            {team}
+          </button>
+        ))}
+      </div>
       {!players ? <p className="mt-3 text-sm text-muted">Loading scorers…</p> : null}
-      {players && !active ? <p className="mt-3 text-sm text-muted">No 2026 touchdown on file for these teams.</p> : null}
-      {active ? (
+      {players && roster.length === 0 ? <p className="mt-3 text-sm text-muted">No 2026 touchdown on file for {side}.</p> : null}
+      {roster.length > 0 ? (
         <>
           <button type="button" onClick={() => setOpen((v) => !v)} className="card mt-3 flex w-full items-center gap-3 p-3 text-left">
-            {active.id ? <img src={headshot(active.id)} alt="" className="size-11 rounded-full object-cover object-top" /> : <span className="size-11 rounded-full bg-background" />}
+            {active?.id ? <img src={headshot(active.id)} alt="" className="size-11 rounded-full object-cover object-top" /> : <span className="size-11 rounded-full bg-background" />}
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{active.name}</span>
-              <span className="text-sm text-muted">{active.team} · {active.pos} · {active.total} TD</span>
+              <span className="block truncate font-semibold">{active ? active.name : "Choose a player"}</span>
+              <span className="text-sm text-muted">{active ? `${active.team} · ${active.pos} · ${active.total} TD` : `${roster.length} players`}</span>
             </span>
-            <span className="text-sm text-muted">{open ? "Close" : "Open"}</span>
+            <span className="text-sm text-muted">{open ? "Close" : "Change"}</span>
           </button>
           {open ? (
             <ul className="mt-2 max-h-64 overflow-y-auto">
-              {players!.map((p) => (
+              {roster.map((p) => (
                 <li key={p.name}>
                   <button type="button" onClick={() => { setName(p.name); setOpen(false); setLine(0.5); }} className="flex min-h-11 w-full items-center gap-3 py-2 text-left">
                     {p.id ? <img src={headshot(p.id)} alt="" className="size-8 rounded-full object-cover object-top" /> : <span className="size-8 rounded-full bg-background" />}
@@ -220,6 +231,8 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
               ))}
             </ul>
           ) : null}
+          {active ? (
+            <>
           <div className="mt-4 flex items-end justify-between">
             <div>
               <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
@@ -237,6 +250,8 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
           </div>
           {note ? <p className="mt-2 text-sm text-muted">{note.call}. {note.against}</p> : null}
           <ModelBox model={active.models?.td} />
+            </>
+          ) : null}
         </>
       ) : null}
     </section>
@@ -251,9 +266,13 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
   const [open, setOpen] = useState(true);
   const [line, setLine] = useState(0.5);
   const [win, setWin] = useState<"L5" | "L10" | "L15" | "2026" | "H2H">("L10");
+  const [side, setSide] = useState(away);
 
   useEffect(() => {
     if (!away || !home) return;
+    setSide(away);
+    setName("");
+    setOpen(true);
     setPlayers(null);
     fetch(`/api/research/nfl/scorers?away=${away}&home=${home}`)
       .then((r) => r.json())
@@ -261,7 +280,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
       .catch(() => setPlayers([]));
   }, [away, home]);
 
-  const roster = [...(players || [])].sort((a, b) => a.name.localeCompare(b.name));
+  const roster = [...(players || [])].filter((p) => p.team === side).sort((a, b) => a.name.localeCompare(b.name));
   const active = roster.find((p) => p.name === name) || null;
   const foe = active ? (active.team === away ? home : away) : home;
   const tabs = active ? BOARD.filter((item) => plays(active, item.key)) : BOARD;
@@ -296,8 +315,16 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
       <header>
         <p className="text-xs uppercase tracking-widest text-accent">Player props</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{away} @ {home}</h2>
-        <p className="mt-1 text-sm text-muted">Pick a player, then the prop. The line moves, and the bars follow.</p>
+        <p className="mt-1 text-sm text-muted">Pick a team, then a player. The line moves, and the bars follow.</p>
       </header>
+      <div className="flex gap-2">
+        {[away, home].map((team) => (
+          <button key={team} type="button" onClick={() => { setSide(team); setName(""); setOpen(true); }} className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm ${side === team ? "bg-accent text-foreground" : "bg-card text-muted"}`}>
+            <img src={mark(team)} alt="" className="size-5 object-contain" />
+            {team}
+          </button>
+        ))}
+      </div>
       {!players ? <p className="text-sm text-muted">Loading the prop board…</p> : null}
       {players ? (
         <div>
