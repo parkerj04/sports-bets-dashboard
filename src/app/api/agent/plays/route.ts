@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import seed from "@/data/agent-plays.json";
+import { agentPlays } from "@/lib/agent-plays";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +46,14 @@ export async function GET(request: Request) {
   const away = q.get("away") || "";
   const home = q.get("home") || "";
   const rows = (await live()) || (seed.plays as Play[]);
-  const plays = rows.filter((p) => !away || ((hit(away, p.away) && hit(home, p.home)) || (hit(away, p.home) && hit(home, p.away)) || (hit(away, p.game) && hit(home, p.game))));
-  return NextResponse.json({ plays, note: "Intake cards stay on the game, labeled in review. An agent cannot publish." });
+  let includeIntake = false;
+  if (q.get("desk") === "1") {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    includeIntake = Boolean(data.user);
+  }
+  const plays = agentPlays(rows, includeIntake).filter((p) => !away || ((hit(away, p.away) && hit(home, p.home)) || (hit(away, p.home) && hit(home, p.away)) || (hit(away, p.game) && hit(home, p.game))));
+  return NextResponse.json({ plays });
 }
 
 export async function POST(request: Request) {
