@@ -16,7 +16,7 @@ import { SlipTray } from "@/components/SlipTray";
 import { TicketDesk } from "@/components/TicketDesk";
 import { RosterCheck } from "@/components/RosterCheck";
 import { AgentDesk } from "@/components/AgentDesk";
-import { ModelCall } from "@/components/ModelCall";
+import { GameHead } from "@/components/ModelCall";
 import { SimHundred } from "@/components/SimHundred";
 import { scoreTone } from "@/lib/score-color";
 
@@ -192,24 +192,31 @@ function GameInner() {
   if (loading) return <p className="text-muted text-center py-16">Loading game lab…</p>;
   if (error || !data) return <p className="text-danger text-center py-16">{error || "Not found"}</p>;
   const { game } = data;
+  const weather = data.ticket?.checks.find((c) => c.id === "weather")?.detail || "";
+  const forecast = weather && !/not loaded/i.test(weather) ? weather : null;
 
   return (
-    <div className="game space-y-6 pb-24">
-      <div>
-        <Link href="/research" className="text-xs text-muted hover:text-accent">← Back to slate</Link>
-        <h1 className="mt-2 text-2xl tracking-tight">{game.awayTeam} <span className="text-muted">@</span> {game.homeTeam}</h1>
-        <p className="text-sm text-muted">{game.status}{game.venue ? ` · ${game.venue}` : ""}</p>
-      </div>
-      {data.line ? (
-        <>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{data.line.spread}</div></div>
-            <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{data.line.total}</div></div>
-            <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{data.line.mlAway || "—"}/{data.line.mlHome || "—"}</div></div>
-          </div>
-          <ModelCall away={game.awayTeam} home={game.homeTeam} spread={data.line.spread} total={data.line.total} sport="MLB" />
-        </>
-      ) : null}
+    <div className="game space-y-6 pb-24" style={{ background: "#0e0e0c", color: "#f0eee6" }}>
+      <Link href="/research" className="text-xs text-muted">← Slate</Link>
+      <GameHead
+        away={game.awayTeam}
+        home={game.homeTeam}
+        posted={data.line?.spread || "NL"}
+        total={data.line?.total ?? ""}
+        forecast={forecast}
+        sport="MLB"
+      />
+      <BvPPicker
+        homeHitters={data.homeHitters}
+        awayHitters={data.awayHitters}
+        homePitcherId={data.homePitcher?.id}
+        awayPitcherId={data.awayPitcher?.id}
+        homePitcherName={data.homePitcher?.name}
+        awayPitcherName={data.awayPitcher?.name}
+        homeTeam={game.homeTeam}
+        awayTeam={game.awayTeam}
+      />
+      <AgentDesk away={game.awayTeam} home={game.homeTeam} />
       <PlaySpot
         away={game.awayTeam}
         home={game.homeTeam}
@@ -237,21 +244,15 @@ function GameInner() {
         <PitcherCard p={data.awayPitcher} label="Away starter" deep={data.awayDeep} />
         <PitcherCard p={data.homePitcher} label="Home starter" deep={data.homeDeep} />
       </section>
-      <BvPPicker
-        homeHitters={data.homeHitters}
-        awayHitters={data.awayHitters}
-        homePitcherId={data.homePitcher?.id}
-        awayPitcherId={data.awayPitcher?.id}
-        homePitcherName={data.homePitcher?.name}
-        awayPitcherName={data.awayPitcher?.name}
-        homeTeam={game.homeTeam}
-        awayTeam={game.awayTeam}
-      />
       <BatterTable title={`${game.awayTeam} hitters`} rows={data.awayHitters} />
       <BatterTable title={`${game.homeTeam} hitters`} rows={data.homeHitters} />
       <RosterCheck sport="mlb" away={game.awayTeam} home={game.homeTeam} awayId={game.awayId} homeId={game.homeId} />
-      {data.ticket && <TicketDesk ticket={data.ticket} />}
-      <AgentDesk away={game.awayTeam} home={game.homeTeam} />
+      {data.ticket && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium">Picks</h2>
+          <TicketDesk ticket={data.ticket} />
+        </section>
+      )}
       {data.line ? (
         <SimHundred
           sport="MLB"

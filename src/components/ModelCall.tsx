@@ -1,7 +1,7 @@
 const ABBR: Record<string, string> = {
   cardinals: "ARI", falcons: "ATL", ravens: "BAL", bills: "BUF", panthers: "CAR", bears: "CHI", bengals: "CIN", browns: "CLE",
   cowboys: "DAL", broncos: "DEN", lions: "DET", packers: "GB", texans: "HOU", colts: "IND", jaguars: "JAX", chiefs: "KC",
-  raiders: "LV", chargers: "LAC", rams: "LAR", dolphins: "MIA", vikings: "MIN", patriots: "NE", saints: "NO", giants: "NYG",
+  raiders: "LV", chargers: "LAC", rams: "LAR", dolphins: "MIA", vikings: "MIN", patriots: "NE", saints: "NO",
   jets: "NYJ", eagles: "PHI", steelers: "PIT", "49ers": "SF", seahawks: "SEA", buccaneers: "TB", titans: "TEN", commanders: "WSH",
   irish: "ND", dame: "ND", heels: "UNC", carolina: "UNC", hawkeyes: "IOWA", buckeyes: "OSU", gators: "FLA", tigers: "MIZ",
   wolves: "NCSU", hokies: "VT", cavaliers: "UVA", eaglescfb: "BC",
@@ -9,11 +9,12 @@ const ABBR: Record<string, string> = {
   orioles: "BAL", "white sox": "CWS", astros: "HOU", mariners: "SEA", rangers: "TEX", angels: "LAA",
   athletics: "ATH", braves: "ATL", mets: "NYM", phillies: "PHI", marlins: "MIA", nationals: "WSH",
   cubs: "CHC", brewers: "MIL", reds: "CIN", pirates: "PIT", dodgers: "LAD", padres: "SD",
-  giants: "SF", diamondbacks: "AZ", rockies: "COL",
+  diamondbacks: "AZ", rockies: "COL",
 };
 
 function tag(name: string) {
   const clean = name.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+  if (clean.endsWith("giants")) return clean.includes("san francisco") ? "SF" : "NYG";
   const last = clean.split(" ").filter(Boolean).pop() || clean;
   if (ABBR[last]) return ABBR[last];
   if (clean.length <= 4) return clean.toUpperCase();
@@ -59,12 +60,42 @@ export function ModelCall({ away, home, spread, total, sport }: { away: string; 
         <span className="text-muted">Model total</span>
         <span className="font-mono">{model.total}</span>
       </div>
-      <div className="flex justify-between gap-2 mt-1">
-        <span className="text-muted">Confidence</span>
-        <span className="font-mono">{model.confidence}</span>
-      </div>
       <p className="text-[11px] text-muted mt-1">{model.baseball ? "Run score from the posted total. A moneyline is not a run line." : "Straight score from the posted number. Not a private model."}</p>
     </div>
+  );
+}
+
+export function GameHead({
+  away,
+  home,
+  posted,
+  total,
+  forecast,
+  sport,
+}: {
+  away: string;
+  home: string;
+  posted: string;
+  total: string | number;
+  forecast: string | null;
+  sport?: string;
+}) {
+  const model = readModel(away, home, posted, total, sport);
+  const missing = !forecast;
+  const totalText = total === "" || total == null ? "NL" : String(total);
+  return (
+    <header className="border-b px-0 py-3 text-sm" style={{ borderColor: "#2c2c28", color: "#f0eee6" }}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="min-w-0 truncate text-base font-medium">{away} @ {home}</h1>
+        <span className="shrink-0 font-mono">{posted || "NL"}</span>
+      </div>
+      <div className="mt-1 flex items-baseline justify-between gap-3">
+        <span className="font-mono">{model ? `${model.awayTag} ${model.awayScore}, ${model.homeTag} ${model.homeScore}` : "No model score"}</span>
+        <span className="text-right font-mono" style={{ color: missing ? "#c45c4a" : "#f0eee6" }}>
+          {missing ? `${totalText} weather not loaded` : `${totalText} ${forecast}`}
+        </span>
+      </div>
+    </header>
   );
 }
 
@@ -72,7 +103,7 @@ export function ModelStrip({ away, home, spread, total, sport }: { away: string;
   const model = readModel(away, home, spread, total, sport);
   if (!model) return null;
   return (
-    <div className="mt-3 grid grid-cols-3 gap-2 border-t border-card-border pt-3 text-center">
+    <div className="mt-3 grid grid-cols-2 gap-2 border-t border-card-border pt-3 text-center">
       <div>
         <div className="text-[10px] uppercase tracking-widest text-muted">{model.baseball ? "Run line" : "Score"}</div>
         <div className="font-mono text-sm">{model.awayTag} {model.awayScore} {model.homeTag} {model.homeScore}</div>
@@ -80,10 +111,6 @@ export function ModelStrip({ away, home, spread, total, sport }: { away: string;
       <div>
         <div className="text-[10px] uppercase tracking-widest text-muted">Total</div>
         <div className="font-mono text-sm">{model.total}</div>
-      </div>
-      <div>
-        <div className="text-[10px] uppercase tracking-widest text-muted">Confidence</div>
-        <div className="font-mono text-sm text-accent">{model.confidence}</div>
       </div>
     </div>
   );

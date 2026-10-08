@@ -53,17 +53,21 @@ export function CoverageSplit({ away, home, venue }: { away: string; home: strin
   return (
     <div className="card space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">Catch chart</h3>
+        <h3 className="font-semibold">Matchup</h3>
         <div className="flex gap-1 rounded-full bg-background p-1">
           {[away, home].map((t) => (
             <button key={t} type="button" onClick={() => { setSide(t); setPicked(""); setBackName(""); }} className={`min-h-11 rounded-full px-3 text-sm ${side === t ? "bg-accent text-foreground" : "text-muted"}`}>{t}</button>
           ))}
         </div>
       </div>
+      <p className="text-xs" style={{ color: "#f0eee6" }}>
+        {star && star.recent?.length ? `★ ${star.name} is the best path. Named in the 2026 catch chart: end-zone spots and scores.` : "No star. The catch chart does not name a best path."}
+        {plus && plus.recent?.length ? ` + ${plus.name} is the best yardage matchup. Named against ${opp} in that same chart.` : ""}
+      </p>
       <div className="flex gap-2 overflow-x-auto pb-1">
         {list.map((p) => (
           <button key={p.name} type="button" onClick={() => setPicked(p.name)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${active?.name === p.name ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
-            {p.name === plus?.name ? "+ " : ""}{p.name === star?.name ? "★ " : ""}{p.name}
+            {p.name === plus?.name && plus.recent?.length ? "+ " : ""}{p.name === star?.name && star.recent?.length ? "★ " : ""}{p.name}
           </button>
         ))}
       </div>

@@ -11,7 +11,8 @@ import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
-import { ModelCall } from "@/components/ModelCall";
+import { GameHead } from "@/components/ModelCall";
+import { AgentDesk } from "@/components/AgentDesk";
 import { SimHundred } from "@/components/SimHundred";
 
 function Inner() {
@@ -62,31 +63,24 @@ function Inner() {
     predHome: lab.predHome,
   });
 
+  const indoor = lab.venue && /dome|sofi|ford field|super dome|lucas oil|nrg|att stadium|caesars|allegiant/i.test(lab.venue);
+  const forecast = indoor ? "Indoor. Weather is not the total." : null;
+
   return (
-    <div className="game space-y-6">
-      <div>
-        <Link href="/research" className="text-xs text-muted hover:text-accent">← NFL slate</Link>
-        <h1 className="mt-2 text-2xl tracking-tight">{lab.away} <span className="text-muted">@</span> {lab.home}</h1>
-        <p className="text-sm text-muted">{lab.status}{lab.venue ? ` · ${lab.venue}` : ""}</p>
-      </div>
+    <div className="game space-y-6" style={{ background: "#0e0e0c", color: "#f0eee6" }}>
+      <Link href="/research" className="text-xs text-muted">← Slate</Link>
+      <GameHead
+        away={lab.away}
+        home={lab.home}
+        posted={String(card?.spread || lab.spread || "NL")}
+        total={card?.total ?? lab.total ?? ""}
+        forecast={forecast}
+        sport="NFL"
+      />
       <FactLine text={facts?.open} />
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="card py-3"><div className="text-muted">Spread</div><div className="font-mono font-semibold">{String(card?.spread || lab.spread || "NL")}</div></div>
-        <div className="card py-3"><div className="text-muted">Total</div><div className="font-mono font-semibold">{String(card?.total ?? lab.total ?? "NL")}</div></div>
-        <div className="card py-3"><div className="text-muted">ML</div><div className="font-mono font-semibold">{String(card?.mlAway || lab.mlAway || "—")}/{String(card?.mlHome || lab.mlHome || "—")}</div></div>
-      </div>
-      <div className="card space-y-1 p-4">
-        <div className="text-xs uppercase tracking-widest text-muted">Researched side</div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="font-semibold">{desk.pick}</div>
-          <div className={`font-mono text-2xl font-semibold ${scoreTone(desk.score)}`}>{desk.score}</div>
-        </div>
-        <p className="text-sm text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
-        <FactLine text={facts?.situation} />
-        <ModelCall away={lab.away} home={lab.home} spread={String(card?.spread || lab.spread || "")} total={card?.total ?? lab.total ?? ""} />
-      </div>
-      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded pending={!/final/i.test(lab.status)} />
       <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
+      <AgentDesk away={lab.away} home={lab.home} />
+      <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded pending={!/final/i.test(lab.status)} />
       <div className="card overflow-x-auto p-4">
         <h3 className="mb-2 text-sm font-semibold">Season</h3>
         <table className="w-full text-xs">
@@ -122,6 +116,14 @@ function Inner() {
         total={card?.total ?? lab.total ?? ""}
         seed={id || `${lab.away}-${lab.home}`}
       />
+      <section className="space-y-2 border p-3 text-sm" style={{ borderColor: "#2c2c28" }}>
+        <h2 className="text-sm font-medium">Picks</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>{desk.pick}</div>
+          <div className={`font-mono ${scoreTone(desk.score)}`}>{desk.score}</div>
+        </div>
+        <p className="text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
+      </section>
     </div>
   );
 }

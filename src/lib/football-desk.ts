@@ -50,7 +50,6 @@ export function footballRegistry(input: {
     if (s.qb && s.qb !== "QB TBD" && s.line && s.line !== "no season line") aligns.push(`QB ${s.qb} ${s.line}`);
     if (num(s.yards) != null && num(other.yards) != null && (num(s.yards) || 0) > (num(other.yards) || 0) + 20) aligns.push(`yards ${s.yards} vs ${other.yards}`);
     if (s.pred && num(s.pred) != null && (num(s.pred) || 0) >= 58) aligns.push(`ESPN projection ${s.pred}%`);
-    if (s.price != null && s.price < 0) aligns.push(`posted favorite ${s.raw}`);
     if (s.outs.length) misses.push(`out or doubtful: ${s.outs.slice(0, 3).join(", ")}`);
     if (!s.qb || s.qb === "QB TBD") misses.push("starting QB not confirmed");
     if (s.price != null && s.price > 0 && aligns.length < 3) misses.push(`posted ${s.raw} and the registry is not stacked`);
