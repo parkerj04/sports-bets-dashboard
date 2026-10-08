@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { CfbGame } from "@/lib/cfb";
 import type { CfbLab } from "@/lib/cfb-lab";
-import { footballRegistry } from "@/lib/football-desk";
 import { scoreTone } from "@/lib/score-color";
 import { AgentDesk } from "@/components/AgentDesk";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
@@ -34,13 +33,6 @@ function Inner() {
   const facts = useDeskFacts(game ? { sport: "cfb", away: game.away, home: game.home, awayAbbr: game.awayAbbr, homeAbbr: game.homeAbbr } : null);
   if (error) return <p className="text-danger text-center py-16">{error}</p>;
   if (!game) return <p className="text-muted text-center py-16">Loading college lab…</p>;
-  const yards = lab?.stats.find((s) => /total yards/i.test(s.label));
-  const desk = footballRegistry({
-    away: game.away, home: game.home, awayRecord: game.awayRecord, homeRecord: game.homeRecord,
-    mlAway: game.mlAway, mlHome: game.mlHome, awayQb: game.awayQb, homeQb: game.homeQb,
-    awayQbLine: game.awayQbLine, homeQbLine: game.homeQbLine, awayYards: yards?.away, homeYards: yards?.home,
-    predAway: lab?.predAway, predHome: lab?.predHome,
-  });
   const list = catchers.filter((l) => l.team === side);
   const active = list.find((l) => l.name === picked) || list[0];
   return (
@@ -80,10 +72,10 @@ function Inner() {
       <div className="card space-y-1 p-4">
         <div className="text-xs uppercase tracking-widest text-muted">QB read</div>
         <div className="flex items-start justify-between gap-3">
-          <div className="font-semibold">{desk.pick}</div>
-          <div className={`font-mono text-2xl font-semibold ${scoreTone(desk.score)}`}>{desk.score}</div>
+          <div className="font-semibold">{game.lean}</div>
+          <div className={`font-mono text-2xl font-semibold ${scoreTone(game.score)}`}>{game.score}</div>
         </div>
-        <p className="text-sm text-muted">{desk.why}</p>
+        <p className="text-sm text-muted">{game.why}</p>
         <FactLine text={facts?.situation} />
       </div>
       {lab?.predHome && <div className="card p-4 text-sm">ESPN predictor: {game.away} {lab.predAway}% · {game.home} {lab.predHome}%</div>}

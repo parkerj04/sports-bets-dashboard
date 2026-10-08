@@ -7,7 +7,6 @@ import type { NflGame } from "@/lib/nfl";
 import type { NflLab } from "@/lib/nfl-game";
 import { CoverageSplit } from "@/components/CoverageSplit";
 import { PropsDesk } from "@/components/builds/props-desk";
-import { footballRegistry } from "@/lib/football-desk";
 import { newsFor } from "@/lib/nfl-news";
 import { scoreTone } from "@/lib/score-color";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
@@ -43,25 +42,7 @@ function Inner() {
   const stats = lab.stats || [];
   const awayInj = injuries.filter((i) => i.team === lab.away);
   const homeInj = injuries.filter((i) => i.team === lab.home);
-  const out = (rows: typeof awayInj) => rows.filter((r) => /out|doubt/i.test(r.status)).map((r) => `${r.name} ${r.status}`);
-  const yards = stats.find((s) => /total yards/i.test(s.label));
   const notes = newsFor(lab.away, lab.home);
-  const desk = footballRegistry({
-    away: lab.away,
-    home: lab.home,
-    awayRecord: card?.awayRecord || "",
-    homeRecord: card?.homeRecord || "",
-    mlAway: card?.mlAway || lab.mlAway,
-    mlHome: card?.mlHome || lab.mlHome,
-    awayOuts: out(awayInj),
-    homeOuts: out(homeInj),
-    awayL5: lastFive.filter((g) => g.team === lab.away).map((g) => g.result),
-    homeL5: lastFive.filter((g) => g.team === lab.home).map((g) => g.result),
-    awayYards: yards?.away,
-    homeYards: yards?.home,
-    predAway: lab.predAway,
-    predHome: lab.predHome,
-  });
 
   const indoor = lab.venue && /dome|sofi|ford field|super dome|lucas oil|nrg|att stadium|caesars|allegiant/i.test(lab.venue);
   const forecast = indoor ? "Indoor. Weather is not the total." : null;
@@ -116,14 +97,16 @@ function Inner() {
         total={card?.total ?? lab.total ?? ""}
         seed={id || `${lab.away}-${lab.home}`}
       />
+      {card?.leanML ? (
       <section className="space-y-2 border p-3 text-sm" style={{ borderColor: "#2c2c28" }}>
         <h2 className="text-sm font-medium">Picks</h2>
         <div className="flex items-start justify-between gap-3">
-          <div>{desk.pick}</div>
-          <div className={`font-mono ${scoreTone(desk.score)}`}>{desk.score}</div>
+          <div>{card.leanML}</div>
+          <div className={`font-mono ${scoreTone(card.leanScore || 0)}`}>{card.leanScore}</div>
         </div>
-        <p className="text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
+        <p className="text-muted">{card.leanWhy}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
       </section>
+      ) : null}
     </div>
   );
 }
