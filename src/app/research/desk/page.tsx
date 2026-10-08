@@ -71,7 +71,7 @@ export default function DeskPage() {
   const [rows, setRows] = useState<Play[]>([]);
   const [err, setErr] = useState("");
   useEffect(() => {
-    fetch("/api/agent/plays")
+    fetch("/api/agent/plays?desk=1")
       .then((r) => r.json())
       .then((d) => setRows(d.plays || []))
       .catch(() => setErr("Intake did not load."));
