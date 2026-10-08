@@ -137,6 +137,7 @@ export function PlaySpot({
   const [spot, setSpot] = useState<Spot>("game");
   const [gameMarket, setGameMarket] = useState<GameMarket>("ML");
   const [side, setSide] = useState(away);
+  const [menu, setMenu] = useState(false);
   const [batMarket, setBatMarket] = useState<BatMarket>("Hits");
   const [playerId, setPlayerId] = useState<number | null>(null);
   const [logs, setLogs] = useState<Record<number, Log[]>>({});
@@ -207,24 +208,32 @@ export function PlaySpot({
         <>
           <div className="flex gap-2">
             {[away, home].map((team) => (
-              <button key={team} type="button" onClick={() => { setSide(team); setPlayerId(null); }} className={`flex min-h-11 items-center gap-2 truncate rounded-full px-3 text-sm ${side === team ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
+              <button key={team} type="button" onClick={() => { setSide(team); setPlayerId(null); setMenu(true); }} className={`flex min-h-11 items-center gap-2 truncate rounded-full px-3 text-sm ${side === team ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
                 <img src={mlbLogo(team)} alt="" className="size-5 object-contain" />
                 {lastName(team)}
               </button>
             ))}
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {roster.map((h) => {
-              const proj = project(logs[h.id], batMarket);
-              return (
-                <button key={h.id} type="button" onClick={() => setPlayerId(h.id)} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm ${player?.id === h.id ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
-                  <Face id={h.id} name={h.name} className="size-8" />
-                  <span>{lastName(h.name)}</span>
-                  <span className="font-mono text-xs">{proj == null ? "—" : one(proj)}</span>
-                </button>
-              );
-            })}
-          </div>
+          <button type="button" onClick={() => setMenu((v) => !v)} className="flex min-h-11 w-full items-center gap-3 rounded-xl bg-background px-3 text-left">
+            {player ? <Face id={player.id} name={player.name} className="size-8" /> : <span className="size-8 rounded-full bg-card" />}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{player ? lastName(player.name) : "Choose a batter"}</span>
+              <span className="text-xs text-muted">{roster.length} on {lastName(side)}</span>
+            </span>
+            <span className="text-sm text-muted">{menu ? "Close" : "Open"}</span>
+          </button>
+          {menu ? (
+            <ul className="max-h-64 overflow-y-auto rounded-xl bg-background p-1">
+              {roster.map((h) => (
+                <li key={h.id}>
+                  <button type="button" onClick={() => { setPlayerId(h.id); setMenu(false); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 text-left">
+                    <Face id={h.id} name={h.name} className="size-8" />
+                    <span className="min-w-0 flex-1 truncate text-sm">{lastName(h.name)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {!player ? <p className="text-sm text-muted">No hitters posted for {side}.</p> : null}
           {player && starts == null && !failed ? <p className="text-sm text-muted">Loading the 2026 log…</p> : null}
           {failed ? <p className="text-sm text-danger">The 2026 log did not load.</p> : null}
