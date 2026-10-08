@@ -212,7 +212,7 @@ export function PlaySpot({
           {player && starts == null && !failed ? <p className="text-sm text-muted">Loading the 2026 log…</p> : null}
           {failed ? <p className="text-sm text-danger">The 2026 log did not load.</p> : null}
           {player && starts ? (
-            <BatterCard player={player} market={batMarket} rows={shown} all={starts} line={line} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} />
+            <BatterCard player={player} market={batMarket} rows={shown} all={starts} line={line} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} foe={side === away ? home : away} />
           ) : null}
         </>
       )}
@@ -221,7 +221,7 @@ export function PlaySpot({
 }
 
 function BatterCard({
-  player, market, rows, all, line, hits, win, setWin, note,
+  player, market, rows, all, line, hits, win, setWin, note, foe,
 }: {
   player: Hitter;
   market: BatMarket;
@@ -232,11 +232,25 @@ function BatterCard({
   win: "L5" | "L10" | "2026";
   setWin: (w: "L5" | "L10" | "2026") => void;
   note?: Edge;
+  foe: string;
 }) {
   const nums = rows.map((row) => valueOf(row, market));
   const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
   const call = !rows.length ? "Pass — no games" : rows.length < 3 ? "Pass — short log" : hits / rows.length >= 0.7 ? "Shape leans over" : hits / rows.length <= 0.35 ? "Shape leans under" : "No clear edge";
   const label = market === "HR" ? "Home runs" : market === "SB" ? "Steals" : market === "H+R+RBI" ? "Hits + runs + RBI" : "Hits";
+  const unit = market === "HR" ? "home runs" : market === "SB" ? "steals" : market === "H+R+RBI" ? "hits + runs + RBI" : "hits";
+  const season = all.length ? all.reduce((sum, row) => sum + valueOf(row, market), 0) / all.length : 0;
+  const recent = all.slice(-5);
+  const hot = recent.length ? recent.reduce((sum, row) => sum + valueOf(row, market), 0) / recent.length : season;
+  const moved = recent.length >= 3 && Math.abs(hot - season) >= (market === "HR" || market === "SB" ? 0.08 : 0.2);
+  const projected = moved ? season * 0.75 + hot * 0.25 : season;
+  const vs = all.filter((row) => {
+    const opp = row.opp.toLowerCase();
+    const other = foe.toLowerCase();
+    return opp && (other.includes(opp) || opp.includes(other.split(" ").pop() || other));
+  });
+  const vsAvg = vs.length ? vs.reduce((sum, row) => sum + valueOf(row, market), 0) / vs.length : null;
+  const model = `${cleanName(player.name)} projects to ${one(projected)} ${unit}. The 2026 rate is ${one(season)} over ${all.length} games. ${moved ? `The last ${recent.length} are ${one(hot)}, so the number ${hot > season ? "is pulled up from" : "sits under"} the season rate.` : `The last ${recent.length || 0} are ${one(hot)}, close enough that the recent run does not move it.`} ${vsAvg == null ? "" : `Against ${foe} in 2026: ${one(vsAvg)} over ${vs.length} game${vs.length === 1 ? "" : "s"}. `}Not a book price.`;
   const scale = Math.max(line, ...nums, 1) * 1.25;
   return (
     <div className="rounded-xl bg-background p-3">
@@ -280,6 +294,11 @@ function BatterCard({
         })}
       </div>
       <p className="mt-3 text-sm text-muted">{call}. Average {one(avg)} in this window. {market === "HR" || market === "SB" ? "The line is 0.5, one event. Not a sportsbook price." : "The line is the middle of the 2026 games. Not a sportsbook price."} {all.length > rows.length ? `Showing ${rows.length} of ${all.length}.` : ""}</p>
+      <div className="mt-4 rounded-xl bg-card p-3">
+        <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
+        <div className="font-mono text-3xl font-semibold">{one(projected)}</div>
+        <p className="mt-1 text-sm text-muted">{model}</p>
+      </div>
       {note ? <p className="mt-2 text-sm text-muted">{note.reasoning}</p> : null}
     </div>
   );

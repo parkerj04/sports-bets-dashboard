@@ -228,6 +228,7 @@ function Card({ prop, onBack, onOpen, embedded, away, home }: { prop: PropCard; 
           <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
         </div>
         <p className="mt-1 text-xs text-muted">{prop.lineNote} Move it and the colors follow. Not a sportsbook price.</p>
+        <Projected prop={prop} />
       </section>
 
       <Defense foe={foe} pos={prop.pos} market={prop.market} />
@@ -241,6 +242,22 @@ function Card({ prop, onBack, onOpen, embedded, away, home }: { prop: PropCard; 
       <Split title="Case against" tone="danger" items={prop.bulletsAgainst} />
       <AnytimeSection away={away} home={home} />
     </Shell>
+  );
+}
+
+function Projected({ prop }: { prop: PropCard }) {
+  const vals = prop.chart.flatMap((bar) => (bar.value == null ? [] : [bar.value]));
+  if (!vals.length) return null;
+  const rate = vals.reduce((sum, n) => sum + n, 0) / vals.length;
+  const value = Math.round(rate * 10) / 10;
+  return (
+    <div className="mt-4 rounded-xl bg-background p-3">
+      <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
+      <div className="font-mono text-3xl font-semibold">{value.toFixed(1)}</div>
+      <p className="mt-1 text-sm text-muted">
+        {prop.player} projects to {value.toFixed(1)} {prop.market.toLowerCase()}. That is the 2026 rate over {vals.length} logged games. {prop.callWhy} Not a book price.
+      </p>
+    </div>
   );
 }
 
