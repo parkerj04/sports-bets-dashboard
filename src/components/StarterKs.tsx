@@ -18,6 +18,7 @@ type Arm = {
   k9: number;
   era: number;
   so: number;
+  oppK: number | null;
 };
 type Win = "L5" | "L10" | "L15" | "2026" | "H2H";
 type Line = { spread: string; total: string; ml: string };
@@ -63,12 +64,15 @@ function KModel({ arm, starts }: { arm: Arm; starts: Start[] }) {
   const last = starts.slice(-5);
   const recent = last.reduce((sum, row) => sum + row.k, 0) / last.length;
   const value = Math.round(rate * 10) / 10;
+  const hot = arm.oppK != null && arm.oppK >= 23.5;
+  const call = arm.oppK == null ? "Lineup K rate is not on the card" : hot ? "Lineup is a strikeout group" : "Won't lean strikeouts off the lineup";
   return (
     <div className="rounded-xl bg-background p-3">
       <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
+      <div className="mt-1 text-lg font-semibold">{call}</div>
       <div className="font-mono text-3xl font-semibold">{value.toFixed(1)}</div>
       <p className="mt-1 text-sm text-muted">
-        {arm.name} projects to {value.toFixed(1)} strikeouts. That is the average of {starts.length} starts in 2026. The last {last.length} average {one(recent)} and are not mixed in. Season {one(arm.k9)} K/9 over a typical {one(ip)} innings would be {one(fromK9)}, and that check is not added either. Not a book price.
+        {arm.name} averages {value.toFixed(1)} strikeouts over {starts.length} starts in 2026. The last {last.length} average {one(recent)} and are not mixed in. {arm.foe} strike out at {arm.oppK == null ? "an unknown rate" : `${one(arm.oppK)}%`}. The desk uses 23.5% as the cut for a strikeout group. Season {one(arm.k9)} K/9 over a typical {one(ip)} innings would be {one(fromK9)}, and that check is not added. Not a book price.
       </p>
     </div>
   );

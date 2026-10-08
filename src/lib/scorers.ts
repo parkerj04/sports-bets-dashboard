@@ -237,6 +237,14 @@ function protect(rows: Raw[], away: string, home: string) {
         : !allowed || allowed.length < 4
           ? `${club} have ${allowed?.length || 0} games on file against ${job}. That is under 4, so the defense is not applied.`
           : `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job} in ${allowed.length} games. A normal defense has allowed ${tenth(usual).toFixed(1)}. The difference, ${tenth(gap).toFixed(1)}, is the whole adjustment.`;
+      const leanCut = market === "td" || market === "passTd" ? 0.1 : market === "catches" ? 0.3 : 5;
+      const call = !rank || !allowed || allowed.length < 4
+        ? `No team lean against the ${club}.`
+        : gap >= leanCut
+          ? `Leans over against the ${club}.`
+          : gap <= -leanCut
+            ? `Leans under against the ${club}.`
+            : `No clear lean against the ${club}.`;
       const total = values.reduce((a, b) => a + b, 0);
       const spike = Math.max(...values);
       const spikeNote = spike > 0 && spike * 2 > total
@@ -244,7 +252,7 @@ function protect(rows: Raw[], away: string, home: string) {
         : "";
       models[market] = {
         value,
-        text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]}. That is the 2026 average, ${tenth(rate).toFixed(1)} over ${n} games${gap ? `, plus ${tenth(gap).toFixed(1)} from the defense` : ""}. The last ${last.length} average ${tenth(recent).toFixed(1)} and are not mixed in. ${matchup}${spikeNote} Not a book price.`,
+        text: `${call} ${player.name} is at ${tenth(rate).toFixed(1)} ${UNIT[market]} per game over ${n} games in 2026${gap ? `, and the defense gap of ${tenth(gap).toFixed(1)} is added` : ""}. The last ${last.length} average ${tenth(recent).toFixed(1)} and are not mixed in. ${matchup}${spikeNote} A yard move under 5, or a catch move under 0.3, is not a lean. Not a book price.`,
       };
     }
     return models;
