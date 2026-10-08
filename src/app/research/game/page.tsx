@@ -218,10 +218,15 @@ function GameInner() {
           ...data.homeHitters.slice(0, 9).map((b) => ({ id: b.id, name: b.name, team: game.homeTeam, avg: b.avg, hr: b.hr, rbi: b.rbi })),
         ]}
         notes={[...(data.edges || []), ...(data.steals || [])]}
+        awayArm={data.awayPitcher ? { id: data.awayPitcher.id, name: data.awayPitcher.name, hand: data.awayPitcher.hand, team: game.awayTeam, hr9: data.awayPitcher.hr9, whip: data.awayPitcher.whip, era: data.awayPitcher.era, k9: data.awayPitcher.k9, avgAgainst: data.awayPitcher.avgAgainst, ip: data.awayPitcher.inningsPitched, sb: data.awayPitcher.sb, cs: data.awayPitcher.cs } : null}
+        homeArm={data.homePitcher ? { id: data.homePitcher.id, name: data.homePitcher.name, hand: data.homePitcher.hand, team: game.homeTeam, hr9: data.homePitcher.hr9, whip: data.homePitcher.whip, era: data.homePitcher.era, k9: data.homePitcher.k9, avgAgainst: data.homePitcher.avgAgainst, ip: data.homePitcher.inningsPitched, sb: data.homePitcher.sb, cs: data.homePitcher.cs } : null}
+        bvp={data.bvp || []}
+        awayClub={data.awayTeam ? { name: data.awayTeam.name, kPct: data.awayTeam.kPct, avg: data.awayTeam.avg, ops: data.awayTeam.ops } : null}
+        homeClub={data.homeTeam ? { name: data.homeTeam.name, kPct: data.homeTeam.kPct, avg: data.homeTeam.avg, ops: data.homeTeam.ops } : null}
       />
       <StarterKs
-        away={data.awayPitcher ? { id: data.awayPitcher.id, name: data.awayPitcher.name, hand: data.awayPitcher.hand, team: game.awayTeam, foe: game.homeTeam, wins: data.awayPitcher.wins, losses: data.awayPitcher.losses, gs: data.awayPitcher.gamesStarted, ip: data.awayPitcher.inningsPitched, k9: data.awayPitcher.k9, era: data.awayPitcher.era, so: data.awayPitcher.strikeOuts } : null}
-        home={data.homePitcher ? { id: data.homePitcher.id, name: data.homePitcher.name, hand: data.homePitcher.hand, team: game.homeTeam, foe: game.awayTeam, wins: data.homePitcher.wins, losses: data.homePitcher.losses, gs: data.homePitcher.gamesStarted, ip: data.homePitcher.inningsPitched, k9: data.homePitcher.k9, era: data.homePitcher.era, so: data.homePitcher.strikeOuts } : null}
+        away={data.awayPitcher ? { id: data.awayPitcher.id, name: data.awayPitcher.name, hand: data.awayPitcher.hand, team: game.awayTeam, foe: game.homeTeam, wins: data.awayPitcher.wins, losses: data.awayPitcher.losses, gs: data.awayPitcher.gamesStarted, ip: data.awayPitcher.inningsPitched, k9: data.awayPitcher.k9, era: data.awayPitcher.era, so: data.awayPitcher.strikeOuts, oppK: data.homeTeam?.kPct ?? null } : null}
+        home={data.homePitcher ? { id: data.homePitcher.id, name: data.homePitcher.name, hand: data.homePitcher.hand, team: game.homeTeam, foe: game.awayTeam, wins: data.homePitcher.wins, losses: data.homePitcher.losses, gs: data.homePitcher.gamesStarted, ip: data.homePitcher.inningsPitched, k9: data.homePitcher.k9, era: data.homePitcher.era, so: data.homePitcher.strikeOuts, oppK: data.awayTeam?.kPct ?? null } : null}
         venue={game.venue}
         status={game.status}
         open={facts?.open}

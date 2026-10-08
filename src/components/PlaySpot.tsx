@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Edge } from "@/lib/mlb";
+import type { BvP } from "@/lib/propdesk";
 import { scoreTone } from "@/lib/score-color";
 import { mergeLogs, personLogUrls, readSplits } from "@/lib/mlb-log";
 import { isPlayable } from "@/lib/edges";
@@ -9,6 +10,8 @@ import { SlipCheck } from "@/components/SlipTray";
 
 type Hitter = { id: number; name: string; team: string; avg: string; hr: number; rbi: number };
 type Log = { date: string; opp: string; h: number; hr: number; r: number; rbi: number; sb: number };
+type Arm = { id: number; name: string; hand: string; team: string; hr9: number; whip: number; era: number; k9: number; avgAgainst: number; ip: number; sb: number; cs: number };
+type Club = { name: string; kPct: number; avg: string; ops: string };
 type Spot = "game" | "batter";
 type GameMarket = "ML" | "Total";
 type BatMarket = "Hits" | "HR" | "H+R+RBI" | "SB";
@@ -101,11 +104,21 @@ export function PlaySpot({
   home,
   hitters,
   notes,
+  awayArm,
+  homeArm,
+  bvp,
+  awayClub,
+  homeClub,
 }: {
   away: string;
   home: string;
   hitters: Hitter[];
   notes: Edge[];
+  awayArm: Arm | null;
+  homeArm: Arm | null;
+  bvp: BvP[];
+  awayClub: Club | null;
+  homeClub: Club | null;
 }) {
   const [spot, setSpot] = useState<Spot>("game");
   const [gameMarket, setGameMarket] = useState<GameMarket>("ML");
@@ -212,7 +225,7 @@ export function PlaySpot({
           {player && starts == null && !failed ? <p className="text-sm text-muted">Loading the 2026 log…</p> : null}
           {failed ? <p className="text-sm text-danger">The 2026 log did not load.</p> : null}
           {player && starts ? (
-            <BatterCard player={player} market={batMarket} rows={shown} all={starts} line={line} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} foe={side === away ? home : away} />
+            <BatterCard player={player} market={batMarket} rows={shown} all={starts} line={line} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} foe={side === away ? home : away} arm={side === away ? homeArm : awayArm} club={side === away ? homeClub : awayClub} prior={bvp.find((row) => row.batterId === player.id) || null} />
           ) : null}
         </>
       )}
@@ -220,8 +233,72 @@ export function PlaySpot({
   );
 }
 
+function batterRead(input: {
+  name: string;
+  market: BatMarket;
+  unit: string;
+  rate: number;
+  n: number;
+  recent: number;
+  recentN: number;
+  foe: string;
+  vsAvg: number | null;
+  vsN: number;
+  arm: Arm | null;
+  club: Club | null;
+  prior: BvP | null;
+}) {
+  const { name, market, unit, rate, n, recent, recentN, foe, vsAvg, vsN, arm, club, prior } = input;
+  const teamLine = vsAvg == null
+    ? `No 2026 game against ${foe} is on his log.`
+    : `Against ${foe} in 2026 he averaged ${one(vsAvg)} ${unit} over ${vsN} game${vsN === 1 ? "" : "s"}. That sample is not averaged into the rate.`;
+  const clubLine = club
+    ? `${foe} as a team are hitting ${club.avg} with a ${club.ops} OPS and a ${one(club.kPct)}% strikeout rate.`
+    : `${foe} team hitting line is not on this card.`;
+  const history = !prior || prior.ab < 5
+    ? `Career at-bats against today's starter are under 5, so that history is not used.`
+    : `Career against today's starter: ${prior.h}-for-${prior.ab}, ${prior.hr} HR, ${prior.so} K.`;
+  const base = `${name} is at ${one(rate)} ${unit} per game over ${n} games in 2026. The last ${recentN} average ${one(recent)} and are not mixed in.`;
+  if (!arm) {
+    return {
+      call: "Starter not posted",
+      text: `${base} No probable pitcher is on the card, so there is no starter matchup. ${teamLine} ${clubLine} Not a book price.`,
+    };
+  }
+  const who = `${arm.name} (${arm.hand}HP)`;
+  if (market === "HR") {
+    const leak = arm.hr9 >= 1.3;
+    return {
+      call: leak ? "Starter is giving up homers" : "Won't lean a homer",
+      text: `${leak ? "The case for one is the starter." : "The case against one is the starter."} ${who} allows ${one(arm.hr9)} HR/9, with a ${one(arm.k9)} K/9 and a ${one(arm.era)} ERA. The desk treats 1.3 HR/9 as a fly-ball leak. ${who} is ${leak ? "at or over" : "under"} that cut. ${base} ${history} ${teamLine} Not a book price.`,
+    };
+  }
+  if (market === "Hits") {
+    const soft = arm.avgAgainst >= 0.23 || arm.whip >= 1.28;
+    const tough = arm.avgAgainst > 0 && arm.avgAgainst <= 0.21 && arm.whip < 1.28;
+    return {
+      call: soft ? "Starter is allowing contact" : tough ? "Won't lean a hit" : "No clear hit lean",
+      text: `${who} has a ${arm.avgAgainst.toFixed(3)} average against and a ${one(arm.whip)} WHIP. The desk flags contact at a .230 average against or a 1.28 WHIP, and a tough line at .210 or lower with a WHIP under 1.28. ${base} ${history} ${teamLine} Not a book price.`,
+    };
+  }
+  if (market === "SB") {
+    const held = arm.ip >= 30 && arm.sb + arm.cs === 0;
+    const loose = arm.sb >= 8;
+    return {
+      call: held ? "Won't lean a steal" : loose ? "Starter has been run on" : "No clear steal lean",
+      text: `${who} has allowed ${arm.sb} steals and ${arm.cs} caught stealing in ${one(arm.ip)} innings. ${held ? "No steal attempt in at least 30 innings is the case against." : loose ? "Eight or more steals allowed is the case for a runner who is on." : "That hold rate is on the card and does not clear either cut."} ${base} ${clubLine} Not a book price.`,
+    };
+  }
+  const soft = arm.era >= 4.2 || arm.whip >= 1.28;
+  const stingy = arm.era > 0 && arm.era <= 3.2 && arm.whip < 1.28;
+  return {
+    call: soft ? "Starter is a runs spot" : stingy ? "Won't lean a big counting line" : "No clear counting lean",
+    text: `Hits, runs, and RBI run through the starter and the other lineup. ${who} has a ${one(arm.era)} ERA and a ${one(arm.whip)} WHIP. The desk treats 4.20 ERA or a 1.28 WHIP as a runs spot, and 3.20 ERA with a lower WHIP as a quiet one. ${base} ${clubLine} ${teamLine} Not a book price.`,
+  };
+}
+
 function BatterCard({
-  player, market, rows, all, line, hits, win, setWin, note, foe,
+  player, market, rows, all, line, hits, win, setWin, note, foe, arm, club, prior,
 }: {
   player: Hitter;
   market: BatMarket;
@@ -233,6 +310,9 @@ function BatterCard({
   setWin: (w: "L5" | "L10" | "2026") => void;
   note?: Edge;
   foe: string;
+  arm: Arm | null;
+  club: Club | null;
+  prior: BvP | null;
 }) {
   const nums = rows.map((row) => valueOf(row, market));
   const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
@@ -249,7 +329,7 @@ function BatterCard({
     return opp && (other.includes(opp) || opp.includes(other.split(" ").pop() || other));
   });
   const vsAvg = vs.length ? vs.reduce((sum, row) => sum + valueOf(row, market), 0) / vs.length : null;
-  const model = `${cleanName(player.name)} projects to ${one(projected)} ${unit}. That is the 2026 average over ${all.length} games. The last ${recent.length} average ${one(hot)} and are not mixed in. ${vsAvg == null ? `There is no 2026 game against ${foe} on the log, so the opponent is not in the number.` : `Against ${foe} in 2026: ${one(vsAvg)} over ${vs.length} game${vs.length === 1 ? "" : "s"}. That sample is shown, not averaged in.`} No park factor and no opposing pitcher is in this number. Not a book price.`;
+  const read = batterRead({ name: cleanName(player.name), market, unit, rate: season, n: all.length, recent: hot, recentN: recent.length, foe, vsAvg, vsN: vs.length, arm, club, prior });
   const scale = Math.max(line, ...nums, 1) * 1.25;
   return (
     <div className="rounded-xl bg-background p-3">
@@ -295,8 +375,9 @@ function BatterCard({
       <p className="mt-3 text-sm text-muted">{call}. Average {one(avg)} in this window. {market === "HR" || market === "SB" ? "The line is 0.5, one event. Not a sportsbook price." : "The line is the middle of the 2026 games. Not a sportsbook price."} {all.length > rows.length ? `Showing ${rows.length} of ${all.length}.` : ""}</p>
       <div className="mt-4 rounded-xl bg-card p-3">
         <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
+        <div className="mt-1 text-lg font-semibold">{read.call}</div>
         <div className="font-mono text-3xl font-semibold">{one(projected)}</div>
-        <p className="mt-1 text-sm text-muted">{model}</p>
+        <p className="mt-1 text-sm text-muted">{read.text}</p>
       </div>
       {note ? <p className="mt-2 text-sm text-muted">{note.reasoning}</p> : null}
     </div>

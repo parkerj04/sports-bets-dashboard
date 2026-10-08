@@ -42,6 +42,8 @@ export interface PitcherStats {
   losses: number;
   hr9: number;
   avgAgainst: number;
+  sb: number;
+  cs: number;
   arsenal: PitchMix[];
 }
 
@@ -160,7 +162,8 @@ export async function getPitcherSeasonStats(playerId: number, season = SEASON): 
     k9: ip > 0 ? Math.round((so / ip) * 9 * 100) / 100 : 0,
     era: parseFloat(s.era || "0"), whip: parseFloat(s.whip || "0"),
     gamesStarted: s.gamesStarted || 0, wins: s.wins || 0, losses: s.losses || 0,
-    hr9: parseFloat(s.homeRunsPer9 || "0"), avgAgainst: parseFloat(s.avg || "0"), arsenal,
+    hr9: parseFloat(s.homeRunsPer9 || "0"), avgAgainst: parseFloat(s.avg || "0"),
+    sb: s.stolenBases || 0, cs: s.caughtStealing || 0, arsenal,
   };
 }
 
