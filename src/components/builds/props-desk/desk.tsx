@@ -255,7 +255,7 @@ function Projected({ prop }: { prop: PropCard }) {
       <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
       <div className="font-mono text-3xl font-semibold">{value.toFixed(1)}</div>
       <p className="mt-1 text-sm text-muted">
-        {prop.player} projects to {value.toFixed(1)} {prop.market.toLowerCase()}. That is the 2026 rate over {vals.length} logged games. {prop.callWhy} Not a book price.
+        {prop.player} projects to {value.toFixed(1)} {prop.market.toLowerCase()}. That is the average of {vals.length} logged games, and nothing else was added. The case on the card: {prop.callWhy} Not a book price.
       </p>
     </div>
   );

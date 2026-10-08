@@ -242,15 +242,14 @@ function BatterCard({
   const season = all.length ? all.reduce((sum, row) => sum + valueOf(row, market), 0) / all.length : 0;
   const recent = all.slice(-5);
   const hot = recent.length ? recent.reduce((sum, row) => sum + valueOf(row, market), 0) / recent.length : season;
-  const moved = recent.length >= 3 && Math.abs(hot - season) >= (market === "HR" || market === "SB" ? 0.08 : 0.2);
-  const projected = moved ? season * 0.75 + hot * 0.25 : season;
+  const projected = season;
   const vs = all.filter((row) => {
     const opp = row.opp.toLowerCase();
     const other = foe.toLowerCase();
     return opp && (other.includes(opp) || opp.includes(other.split(" ").pop() || other));
   });
   const vsAvg = vs.length ? vs.reduce((sum, row) => sum + valueOf(row, market), 0) / vs.length : null;
-  const model = `${cleanName(player.name)} projects to ${one(projected)} ${unit}. The 2026 rate is ${one(season)} over ${all.length} games. ${moved ? `The last ${recent.length} are ${one(hot)}, so the number ${hot > season ? "is pulled up from" : "sits under"} the season rate.` : `The last ${recent.length || 0} are ${one(hot)}, close enough that the recent run does not move it.`} ${vsAvg == null ? "" : `Against ${foe} in 2026: ${one(vsAvg)} over ${vs.length} game${vs.length === 1 ? "" : "s"}. `}Not a book price.`;
+  const model = `${cleanName(player.name)} projects to ${one(projected)} ${unit}. That is the 2026 average over ${all.length} games. The last ${recent.length} average ${one(hot)} and are not mixed in. ${vsAvg == null ? `There is no 2026 game against ${foe} on the log, so the opponent is not in the number.` : `Against ${foe} in 2026: ${one(vsAvg)} over ${vs.length} game${vs.length === 1 ? "" : "s"}. That sample is shown, not averaged in.`} No park factor and no opposing pitcher is in this number. Not a book price.`;
   const scale = Math.max(line, ...nums, 1) * 1.25;
   return (
     <div className="rounded-xl bg-background p-3">
