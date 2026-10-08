@@ -219,36 +219,32 @@ function protect(rows: Raw[], away: string, home: string) {
     if (!n) return models;
     for (const market of MODEL_MARKETS) {
       const stat = roleKey(player.pos, market);
-      const rank = Math.min(ranks.get(`${mine}|${player.pos}|${player.name}|${stat}`) || 3, 3);
+      const rankRaw = ranks.get(`${mine}|${player.pos}|${player.name}|${stat}`);
+      const rank = rankRaw ? Math.min(rankRaw, 3) : null;
       const values = weeksPlayed.map((w) => weekStat(w, market));
       const rate = values.reduce((a, b) => a + b, 0) / n;
-      const usual = mean(league.get(`${player.pos}|${stat}|${rank}|${market}`));
-      const allowed = defense.get(`${foeFile}|${player.pos}|${stat}|${rank}|${market}`);
+      const last = values.slice(-5);
+      const recent = last.reduce((a, b) => a + b, 0) / last.length;
+      const usual = rank ? mean(league.get(`${player.pos}|${stat}|${rank}|${market}`)) : 0;
+      const allowed = rank ? defense.get(`${foeFile}|${player.pos}|${stat}|${rank}|${market}`) : undefined;
       const oppPer = mean(allowed);
-      const shortLog = n < 3;
-      const base = shortLog ? (rate + usual) / 2 : rank === 1 ? rate : rate * 0.7 + usual * 0.3;
-      const gap = allowed && allowed.length >= 3 && usual ? oppPer - usual : 0;
-      const cap = market === "td" || market === "passTd" ? 0.5 : Math.max(usual, 1);
-      const move = Math.max(-cap, Math.min(cap, gap));
-      const value = tenth(Math.max(0, base + move));
+      const gap = allowed && allowed.length >= 4 && usual ? oppPer - usual : 0;
+      const value = tenth(Math.max(0, rate + gap));
       const club = CLUB[foe] || foe;
-      const job = roleName(player.pos, rank);
-      const matchup = !allowed || allowed.length < 3
-        ? `${club} do not have 3 games on file against ${job}, so the defense does not move the number.`
-        : move > 0.05 && value > rate
-          ? `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job}. A normal defense allows ${tenth(usual).toFixed(1)}. That is why the number clears that rate.`
-          : move < -0.05 && value < rate
-            ? `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job}. A normal defense allows ${tenth(usual).toFixed(1)}. That is why the number sits under that rate.`
-            : `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job}, close to the normal ${tenth(usual).toFixed(1)}, so the matchup barely moves it.`;
+      const job = rank ? roleName(player.pos, rank) : "this player";
+      const matchup = !rank
+        ? "The 2026 yard rank is not on file, so no defense is applied."
+        : !allowed || allowed.length < 4
+          ? `${club} have ${allowed?.length || 0} games on file against ${job}. That is under 4, so the defense is not applied.`
+          : `${club} have allowed ${tenth(oppPer).toFixed(1)} a game to ${job} in ${allowed.length} games. A normal defense has allowed ${tenth(usual).toFixed(1)}. The difference, ${tenth(gap).toFixed(1)}, is the whole adjustment.`;
       const total = values.reduce((a, b) => a + b, 0);
       const spike = Math.max(...values);
-      const against = (market === "td" || market === "passTd") && spike >= 2 && spike * 2 > total
-        ? ` One game was ${tenth(spike).toFixed(0)} of the ${tenth(total).toFixed(0)} scores.`
+      const spikeNote = spike > 0 && spike * 2 > total
+        ? ` One game was ${tenth(spike).toFixed(market === "td" || market === "passTd" ? 0 : 1)} of the ${tenth(total).toFixed(market === "td" || market === "passTd" ? 0 : 1)} on the log.`
         : "";
-      const sample = shortLog ? " The log is under 3 games, so it is pulled halfway to the normal player in that role." : "";
       models[market] = {
         value,
-        text: `${player.name} is ${job} and projects to ${value.toFixed(1)} ${UNIT[market]} against the ${club}. The 2026 rate is ${tenth(rate).toFixed(1)} over ${n} games. ${matchup}${sample}${against} Not a book price.`,
+        text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]}. That is the 2026 average, ${tenth(rate).toFixed(1)} over ${n} games${gap ? `, plus ${tenth(gap).toFixed(1)} from the defense` : ""}. The last ${last.length} average ${tenth(recent).toFixed(1)} and are not mixed in. ${matchup}${spikeNote} Not a book price.`,
       };
     }
     return models;
@@ -288,7 +284,7 @@ export async function gameScorers(away: string, home: string) {
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. The model starts at the player's own rate, then adds the full gap between what this defense allows that role and what a normal defense allows. Touchdowns can move by up to half a score. Yards can move by up to one normal game. Not a sportsbook price.",
+    source: "nflverse 2026. The number is the player's own per-game average. A defense is added only when it has at least 4 games against that role, and the add is the difference versus a normal defense. The last five are shown and not averaged in. Not a sportsbook price.",
     players,
   };
 }

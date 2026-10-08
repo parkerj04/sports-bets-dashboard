@@ -60,13 +60,15 @@ function KModel({ arm, starts }: { arm: Arm; starts: Start[] }) {
   const rate = starts.reduce((sum, row) => sum + row.k, 0) / starts.length;
   const ip = starts.reduce((sum, row) => sum + innings(row.ip), 0) / starts.length;
   const fromK9 = arm.k9 > 0 && ip > 0 ? (arm.k9 * ip) / 9 : rate;
-  const value = Math.round(((rate + fromK9) / 2) * 10) / 10;
+  const last = starts.slice(-5);
+  const recent = last.reduce((sum, row) => sum + row.k, 0) / last.length;
+  const value = Math.round(rate * 10) / 10;
   return (
     <div className="rounded-xl bg-background p-3">
       <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
       <div className="font-mono text-3xl font-semibold">{value.toFixed(1)}</div>
       <p className="mt-1 text-sm text-muted">
-        {arm.name} projects to {value.toFixed(1)} strikeouts. The 2026 starts average {one(rate)} K. The season {one(arm.k9)} K/9 over a typical {one(ip)} innings is {one(fromK9)}. The number is the middle of those two. Not a book price.
+        {arm.name} projects to {value.toFixed(1)} strikeouts. That is the average of {starts.length} starts in 2026. The last {last.length} average {one(recent)} and are not mixed in. Season {one(arm.k9)} K/9 over a typical {one(ip)} innings would be {one(fromK9)}, and that check is not added either. Not a book price.
       </p>
     </div>
   );

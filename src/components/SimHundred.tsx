@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 type Final = { away: number; home: number };
 
@@ -89,11 +89,10 @@ export function SimHundred({
   total: string | number;
   seed: string;
 }) {
-  const [spin, setSpin] = useState(0);
   const report = useMemo(() => {
     const line = readLine(spread, total, homeTag, awayTag, home, away);
     if (!line) return null;
-    const rng = mulberry32(hash(`${seed}|${spin}|${sport}`));
+    const rng = mulberry32(hash(`${seed}|${sport}`));
     const games: Final[] = [];
     for (let i = 0; i < 100; i++) games.push(draw(sport, line.homeImp, line.awayImp, rng));
     let homeCover = 0;
@@ -139,10 +138,10 @@ export function SimHundred({
       avgHome: (homeSum / 100).toFixed(1),
       total: line.total,
       note: sport === "NFL"
-        ? "Each sim draws a margin around the posted spread with a 13.5-point swing, and a total around the posted number with a 10-point swing. That is the market shaken up, not a scouting report. One real game is one of these, not the average."
-        : "Each team’s runs are a Poisson draw at its implied total from the posted number. A 4-run mean can still finish at 1 or at 8. This does not know the lineup or the umpire.",
+        ? "One run of 100, tied to this game. Each draw uses the posted spread with a 13.5-point swing and the posted total with a 10-point swing. It does not get redrawn. It is the market shaken up, not a scouting report."
+        : "One run of 100, tied to this game. Each team’s runs are a Poisson draw at its implied total from the posted number. It does not get redrawn. It does not know the lineup or the umpire.",
     };
-  }, [sport, away, home, awayTag, homeTag, spread, total, seed, spin]);
+  }, [sport, away, home, awayTag, homeTag, spread, total, seed]);
 
   if (!report) return null;
   const closeLabel = sport === "NFL" ? "One score" : "One run";
@@ -159,9 +158,8 @@ export function SimHundred({
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-widest text-accent">100 sims</p>
-          <h2 className="mt-1 font-semibold">What the posted number produces</h2>
+          <h2 className="mt-1 font-semibold">One run, from the posted number</h2>
         </div>
-        <button type="button" onClick={() => setSpin((n) => n + 1)} className="min-h-11 shrink-0 rounded-full bg-accent px-3 text-sm text-[#1a1408]">Run again</button>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {tiles.map((t) => (

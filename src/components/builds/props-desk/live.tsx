@@ -86,7 +86,7 @@ function rateModel(player: Player, market: Market, values: number[]) {
   const value = Math.round(rate * 10) / 10;
   return {
     value,
-    text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]}. That is the 2026 rate over ${values.length} games. The defense file did not move it. Not a book price.`,
+    text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]}. That is the average of ${values.length} logged 2026 games. No defense sample was attached to this card, so nothing else was added. Not a book price.`,
   };
 }
 
