@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BatterLine } from "@/lib/mlb";
 import type { BvP } from "@/lib/propdesk";
 import type { HitterLog } from "@/lib/hitter-form";
-import { PitcherZones } from "@/components/PitcherZones";
+import { BatterZones, PitcherZones } from "@/components/PitcherZones";
+import { mergeLogs, personLogUrls, readSplits } from "@/lib/mlb-log";
 
 type Opt = BatterLine & { vsId?: number | null; vsName?: string | null; side: string };
 
@@ -76,6 +77,34 @@ export function BvPPicker({
   }
 
   const list = openSide === "away" ? awayOptions : homeOptions;
+  const listKey = list.map((b) => b.id).join(",");
+  const [rates, setRates] = useState<Record<number, number>>({});
+  useEffect(() => {
+    const ids = listKey ? listKey.split(",").map(Number) : [];
+    let live = true;
+    for (const id of ids) {
+      Promise.all(personLogUrls(id, "hitting").map((url) => fetch(url, { cache: "no-store" }).then((res) => (res.ok ? res.json() : null)).catch(() => null)))
+        .then((payloads) => {
+          const rows = mergeLogs(payloads.map(readSplits));
+          if (!live || !rows.length) return;
+          const rate = rows.reduce((sum, row) => sum + (Number(row.stat?.hits) || 0) + (Number(row.stat?.runs) || 0) + (Number(row.stat?.rbi) || 0), 0) / rows.length;
+          setRates((cur) => (cur[id] === rate ? cur : { ...cur, [id]: rate }));
+        })
+        .catch(() => undefined);
+    }
+    return () => { live = false; };
+  }, [listKey]);
+  const starId = useMemo(() => {
+    let best: number | null = null;
+    let rate = -1;
+    for (const b of list) {
+      const n = rates[b.id];
+      if (n == null || n <= rate) continue;
+      rate = n;
+      best = b.id;
+    }
+    return best;
+  }, [list, rates]);
   const vsPitcherId = openSide === "away" ? homePitcherId : awayPitcherId;
   const vsPitcherName = openSide === "away" ? homePitcherName : awayPitcherName;
   const sideName = openSide === "away" ? awayTeam : homeTeam;
@@ -92,15 +121,14 @@ export function BvPPicker({
           <button key={side} type="button" onClick={() => { setOpenSide(side); setMenu(false); }} className={`min-h-11 flex-1 rounded-full px-3 text-sm ${openSide === side ? "bg-accent text-background" : "bg-background text-muted"}`}>{label}</button>
         ))}
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_148px] items-start gap-2">
-        <div>
+      <div>
           <button type="button" onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="flex min-h-11 w-full items-center gap-3 rounded-xl bg-background px-3 py-2 text-left">
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{showing ? showing.name : "Choose a batter"}</span>
               <span className="text-xs text-muted">
                 {showing
                   ? `${showing.avg} · ${showing.hr} HR · vs ${showing.vsName}`
-                  : `${list.length} hitters`}
+                  : `${list.length} hitters${starId ? " · star is the best hits+runs+RBI log against this starter" : ""}`}
               </span>
             </span>
             <span className="text-sm text-muted">{menu ? "Close" : "Open"}</span>
@@ -110,16 +138,18 @@ export function BvPPicker({
               {list.map((b) => (
                 <li key={`${b.side}-${b.id}`}>
                   <button type="button" onClick={() => { setMenu(false); tap(b); }} className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left ${picked?.id === b.id ? "bg-accent/20" : ""}`}>
-                    <span className="min-w-0 truncate text-sm font-medium">{b.name}</span>
-                    <span className="shrink-0 font-mono text-xs text-muted">{b.avg} · {b.hr} HR</span>
+                    <span className="min-w-0 truncate text-sm font-medium">{b.id === starId ? "★ " : ""}{b.name}</span>
+                    <span className="shrink-0 font-mono text-xs text-muted">{b.id === starId && rates[b.id] != null ? `${rates[b.id].toFixed(2)} H+R+RBI` : `${b.avg} · ${b.hr} HR`}</span>
                   </button>
                 </li>
               ))}
               {list.length === 0 ? <li className="px-2 py-3 text-xs text-muted">No hitters loaded for this side.</li> : null}
             </ul>
           ) : null}
-        </div>
+      </div>
+      <div className="grid grid-cols-2 items-start gap-2">
         <PitcherZones id={vsPitcherId} name={vsPitcherName || "Starter"} />
+        {showing ? <BatterZones id={showing.id} name={showing.name} /> : <p className="text-xs text-muted">Pick a batter to set his zones against the starter.</p>}
       </div>
       <div className="space-y-2 border-t border-card-border pt-3">
         <p className="text-xs uppercase tracking-widest text-muted">Career vs {vsPitcherName || "the starter"}</p>

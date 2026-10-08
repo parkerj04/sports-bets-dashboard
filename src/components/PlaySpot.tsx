@@ -175,6 +175,14 @@ export function PlaySpot({
   const deskRows = useMemo(() => {
     const markets = ["Hits", "HR", "H+R+RBI", "SB"] as const;
     const out: PropItem[] = [];
+    let bestId: number | null = null;
+    let bestRate = -1;
+    for (const h of roster) {
+      const log = logs[h.id];
+      if (!log?.length) continue;
+      const rate = log.reduce((sum, row) => sum + row.h + row.r + row.rbi, 0) / log.length;
+      if (rate > bestRate) { bestRate = rate; bestId = h.id; }
+    }
     for (const h of roster) {
       const log = logs[h.id];
       if (!log?.length) continue;
@@ -204,8 +212,9 @@ export function PlaySpot({
             { label: "HR", value: String(h.hr) },
             { label: "RBI", value: String(h.rbi) },
           ],
-          matchup: `${cleanName(h.name)} against ${arm?.name || "the starter"} for ${lastName(foe)}. ${armLine} ${bvpLine} Zones for this starter are on the matchup above. Red-zone style spray is not a baseball file.`,
+          matchup: `${cleanName(h.name)} against ${arm?.name || "the starter"} for ${lastName(foe)}. ${armLine} ${bvpLine} ${h.id === bestId ? `The star is this batter: the highest hits+runs+RBI per game on the 2026 log, ${bestRate.toFixed(2)}, against ${arm?.name || "the posted starter"}. Career versus the starter does not include runs, so that file is not the rank.` : "The star on this list is the best hits+runs+RBI log against the posted starter."} Zones for this starter and this batter sit on the matchup above.`,
           script: market === "SB" ? `Bases against ${arm?.name || lastName(foe)}` : `Bat against ${arm?.name || lastName(foe)}`,
+          star: market === "H+R+RBI" && h.id === bestId,
         });
       }
     }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { headshot, one, pct, summarize, teamLogo } from "./data";
-import { PropRank, type PropItem } from "@/components/PropRank";
 
 type Week = { week: number; date?: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
 type Player = {
@@ -311,54 +310,127 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
     setLine(lineFor(active.weeks.map((week) => statOf(week, next))));
   }
 
-  const deskRows: PropItem[] = roster.flatMap((player) => {
-    if (!player.weeks.length) return [];
-    const foeName = player.team === away ? home : away;
-    const teamRec = roster.reduce((sum, mate) => sum + mate.weeks.reduce((s, week) => s + week.catches, 0), 0);
-    const mine = player.weeks.reduce((sum, week) => sum + week.catches, 0);
-    const share = teamRec > 0 ? Math.round((mine / teamRec) * 100) : null;
-    const matchup = `${share == null ? "Reception share is not in this log." : `Reception share on the loaded 2026 log is ${share}%. That is receptions, not charted targets.`} Red-zone targets are not in this file. Coverage is the stadium chart on this page.`;
-    return BOARD.filter((item) => item.key === "td" || plays(player, item.key)).map((item) => ({
-      id: `${player.team}-${player.name}-${item.key}`,
-      player: player.name,
-      face: player.id ? headshot(player.id) : undefined,
-      team: player.team,
-      opp: foeName,
-      market: item.label,
-      games: player.weeks.map((week) => ({
-        key: `${week.week}-${item.key}`,
-        date: playedOn(week.date, week.week),
-        opp: week.opp,
-        value: statOf(week, item.key),
-        box: `${playedOn(week.date, week.week)} vs ${week.opp}: ${statOf(week, item.key)} ${item.label}. Receptions ${week.catches}, receiving yards ${week.rec}, rush yards ${week.rush}, touchdowns ${week.td}. A full box score is not in this file.`,
-      })),
-      confirmed: false,
-      season: [
-        { label: "G", value: String(player.weeks.length) },
-        { label: "Rec", value: String(mine) },
-        { label: "TD", value: String(player.weeks.reduce((sum, week) => sum + week.td, 0)) },
-      ],
-      matchup,
-      script: item.key === "rush" ? `Run script vs ${foeName}` : item.key === "td" ? `Score script vs ${foeName}` : `Pass script vs ${foeName}`,
-    }));
-  });
-
   return (
     <section className="flex w-full flex-col gap-3">
       <header>
         <p className="text-xs uppercase tracking-widest text-accent">Player props</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{away} @ {home}</h2>
-        <p className="mt-1 text-sm text-muted">One side at a time. The list is ranked on the real log.</p>
+        <p className="mt-1 text-sm text-muted">Pick a team, then a player. The line moves, and the bars follow.</p>
       </header>
       <div className="flex gap-2">
         {[away, home].map((team) => (
-          <button key={team} type="button" onClick={() => setSide(team)} className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm ${side === team ? "bg-accent text-foreground" : "bg-card text-muted"}`}>
+          <button key={team} type="button" onClick={() => { setSide(team); setName(""); setOpen(true); }} className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm ${side === team ? "bg-accent text-foreground" : "bg-card text-muted"}`}>
             <img src={mark(team)} alt="" className="size-5 object-contain" />
             {team}
           </button>
         ))}
       </div>
-      <PropRank rows={deskRows} loading={!players} />
+      {!players ? <p className="text-sm text-muted">Loading the prop board…</p> : null}
+      {players ? (
+        <div>
+          <button type="button" onClick={() => setOpen((v) => !v)} className="card flex w-full items-center gap-3 p-3 text-left">
+            {active?.id ? <img src={headshot(active.id)} alt="" className="size-11 rounded-full object-cover object-top" /> : <span className="size-11 shrink-0 rounded-full bg-background" />}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold">{active ? active.name : "Choose a player"}</span>
+              <span className="text-sm text-muted">{active ? `${active.pos} · ${active.team} @ ${foe}` : `${roster.length} players`}</span>
+            </span>
+            <span className="text-sm text-muted">{open ? "Close" : "Change"}</span>
+          </button>
+          {open ? (
+            <ul className="card mt-2 max-h-80 overflow-y-auto p-1">
+              {roster.map((p) => (
+                <li key={`${p.team}-${p.name}`}>
+                  <button type="button" onClick={() => pickPlayer(p)} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-2 text-left">
+                    {p.id ? <img src={headshot(p.id)} alt="" className="size-8 rounded-full object-cover object-top" /> : <span className="size-8 rounded-full bg-background" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{p.name}</span>
+                      <span className="text-xs text-muted">{p.team} · {p.pos}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+      {active && shown ? (
+        <section className="card overflow-hidden">
+          <div className="flex items-center gap-3 border-b border-card-border px-4 py-4">
+            {active.id ? <img src={headshot(active.id)} alt="" className="size-16 rounded-full object-cover object-top ring-1 ring-card-border" /> : <span className="size-16 shrink-0 rounded-full bg-background" />}
+            <div className="min-w-0">
+              <h3 className="truncate text-2xl font-semibold tracking-tight">{active.name}</h3>
+              <p className="text-sm text-muted">{active.pos} · {active.team} @ {foe}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 border-b border-card-border text-center">
+            <div className="px-2 py-3"><div className="font-mono text-lg font-semibold">{active.weeks.length}</div><div className="text-[10px] uppercase tracking-widest text-muted">Games</div></div>
+            {(() => {
+              const withTd = BOARD.filter((item) => item.key === "td" || plays(active, item.key));
+              const td = withTd.find((item) => item.key === "td");
+              const rest = withTd.filter((item) => item.key !== "td").slice(0, td ? 2 : 3);
+              return (td ? [...rest, td] : rest).map((item) => {
+                const total = active.weeks.reduce((sum, week) => sum + statOf(week, item.key), 0);
+                return (
+                  <div key={item.key} className="border-l border-card-border px-2 py-3">
+                    <div className="font-mono text-lg font-semibold">{Number.isInteger(total) ? total : one(total)}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted">{item.label}</div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          <div className="space-y-3 p-4">
+            <div className="flex items-baseline justify-between">
+              <p className="text-xs uppercase tracking-widest text-muted">{win} averages</p>
+              <p className="text-xs text-muted">{weeks.length ? `${weeks.length} games` : "No games"}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {tabs.map((item) => {
+                const avg = weeks.length ? weeks.reduce((sum, week) => sum + statOf(week, item.key), 0) / weeks.length : 0;
+                return (
+                  <button key={item.key} type="button" onClick={() => pickMarket(item.key)} className={`rounded-2xl px-3 py-3 text-left ${view === item.key ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}>
+                    <div className="text-[10px] uppercase tracking-widest text-muted">{item.label}</div>
+                    <div className="font-mono text-2xl font-semibold">{weeks.length ? one(avg) : "—"}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-widest text-muted">{tabs.find((item) => item.key === view)?.label} · {win}</div>
+                <div className="font-mono text-3xl font-semibold">{shown.n ? one(shown.avg) : "—"}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
+                <div className="font-mono text-2xl font-semibold">{one(line)}</div>
+                <div className="font-mono text-xs text-good">{shown.n ? `${shown.hits}/${shown.n} over` : "No games"}</div>
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto">
+              {windows.map((item) => (
+                <button key={item.key} type="button" onClick={() => setWin(item.key)} className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl text-center ${win === item.key ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}>
+                  <span className="text-[10px] text-muted">{item.key}</span>
+                  <span className={`font-mono text-xs font-semibold ${item.n && item.pct >= 0.5 ? "text-good" : "text-danger"}`}>{item.n ? pct(item.pct) : "—"}</span>
+                  <span className="font-mono text-[10px] text-muted">{item.n ? one(item.avg) : "N/A"}</span>
+                </button>
+              ))}
+            </div>
+            <Bars
+              line={line}
+              values={values}
+              pendingOpp={pending ? foe : undefined}
+              weeks={weeks.map((week) => ({ label: playedOn(week.date, week.week), abbr: week.opp, value: statOf(week, view) }))}
+            />
+            <div className="flex items-center gap-2">
+              <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Lower the line" onClick={() => setLine((v) => Math.max(0, Math.round((v - 0.5) * 10) / 10))}>−</button>
+              <input className="h-11 min-w-0 flex-1 accent-accent" type="range" min={0} max={Math.max(line, ...active.weeks.map((week) => statOf(week, view)), 1)} step={0.5} value={line} aria-label="Research line" onChange={(e) => setLine(Number(e.target.value))} />
+              <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
+            </div>
+            <p className="text-sm text-muted">{shown.call}. {shown.against}</p>
+            <ModelBox model={view === "td" ? active.models?.td : (active.models?.[view] || rateModel(active, view, active.weeks.map((week) => statOf(week, view))))} />
+          </div>
+        </section>
+      ) : null}
       <p className="text-xs text-muted">{source}</p>
     </section>
   );
