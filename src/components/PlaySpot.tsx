@@ -70,6 +70,20 @@ function Face({ id, name, className }: { id: number; name: string; className: st
   return <img src={face(id)} alt="" className={`rounded-full object-cover object-top ${className}`} onError={() => setBad(true)} />;
 }
 
+function sameClub(opp: string, foe: string) {
+  const a = opp.toLowerCase();
+  const b = foe.toLowerCase();
+  const last = b.split(" ").pop() || b;
+  return Boolean(a) && (b.includes(a) || a.includes(last));
+}
+
+function sliceLog(rows: Log[], win: "L5" | "L10" | "L15" | "2026" | "H2H", foe: string) {
+  if (win === "H2H") return rows.filter((row) => sameClub(row.opp, foe));
+  if (win === "2026") return rows;
+  const n = win === "L5" ? 5 : win === "L10" ? 10 : 15;
+  return rows.slice(-n);
+}
+
 function researchLine(values: number[], market: BatMarket) {
   if (market === "HR" || market === "SB") return 0.5;
   if (!values.length) return 0.5;
@@ -127,7 +141,8 @@ export function PlaySpot({
   const [playerId, setPlayerId] = useState<number | null>(null);
   const [logs, setLogs] = useState<Record<number, Log[]>>({});
   const [failed, setFailed] = useState(false);
-  const [win, setWin] = useState<"L5" | "L10" | "2026">("L10");
+  const [win, setWin] = useState<"L5" | "L10" | "L15" | "2026" | "H2H">("L10");
+  const [line, setLine] = useState(0.5);
 
   const roster = hitters.filter((h) => h.team === side);
   const rosterKey = roster.map((h) => h.id).join(",");
@@ -146,8 +161,10 @@ export function PlaySpot({
 
   const starts = player ? logs[player.id] : undefined;
   const values = useMemo(() => (starts || []).map((row) => valueOf(row, batMarket)), [starts, batMarket]);
-  const line = researchLine(values, batMarket);
-  const shown = win === "L5" ? (starts || []).slice(-5) : win === "L10" ? (starts || []).slice(-10) : starts || [];
+  const seed = researchLine(values, batMarket);
+  useEffect(() => { setLine(seed); }, [player?.id, batMarket, seed]);
+  const foeName = side === away ? home : away;
+  const shown = sliceLog(starts || [], win, foeName);
   const hits = shown.filter((row) => valueOf(row, batMarket) > line).length;
   const gameNotes = notes.filter((n) => (gameMarket === "ML" ? n.market === "Moneyline" : n.market === "Game Total" || n.market === "Total"));
   const stealNote = player ? notes.find((n) => n.market === "Stolen Bases" && n.pick.includes(lastName(player.name))) : undefined;
@@ -208,24 +225,11 @@ export function PlaySpot({
               );
             })}
           </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {(["Hits", "HR", "H+R+RBI", "SB"] as const).map((key) => {
-              const proj = player ? project(logs[player.id], key) : null;
-              const label = key === "SB" ? "Steals" : key === "HR" ? "Home runs" : key;
-              return (
-                <button key={key} type="button" onClick={() => setBatMarket(key)} className={`flex min-h-14 shrink-0 flex-col items-center justify-center rounded-2xl px-3 text-sm ${batMarket === key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>
-                  <span>{label}</span>
-                  <span className="font-mono text-xs font-semibold">{proj == null ? "—" : one(proj)}</span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted">Each number is that stat per game in 2026. Not a sportsbook price.</p>
           {!player ? <p className="text-sm text-muted">No hitters posted for {side}.</p> : null}
           {player && starts == null && !failed ? <p className="text-sm text-muted">Loading the 2026 log…</p> : null}
           {failed ? <p className="text-sm text-danger">The 2026 log did not load.</p> : null}
           {player && starts ? (
-            <BatterCard player={player} market={batMarket} rows={shown} all={starts} line={line} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} foe={side === away ? home : away} arm={side === away ? homeArm : awayArm} club={side === away ? homeClub : awayClub} prior={bvp.find((row) => row.batterId === player.id) || null} />
+            <BatterCard player={player} market={batMarket} setMarket={setBatMarket} rows={shown} all={starts} line={line} setLine={setLine} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} foe={foeName} arm={side === away ? homeArm : awayArm} club={side === away ? homeClub : awayClub} prior={bvp.find((row) => row.batterId === player.id) || null} />
           ) : null}
         </>
       )}
@@ -298,16 +302,18 @@ function batterRead(input: {
 }
 
 function BatterCard({
-  player, market, rows, all, line, hits, win, setWin, note, foe, arm, club, prior,
+  player, market, setMarket, rows, all, line, setLine, hits, win, setWin, note, foe, arm, club, prior,
 }: {
   player: Hitter;
   market: BatMarket;
+  setMarket: (market: BatMarket) => void;
   rows: Log[];
   all: Log[];
   line: number;
+  setLine: (line: number) => void;
   hits: number;
-  win: "L5" | "L10" | "2026";
-  setWin: (w: "L5" | "L10" | "2026") => void;
+  win: "L5" | "L10" | "L15" | "2026" | "H2H";
+  setWin: (w: "L5" | "L10" | "L15" | "2026" | "H2H") => void;
   note?: Edge;
   foe: string;
   arm: Arm | null;
@@ -318,6 +324,22 @@ function BatterCard({
   const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
   const call = !rows.length ? "Pass — no games" : rows.length < 3 ? "Pass — short log" : hits / rows.length >= 0.7 ? "Shape leans over" : hits / rows.length <= 0.35 ? "Shape leans under" : "No clear edge";
   const label = market === "HR" ? "Home runs" : market === "SB" ? "Steals" : market === "H+R+RBI" ? "Hits + runs + RBI" : "Hits";
+  const props = (["Hits", "HR", "H+R+RBI", "SB"] as const).map((key) => {
+    const name = key === "SB" ? "Steals" : key === "HR" ? "HR" : key === "H+R+RBI" ? "H+R+RBI" : "Hits";
+    return { key, name, avg: project(all, key) };
+  });
+  const windows = (["L5", "L10", "L15", "2026", "H2H"] as const).map((key) => {
+    const sample = sliceLog(all, key, foe).map((row) => valueOf(row, market));
+    const over = sample.filter((n) => n > line).length;
+    const avg = sample.length ? sample.reduce((sum, n) => sum + n, 0) / sample.length : 0;
+    return { key, n: sample.length, over, avg, pct: sample.length ? over / sample.length : 0 };
+  });
+  const support = (["Hits", "HR", "H+R+RBI", "SB"] as const).filter((key) => key !== market).slice(0, 3).map((key) => {
+    const sample = rows.map((row) => valueOf(row, key));
+    const avg = sample.length ? sample.reduce((sum, n) => sum + n, 0) / sample.length : 0;
+    const name = key === "SB" ? "Steals" : key === "HR" ? "HR" : key === "H+R+RBI" ? "H+R+RBI" : "Hits";
+    return { key, name, avg, n: sample.length };
+  });
   const unit = market === "HR" ? "home runs" : market === "SB" ? "steals" : market === "H+R+RBI" ? "hits + runs + RBI" : "hits";
   const season = all.length ? all.reduce((sum, row) => sum + valueOf(row, market), 0) / all.length : 0;
   const recent = all.slice(-5);
@@ -337,20 +359,30 @@ function BatterCard({
         <Face id={player.id} name={player.name} className="size-12" />
         <div>
           <div className="text-lg font-semibold">{cleanName(player.name)}</div>
-          <p className="text-sm text-muted">{label} · {player.avg} AVG · {player.hr} HR · {player.rbi} RBI on the season</p>
+          <p className="text-sm text-muted">{player.avg} AVG · {player.hr} HR · {player.rbi} RBI · vs {lastName(foe)}</p>
         </div>
+      </div>
+      <div className="mt-3 flex gap-2 overflow-x-auto">
+        {props.map((item) => (
+          <button key={item.key} type="button" onClick={() => setMarket(item.key)} className={`flex min-h-14 shrink-0 flex-col items-center justify-center rounded-2xl px-3 text-sm ${market === item.key ? "bg-accent text-foreground" : "bg-card text-muted"}`}>
+            <span>{item.name}</span>
+            <span className="font-mono text-xs font-semibold">{item.avg == null ? "—" : one(item.avg)}</span>
+          </button>
+        ))}
       </div>
       <div className="mt-3 flex items-end justify-between">
         <div>
           <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
           <div className="font-mono text-3xl font-semibold">{one(line)}</div>
         </div>
-        <div className="text-right text-sm text-muted">{rows.length ? `${hits}/${rows.length} over` : "No games"}</div>
+        <div className="text-right text-sm text-muted">{rows.length ? `${hits}/${rows.length} over · ${label}` : "No games"}</div>
       </div>
-      <div className="mt-3 flex gap-2">
-        {(["L5", "L10", "2026"] as const).map((key) => (
-          <button key={key} type="button" onClick={() => setWin(key)} className={`flex size-16 shrink-0 items-center justify-center rounded-3xl text-sm ${win === key ? "bg-accent/30 ring-1 ring-accent" : "bg-card"}`}>
-            {key}
+      <div className="mt-3 flex gap-2 overflow-x-auto">
+        {windows.map((item) => (
+          <button key={item.key} type="button" onClick={() => setWin(item.key)} className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl text-center ${win === item.key ? "bg-accent/30 ring-1 ring-accent" : "bg-card"}`}>
+            <span className="text-[10px] text-muted">{item.key}</span>
+            <span className={`font-mono text-xs font-semibold ${item.n && item.pct >= 0.5 ? "text-good" : "text-danger"}`}>{item.n ? `${Math.round(item.pct * 100)}%` : "—"}</span>
+            <span className="font-mono text-[10px] text-muted">{item.n ? one(item.avg) : "N/A"}</span>
           </button>
         ))}
       </div>
@@ -372,7 +404,20 @@ function BatterCard({
           );
         })}
       </div>
-      <p className="mt-3 text-sm text-muted">{call}. Average {one(avg)} in this window. {market === "HR" || market === "SB" ? "The line is 0.5, one event. Not a sportsbook price." : "The line is the middle of the 2026 games. Not a sportsbook price."} {all.length > rows.length ? `Showing ${rows.length} of ${all.length}.` : ""}</p>
+      <div className="mt-4 flex items-center gap-2">
+        <button type="button" className="size-11 shrink-0 rounded-full bg-card text-lg" aria-label="Lower the line" onClick={() => setLine(Math.max(0, Math.round((line - 0.5) * 10) / 10))}>−</button>
+        <input className="h-11 min-w-0 flex-1 accent-accent" type="range" min={0} max={Math.max(line, ...all.map((row) => valueOf(row, market)), 1)} step={0.5} value={line} aria-label="Research line" onChange={(e) => setLine(Number(e.target.value))} />
+        <button type="button" className="size-11 shrink-0 rounded-full bg-card text-lg" aria-label="Raise the line" onClick={() => setLine(Math.round((line + 0.5) * 10) / 10)}>+</button>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        {support.map((item) => (
+          <div key={item.key} className="rounded-xl bg-card px-2 py-2">
+            <div className="text-[10px] uppercase tracking-widest text-muted">{item.name}</div>
+            <div className="font-mono text-sm">{item.n ? `${one(item.avg)} avg` : "—"}</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-sm text-muted">{call}. Average {one(avg)} in this window. Move the line and the colors follow. Not a sportsbook price. {all.length > rows.length ? `Showing ${rows.length} of ${all.length}.` : ""}</p>
       <div className="mt-4 rounded-xl bg-card p-3">
         <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
         <div className="mt-1 text-lg font-semibold">{read.call}</div>

@@ -20,14 +20,6 @@ type Player = {
 };
 type Market = "rec" | "catches" | "rush" | "pass" | "passTd";
 
-const MARKETS: { key: Market; label: string }[] = [
-  { key: "rec", label: "Receiving yards" },
-  { key: "catches", label: "Receptions" },
-  { key: "rush", label: "Rushing yards" },
-  { key: "pass", label: "Passing yards" },
-  { key: "passTd", label: "Passing TDs" },
-];
-
 const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function playedOn(date?: string, week?: number) {
@@ -44,7 +36,19 @@ function mark(abbr: string) {
   return teamLogo(LOGO[abbr] || abbr);
 }
 
-function statOf(week: Week, market: Market) {
+type BoardMarket = Market | "td";
+
+const BOARD: { key: BoardMarket; label: string }[] = [
+  { key: "catches", label: "Rec" },
+  { key: "rec", label: "Rec yds" },
+  { key: "rush", label: "Rush" },
+  { key: "td", label: "Anytime TD" },
+  { key: "pass", label: "Pass yds" },
+  { key: "passTd", label: "Pass TD" },
+];
+
+function statOf(week: Week, market: BoardMarket) {
+  if (market === "td") return week.td;
   if (market === "rec") return week.rec;
   if (market === "catches") return week.catches;
   if (market === "rush") return week.rush;
@@ -52,17 +56,17 @@ function statOf(week: Week, market: Market) {
   return week.passTd;
 }
 
-function totalOf(player: Player, market: Market) {
-  if (market === "rec") return player.rec;
-  if (market === "catches") return player.catches;
-  if (market === "rush") return player.rush;
-  if (market === "pass") return player.pass;
-  return player.passTd;
+function plays(player: Player, market: BoardMarket) {
+  if (market === "pass" || market === "passTd") return player.pass > 0 || player.passTd > 0;
+  if (market === "td") return player.weeks.some((week) => week.td > 0);
+  return player.weeks.some((week) => statOf(week, market) > 0);
 }
 
-function inMarket(player: Player, market: Market) {
-  if (market === "pass" || market === "passTd") return player.pass > 0 || player.passTd > 0;
-  return totalOf(player, market) > 0;
+function takeWeeks(weeks: Week[], win: "L5" | "L10" | "L15" | "2026" | "H2H", foe: string) {
+  if (win === "H2H") return weeks.filter((week) => week.opp === foe);
+  if (win === "2026") return weeks;
+  const n = win === "L5" ? 5 : win === "L10" ? 10 : 15;
+  return weeks.slice(-n);
 }
 
 function lineFor(values: number[]) {
@@ -242,10 +246,11 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
 export function LiveBoard({ away, home, pending = false }: { away: string; home: string; pending?: boolean }) {
   const [players, setPlayers] = useState<Player[] | null>(null);
   const [source, setSource] = useState("");
-  const [market, setMarket] = useState<Market>("rec");
+  const [market, setMarket] = useState<BoardMarket>("catches");
   const [name, setName] = useState("");
   const [open, setOpen] = useState(true);
   const [line, setLine] = useState(0.5);
+  const [win, setWin] = useState<"L5" | "L10" | "L15" | "2026" | "H2H">("L10");
 
   useEffect(() => {
     if (!away || !home) return;
@@ -256,25 +261,34 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
       .catch(() => setPlayers([]));
   }, [away, home]);
 
-  const list = (players || [])
-    .filter((p) => inMarket(p, market))
-    .sort((a, b) => totalOf(b, market) - totalOf(a, market));
-  const active = list.find((p) => p.name === name) || null;
-  const values = active ? active.weeks.map((w) => statOf(w, market)) : [];
+  const roster = [...(players || [])].sort((a, b) => a.name.localeCompare(b.name));
+  const active = roster.find((p) => p.name === name) || null;
+  const foe = active ? (active.team === away ? home : away) : home;
+  const tabs = active ? BOARD.filter((item) => plays(active, item.key)) : BOARD;
+  const view = tabs.some((item) => item.key === market) ? market : (tabs[0]?.key || "catches");
+  const weeks = active ? takeWeeks(active.weeks, win, foe) : [];
+  const values = weeks.map((week) => statOf(week, view));
   const shown = active ? read(values, line) : null;
-
-  function pickMarket(next: Market) {
-    setMarket(next);
-    setName("");
-    setOpen(true);
-    setLine(0.5);
-  }
+  const windows = (["L5", "L10", "L15", "2026", "H2H"] as const).map((key) => {
+    const rows = active ? takeWeeks(active.weeks, key, foe) : [];
+    const nums = rows.map((week) => statOf(week, view));
+    return { key, ...read(nums, line) };
+  });
 
   function pickPlayer(player: Player) {
-    const nums = player.weeks.map((w) => statOf(w, market));
+    const next = BOARD.find((item) => plays(player, item.key))?.key || "catches";
+    const nums = player.weeks.map((week) => statOf(week, next));
     setName(player.name);
+    setMarket(next);
     setOpen(false);
+    setWin("L10");
     setLine(lineFor(nums));
+  }
+
+  function pickMarket(next: BoardMarket) {
+    if (!active) return;
+    setMarket(next);
+    setLine(lineFor(active.weeks.map((week) => statOf(week, next))));
   }
 
   return (
@@ -282,13 +296,8 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
       <header>
         <p className="text-xs uppercase tracking-widest text-accent">Player props</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{away} @ {home}</h2>
-        <p className="mt-1 text-sm text-muted">Receiving, rushing, and passing. The line is the median of the 2026 games, snapped to .5.</p>
+        <p className="mt-1 text-sm text-muted">Pick a player, then the prop. The line moves, and the bars follow.</p>
       </header>
-      <div className="flex flex-wrap gap-2">
-        {MARKETS.map((item) => (
-          <button key={item.key} type="button" onClick={() => pickMarket(item.key)} className={`min-h-11 rounded-full px-3 text-sm ${market === item.key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{item.label}</button>
-        ))}
-      </div>
       {!players ? <p className="text-sm text-muted">Loading the prop board…</p> : null}
       {players ? (
         <div>
@@ -296,13 +305,13 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
             {active?.id ? <img src={headshot(active.id)} alt="" className="size-11 rounded-full object-cover object-top" /> : <span className="size-11 shrink-0 rounded-full bg-background" />}
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{active ? active.name : "Choose a player"}</span>
-              <span className="text-sm text-muted">{active ? `${active.team} · ${active.pos} · ${MARKETS.find((m) => m.key === market)?.label}` : `${list.length} players`}</span>
+              <span className="text-sm text-muted">{active ? `${active.pos} · ${active.team} @ ${foe}` : `${roster.length} players`}</span>
             </span>
-            <span className="text-sm text-muted">{open ? "Close" : "Open"}</span>
+            <span className="text-sm text-muted">{open ? "Close" : "Change"}</span>
           </button>
           {open ? (
             <ul className="card mt-2 max-h-80 overflow-y-auto p-1">
-              {list.map((p) => (
+              {roster.map((p) => (
                 <li key={`${p.team}-${p.name}`}>
                   <button type="button" onClick={() => pickPlayer(p)} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-2 text-left">
                     {p.id ? <img src={headshot(p.id)} alt="" className="size-8 rounded-full object-cover object-top" /> : <span className="size-8 rounded-full bg-background" />}
@@ -310,7 +319,6 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
                       <span className="block truncate text-sm font-medium">{p.name}</span>
                       <span className="text-xs text-muted">{p.team} · {p.pos}</span>
                     </span>
-                    <span className="font-mono text-sm">{totalOf(p, market)}</span>
                   </button>
                 </li>
               ))}
@@ -320,34 +328,58 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
       ) : null}
       {active && shown ? (
         <section className="card p-4">
-          <div className="flex items-end justify-between">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {tabs.map((item) => (
+              <button key={item.key} type="button" onClick={() => pickMarket(item.key)} className={`min-h-11 shrink-0 rounded-full px-3 text-sm ${view === item.key ? "bg-accent text-foreground" : "bg-background text-muted"}`}>{item.label}</button>
+            ))}
+          </div>
+          <div className="mt-3 flex items-end justify-between">
             <div>
               <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
               <div className="font-mono text-3xl font-semibold">{one(line)}</div>
             </div>
             <div className="text-right">
               <div className="font-mono text-lg text-good">{shown.n ? `${shown.hits}/${shown.n} over` : "No games"}</div>
-              <div className="text-xs text-muted">{shown.n ? `${pct(shown.pct)} · avg ${one(shown.avg)}` : ""} · 2026</div>
+              <div className="text-xs text-muted">{shown.n ? `${pct(shown.pct)} · avg ${one(shown.avg)}` : "No games in this window"}</div>
             </div>
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto">
+            {windows.map((item) => (
+              <button key={item.key} type="button" onClick={() => setWin(item.key)} className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl text-center ${win === item.key ? "bg-accent/30 ring-1 ring-accent" : "bg-background"}`}>
+                <span className="text-[10px] text-muted">{item.key}</span>
+                <span className={`font-mono text-xs font-semibold ${item.n && item.pct >= 0.5 ? "text-good" : "text-danger"}`}>{item.n ? pct(item.pct) : "—"}</span>
+                <span className="font-mono text-[10px] text-muted">{item.n ? one(item.avg) : "N/A"}</span>
+              </button>
+            ))}
           </div>
           <div className="mt-3">
             <Bars
               line={line}
               values={values}
-              pendingOpp={pending ? (active.team === away ? home : away) : undefined}
-              weeks={active.weeks.map((w) => ({ label: playedOn(w.date, w.week), abbr: w.opp, value: statOf(w, market) }))}
+              pendingOpp={pending ? foe : undefined}
+              weeks={weeks.map((week) => ({ label: playedOn(week.date, week.week), abbr: week.opp, value: statOf(week, view) }))}
             />
           </div>
           <div className="mt-4 flex items-center gap-2">
             <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Lower the line" onClick={() => setLine((v) => Math.max(0, Math.round((v - 0.5) * 10) / 10))}>−</button>
-            <input className="h-11 min-w-0 flex-1 accent-accent" type="range" min={0} max={Math.max(line, ...values, 10)} step={0.5} value={line} aria-label="Research line" onChange={(e) => setLine(Number(e.target.value))} />
+            <input className="h-11 min-w-0 flex-1 accent-accent" type="range" min={0} max={Math.max(line, ...active.weeks.map((week) => statOf(week, view)), 1)} step={0.5} value={line} aria-label="Research line" onChange={(e) => setLine(Number(e.target.value))} />
             <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
           </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            {BOARD.filter((item) => item.key !== view && plays(active, item.key)).slice(0, 3).map((item) => {
+              const avg = weeks.length ? weeks.reduce((sum, week) => sum + statOf(week, item.key), 0) / weeks.length : 0;
+              return (
+                <div key={item.key} className="rounded-xl bg-background px-2 py-2">
+                  <div className="text-[10px] uppercase tracking-widest text-muted">{item.label}</div>
+                  <div className="font-mono text-sm">{weeks.length ? `${one(avg)} avg` : "—"}</div>
+                </div>
+              );
+            })}
+          </div>
           <p className="mt-3 text-sm text-muted">{shown.call}. {shown.against}</p>
-          <ModelBox model={active.models?.[market] || rateModel(active, market, values)} />
+          <ModelBox model={view === "td" ? active.models?.td : (active.models?.[view] || rateModel(active, view, active.weeks.map((week) => statOf(week, view))))} />
         </section>
       ) : null}
-      <AnytimeSection away={away} home={home} pending={pending} />
       <p className="text-xs text-muted">{source}</p>
     </section>
   );
