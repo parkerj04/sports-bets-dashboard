@@ -324,21 +324,17 @@ function BatterCard({
   const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
   const call = !rows.length ? "Pass — no games" : rows.length < 3 ? "Pass — short log" : hits / rows.length >= 0.7 ? "Shape leans over" : hits / rows.length <= 0.35 ? "Shape leans under" : "No clear edge";
   const label = market === "HR" ? "Home runs" : market === "SB" ? "Steals" : market === "H+R+RBI" ? "Hits + runs + RBI" : "Hits";
-  const props = (["Hits", "HR", "H+R+RBI", "SB"] as const).map((key) => {
-    const name = key === "SB" ? "Steals" : key === "HR" ? "HR" : key === "H+R+RBI" ? "H+R+RBI" : "Hits";
-    return { key, name, avg: project(all, key) };
-  });
+  const totals = (["Hits", "HR", "H+R+RBI", "SB"] as const).map((key) => ({
+    key,
+    name: key === "SB" ? "SB" : key === "HR" ? "HR" : key === "H+R+RBI" ? "H+R+RBI" : "Hits",
+    total: all.reduce((sum, row) => sum + valueOf(row, key), 0),
+    avg: project(rows, key),
+  }));
   const windows = (["L5", "L10", "L15", "2026", "H2H"] as const).map((key) => {
     const sample = sliceLog(all, key, foe).map((row) => valueOf(row, market));
     const over = sample.filter((n) => n > line).length;
     const avg = sample.length ? sample.reduce((sum, n) => sum + n, 0) / sample.length : 0;
     return { key, n: sample.length, over, avg, pct: sample.length ? over / sample.length : 0 };
-  });
-  const support = (["Hits", "HR", "H+R+RBI", "SB"] as const).filter((key) => key !== market).slice(0, 3).map((key) => {
-    const sample = rows.map((row) => valueOf(row, key));
-    const avg = sample.length ? sample.reduce((sum, n) => sum + n, 0) / sample.length : 0;
-    const name = key === "SB" ? "Steals" : key === "HR" ? "HR" : key === "H+R+RBI" ? "H+R+RBI" : "Hits";
-    return { key, name, avg, n: sample.length };
   });
   const unit = market === "HR" ? "home runs" : market === "SB" ? "steals" : market === "H+R+RBI" ? "hits + runs + RBI" : "hits";
   const season = all.length ? all.reduce((sum, row) => sum + valueOf(row, market), 0) / all.length : 0;
@@ -354,28 +350,46 @@ function BatterCard({
   const read = batterRead({ name: cleanName(player.name), market, unit, rate: season, n: all.length, recent: hot, recentN: recent.length, foe, vsAvg, vsN: vs.length, arm, club, prior });
   const scale = Math.max(line, ...nums, 1) * 1.25;
   return (
-    <div className="rounded-xl bg-background p-3">
-      <div className="flex items-center gap-3">
-        <Face id={player.id} name={player.name} className="size-12" />
-        <div>
-          <div className="text-lg font-semibold">{cleanName(player.name)}</div>
-          <p className="text-sm text-muted">{player.avg} AVG · {player.hr} HR · {player.rbi} RBI · vs {lastName(foe)}</p>
+    <div className="overflow-hidden rounded-xl bg-background">
+      <div className="flex items-center gap-3 border-b border-card-border px-3 py-3">
+        <Face id={player.id} name={player.name} className="size-16" />
+        <div className="min-w-0">
+          <div className="truncate text-2xl font-semibold tracking-tight">{cleanName(player.name)}</div>
+          <p className="text-sm text-muted">{player.avg} AVG · vs {lastName(foe)}</p>
         </div>
       </div>
-      <div className="mt-3 flex gap-2 overflow-x-auto">
-        {props.map((item) => (
-          <button key={item.key} type="button" onClick={() => setMarket(item.key)} className={`flex min-h-14 shrink-0 flex-col items-center justify-center rounded-2xl px-3 text-sm ${market === item.key ? "bg-accent text-foreground" : "bg-card text-muted"}`}>
-            <span>{item.name}</span>
-            <span className="font-mono text-xs font-semibold">{item.avg == null ? "—" : one(item.avg)}</span>
+      <div className="grid grid-cols-4 border-b border-card-border text-center">
+        <div className="px-1 py-3"><div className="font-mono text-lg font-semibold">{all.length}</div><div className="text-[10px] uppercase tracking-widest text-muted">Games</div></div>
+        {totals.slice(0, 3).map((item) => (
+          <div key={item.key} className="border-l border-card-border px-1 py-3">
+            <div className="font-mono text-lg font-semibold">{item.total}</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted">{item.name}</div>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3 p-3">
+      <div className="flex items-baseline justify-between">
+        <p className="text-xs uppercase tracking-widest text-muted">{win} averages</p>
+        <p className="text-xs text-muted">{rows.length ? `${rows.length} games` : "No games"}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {totals.map((item) => (
+          <button key={item.key} type="button" onClick={() => setMarket(item.key)} className={`rounded-2xl px-3 py-3 text-left ${market === item.key ? "bg-accent/30 ring-1 ring-accent" : "bg-card"}`}>
+            <span className="block text-[10px] uppercase tracking-widest text-muted">{item.name}</span>
+            <span className="font-mono text-2xl font-semibold">{item.avg == null ? "—" : one(item.avg)}</span>
           </button>
         ))}
       </div>
       <div className="mt-3 flex items-end justify-between">
         <div>
-          <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
-          <div className="font-mono text-3xl font-semibold">{one(line)}</div>
+          <div className="text-xs uppercase tracking-widest text-muted">{label} · {win}</div>
+          <div className="font-mono text-3xl font-semibold">{rows.length ? one(avg) : "—"}</div>
         </div>
-        <div className="text-right text-sm text-muted">{rows.length ? `${hits}/${rows.length} over · ${label}` : "No games"}</div>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-widest text-muted">Research line</div>
+          <div className="font-mono text-2xl font-semibold">{one(line)}</div>
+          <div className="text-xs text-muted">{rows.length ? `${hits}/${rows.length} over` : "No games"}</div>
+        </div>
       </div>
       <div className="mt-3 flex gap-2 overflow-x-auto">
         {windows.map((item) => (
@@ -409,14 +423,6 @@ function BatterCard({
         <input className="h-11 min-w-0 flex-1 accent-accent" type="range" min={0} max={Math.max(line, ...all.map((row) => valueOf(row, market)), 1)} step={0.5} value={line} aria-label="Research line" onChange={(e) => setLine(Number(e.target.value))} />
         <button type="button" className="size-11 shrink-0 rounded-full bg-card text-lg" aria-label="Raise the line" onClick={() => setLine(Math.round((line + 0.5) * 10) / 10)}>+</button>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        {support.map((item) => (
-          <div key={item.key} className="rounded-xl bg-card px-2 py-2">
-            <div className="text-[10px] uppercase tracking-widest text-muted">{item.name}</div>
-            <div className="font-mono text-sm">{item.n ? `${one(item.avg)} avg` : "—"}</div>
-          </div>
-        ))}
-      </div>
       <p className="mt-3 text-sm text-muted">{call}. Average {one(avg)} in this window. Move the line and the colors follow. Not a sportsbook price. {all.length > rows.length ? `Showing ${rows.length} of ${all.length}.` : ""}</p>
       <div className="mt-4 rounded-xl bg-card p-3">
         <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
@@ -425,6 +431,7 @@ function BatterCard({
         <p className="mt-1 text-sm text-muted">{read.text}</p>
       </div>
       {note ? <p className="mt-2 text-sm text-muted">{note.reasoning}</p> : null}
+      </div>
     </div>
   );
 }
