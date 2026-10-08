@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AccountSlot } from "@/components/AccountMark";
@@ -28,6 +29,9 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-grid`}>
         <AccountSlot />
         {children}
+        <footer className="px-4 py-6 text-center text-xs text-muted">
+          <Link href="/disclaimer">21+ only, not financial advice, 1-800-GAMBLER</Link>
+        </footer>
       </body>
     </html>
   );
