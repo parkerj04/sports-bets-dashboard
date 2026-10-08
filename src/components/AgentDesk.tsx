@@ -27,17 +27,35 @@ function oneEach(rows: Play[]) {
   }
   return out;
 }
-function Board({ title, rows }: { title: string; rows: Play[] }) {
+function friday(p: Play) {
+  if ((p.score || 0) >= 70) return "Cut";
+  return "Cap";
+}
+
+function tone(call: string) {
+  if (call === "Keep") return "#3f6b45";
+  if (call === "Cut") return "#c45c4a";
+  return "#b8881e";
+}
+
+function Board({ title, rows, label }: { title: string; rows: Play[]; label: string }) {
   if (!rows.length) return null;
   return (
     <section className="space-y-3">
-      <h3 className="font-semibold text-sm">{title}</h3>
-      {oneEach(rows).map((p, i) => (
-        <div key={p.id} className="card p-4 text-sm">
-          <div className="flex justify-between gap-2"><span className="font-semibold">{i + 1}. {p.pick}</span><span className="font-mono">{p.score}</span></div>
-          <p className="text-sm mt-2 leading-6">{p.why}</p>
-        </div>
-      ))}
+      <h3 className="text-sm font-medium">{title}</h3>
+      {oneEach(rows).map((p) => {
+        const call = friday(p);
+        return (
+          <article key={p.id} className="border p-3 text-sm" style={{ background: "#0e0e0c", color: "#f0eee6", borderColor: "#2c2c28" }}>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs uppercase tracking-widest">{label}</p>
+              <span className="font-mono">{p.score}</span>
+            </div>
+            <p className="mt-2">{p.pick}</p>
+            <p className="mt-2 font-medium" style={{ color: tone(call) }}>{call}</p>
+          </article>
+        );
+      })}
     </section>
   );
 }
@@ -66,8 +84,8 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
   if (!desk.length && !review.length) return null;
   return (
     <>
-      <Board title="F.R.I.D.A.Y.'s picks" rows={desk} />
-      <Board title="In review" rows={review} />
+      <Board title="F.R.I.D.A.Y." rows={desk} label="Call" />
+      <Board title="In review" rows={review} label="In review" />
     </>
   );
 }
