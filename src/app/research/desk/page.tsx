@@ -41,6 +41,13 @@ function callFor(p: Play) {
   return "Cap";
 }
 
+function deskLine(p: Play, call: string) {
+  if (call === "Cut") return "The number is 70 or higher. That needs three confirms and a log. It does not clear.";
+  if (/[-+]\d/.test(p.pick) && /moneyline|\bml\b|\-\d/i.test(p.pick)) return "A favorite price is not a path. The log has to clear the number before this is a keep.";
+  if (/over|under/i.test(p.pick)) return "A total stays a cap until the forecast is on the card. No weather, no keep.";
+  return "Open intake. The writeup below is the agent's. The call is the desk.";
+}
+
 function tone(call: string) {
   if (call === "Keep") return "#3f6b45";
   if (call === "Cut") return "#c45c4a";
@@ -88,7 +95,7 @@ export default function DeskPage() {
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         <h1 className="text-xl font-medium">Desk review</h1>
-        <p className="text-sm text-muted">Open intake only. A finished game drops off at 2:00 AM Eastern. A parlay is one box.</p>
+        <p className="text-sm text-muted">Open intake only. The call is the desk. The paragraph is the research. A finished game drops off at 2:00 AM Eastern.</p>
         {err && <p className="text-sm text-negative">{err}</p>}
         {!err && !open.length && <p className="text-sm text-muted">No open intake.</p>}
         {boxes(open).map((legs) => {
@@ -104,6 +111,8 @@ export default function DeskPage() {
                 <span className="font-mono">{first.score}</span>
               </div>
               <p className="mt-2 font-medium" style={{ color: tone(call) }}>{call}</p>
+              <p className="mt-2 leading-6">{deskLine(first, call)}</p>
+              {legs.map((leg) => leg.why ? <p key={leg.id + "-why"} className="mt-2 leading-6 text-sm" style={{ color: "#c8c4b8" }}>{leg.why}</p> : null)}
             </article>
           );
         })}
