@@ -226,9 +226,12 @@ export function StarterKs({
           </button>
         ))}
       </div>
-      <div>
+      <div className="flex items-center gap-3">
+        <img src={`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_180,q_auto:best/v1/people/${arm.id}/headshot/67/current`} alt="" className="size-12 shrink-0 rounded-full object-cover object-top" />
+        <div>
         <div className="text-lg font-semibold">{arm.name}</div>
         <p className="text-sm text-muted">{arm.hand}HP · {arm.wins}-{arm.losses} · {arm.gs} GS · {arm.so} K · {one(arm.k9)} K/9 · {one(arm.era)} ERA</p>
+        </div>
       </div>
       {loading ? <p className="text-sm text-muted">Loading the 2026 strikeout log…</p> : null}
       {failed ? <p className="text-sm text-danger">The 2026 strikeout log did not load.</p> : null}

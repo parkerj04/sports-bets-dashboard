@@ -89,6 +89,7 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
   }, [ranked]);
 
   const open = ranked.find((x) => x.row.id === openId) || null;
+  const samePlayer = open ? ranked.filter((x) => x.row.player === open.row.player && x.row.team === open.row.team) : [];
 
   return (
     <section className="space-y-3" style={{ color: "#f0eee6" }}>
@@ -103,12 +104,22 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
       <p className="text-xs" style={{ color: "#a89f90" }}>Ranked by how often the log cleared this number. No book is posted, so the number is the player’s own median and the row says research.</p>
       {loading ? <p className="text-sm" style={{ color: "#a89f90" }}>Loading logs…</p> : null}
       {!loading && ranked.length === 0 ? <p className="text-sm" style={{ color: "#a89f90" }}>No real log to rank.</p> : null}
-      {open ? <Card item={open.row} number={open.number} onBack={() => setOpenId(null)} /> : null}
+      {open ? (
+        <>
+          <div className="flex gap-1 overflow-x-auto">
+            {samePlayer.map((item) => (
+              <button key={item.row.id} type="button" onClick={() => setOpenId(item.row.id)} className="min-h-11 shrink-0 rounded-full px-3 text-sm" style={{ background: item.row.id === open.row.id ? "#2c2c28" : "transparent", color: "#f0eee6" }}>{item.row.market}</button>
+            ))}
+          </div>
+          <Card key={open.row.id} item={open.row} number={open.number} onBack={() => setOpenId(null)} />
+        </>
+      ) : null}
       {boxes.map((box) => (
         <div key={box.script} className="border" style={{ borderColor: "#2c2c28", background: "#0e0e0c" }}>
           <p className="border-b px-3 py-2 text-xs" style={{ borderColor: "#2c2c28", color: "#a89f90" }}>{box.script}</p>
           {box.rows.map((item) => (
             <button key={item.row.id} type="button" onClick={() => setOpenId(item.row.id)} className="flex min-h-11 w-full items-center gap-2 border-b px-3 py-2 text-left text-sm" style={{ borderColor: "#2c2c28", color: item.row.confirmed ? "#f0eee6" : "#c45c4a" }}>
+              {item.row.face ? <img src={item.row.face} alt="" className="size-8 shrink-0 rounded-full object-cover object-top" /> : <span className="size-8 shrink-0 rounded-full" style={{ background: "#2c2c28" }} />}
               <span className="min-w-0 flex-1 truncate">{item.row.star ? "★ " : ""}{item.row.player}</span>
               <span className="shrink-0 text-xs" style={{ color: "#a89f90" }}>{item.row.market}</span>
               <span className="w-10 shrink-0 text-right font-mono">{one(item.number)}</span>
