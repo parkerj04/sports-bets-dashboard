@@ -9,6 +9,10 @@ import { mergeLogs, personLogUrls, readSplits } from "@/lib/mlb-log";
 
 type Opt = BatterLine & { vsId?: number | null; vsName?: string | null; side: string };
 
+function face(id: number) {
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_180,q_auto:best/v1/people/${id}/headshot/67/current`;
+}
+
 export function BvPPicker({
   homeHitters,
   awayHitters,
@@ -123,6 +127,7 @@ export function BvPPicker({
       </div>
       <div>
           <button type="button" onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="flex min-h-11 w-full items-center gap-3 rounded-xl bg-background px-3 py-2 text-left">
+            {showing ? <img src={face(showing.id)} alt="" className="size-11 shrink-0 rounded-full object-cover object-top" /> : <span className="size-11 shrink-0 rounded-full bg-card" />}
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{showing ? showing.name : "Choose a batter"}</span>
               <span className="text-xs text-muted">
@@ -137,8 +142,9 @@ export function BvPPicker({
             <ul className="mt-2 max-h-72 overflow-y-auto rounded-xl bg-background p-1">
               {list.map((b) => (
                 <li key={`${b.side}-${b.id}`}>
-                  <button type="button" onClick={() => { setMenu(false); tap(b); }} className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left ${picked?.id === b.id ? "bg-accent/20" : ""}`}>
-                    <span className="min-w-0 truncate text-sm font-medium">{b.id === starId ? "★ " : ""}{b.name}</span>
+                  <button type="button" onClick={() => { setMenu(false); tap(b); }} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${picked?.id === b.id ? "bg-accent/20" : ""}`}>
+                    <img src={face(b.id)} alt="" className="size-8 shrink-0 rounded-full object-cover object-top" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{b.id === starId ? "★ " : ""}{b.name}</span>
                     <span className="shrink-0 font-mono text-xs text-muted">{b.id === starId && rates[b.id] != null ? `${rates[b.id].toFixed(2)} H+R+RBI` : `${b.avg} · ${b.hr} HR`}</span>
                   </button>
                 </li>

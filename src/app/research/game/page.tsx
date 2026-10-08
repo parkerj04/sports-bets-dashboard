@@ -31,10 +31,13 @@ function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string
   return (
     <div className="card p-4 space-y-3">
       <div className="flex justify-between gap-3">
-        <div>
+        <div className="flex min-w-0 items-center gap-3">
+          <img src={`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_180,q_auto:best/v1/people/${p.id}/headshot/67/current`} alt="" className="size-12 shrink-0 rounded-full object-cover object-top" />
+          <div className="min-w-0">
           <div className="text-xs text-muted">{label} · {p.hand}HP</div>
-          <h3 className="font-semibold text-lg">{p.name}</h3>
+          <h3 className="truncate font-semibold text-lg">{p.name}</h3>
           <p className="text-xs text-muted">{p.wins}-{p.losses} · {p.gamesStarted} GS · {p.inningsPitched} IP</p>
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 text-center">
