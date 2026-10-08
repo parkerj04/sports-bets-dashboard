@@ -17,6 +17,7 @@ export type PropItem = {
   season: { label: string; value: string }[];
   matchup: string;
   script: string;
+  star?: boolean;
 };
 
 type Win = "L5" | "L10" | "Season";
@@ -108,7 +109,7 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
           <p className="border-b px-3 py-2 text-xs" style={{ borderColor: "#2c2c28", color: "#a89f90" }}>{box.script}</p>
           {box.rows.map((item) => (
             <button key={item.row.id} type="button" onClick={() => setOpenId(item.row.id)} className="flex min-h-11 w-full items-center gap-2 border-b px-3 py-2 text-left text-sm" style={{ borderColor: "#2c2c28", color: item.row.confirmed ? "#f0eee6" : "#c45c4a" }}>
-              <span className="min-w-0 flex-1 truncate">{item.row.player}</span>
+              <span className="min-w-0 flex-1 truncate">{item.row.star ? "★ " : ""}{item.row.player}</span>
               <span className="shrink-0 text-xs" style={{ color: "#a89f90" }}>{item.row.market}</span>
               <span className="w-10 shrink-0 text-right font-mono">{one(item.number)}</span>
               <span className="w-12 shrink-0 text-right font-mono">{item.stats.hits}/{item.stats.n}</span>
