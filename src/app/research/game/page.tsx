@@ -18,7 +18,6 @@ import { RosterCheck } from "@/components/RosterCheck";
 import { AgentDesk } from "@/components/AgentDesk";
 import { GameHead } from "@/components/ModelCall";
 import { SimHundred } from "@/components/SimHundred";
-import { scoreTone } from "@/lib/score-color";
 
 function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string; deep?: PitcherDeep | null }) {
   if (!p) {
@@ -37,12 +36,6 @@ function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string
           <h3 className="font-semibold text-lg">{p.name}</h3>
           <p className="text-xs text-muted">{p.wins}-{p.losses} · {p.gamesStarted} GS · {p.inningsPitched} IP</p>
         </div>
-        {deep && (
-          <div className="text-right">
-            <div className="text-[10px] text-muted uppercase">LS</div>
-            <div className={`text-2xl font-mono font-bold ${scoreTone(deep.lsRating)}`}>{deep.lsRating}</div>
-          </div>
-        )}
       </div>
       <div className="grid grid-cols-4 gap-2 text-center">
         {[["ERA", p.era], ["WHIP", p.whip], ["K/9", p.k9], ["HR/9", p.hr9]].map(([k, v]) => (
@@ -52,18 +45,6 @@ function PitcherCard({ p, label, deep }: { p: PitcherStats | null; label: string
           </div>
         ))}
       </div>
-      {deep && (
-        <div className="grid grid-cols-2 gap-2 text-center text-xs">
-          <div className="bg-white/5 rounded-lg py-2">
-            <div className="text-muted">Proj Ks</div>
-            <div className="font-mono text-sm font-semibold">{deep.projK}</div>
-          </div>
-          <div className="bg-white/5 rounded-lg py-2">
-            <div className="text-muted">L5 Ks</div>
-            <div className="font-mono text-sm font-semibold">{deep.last5K} / {deep.last5IP} IP</div>
-          </div>
-        </div>
-      )}
       {deep && deep.splits.length > 0 && (
         <div className="text-xs space-y-1">
           <div className="text-muted uppercase tracking-wide">vs L / R</div>
@@ -161,6 +142,7 @@ function GameInner() {
     awayDeep: PitcherDeep | null;
     bvp: BvP[];
     form: HitterLog[];
+    lineupPosted?: boolean;
     line?: MlbLine | null;
   } | null>(null);
   const [error, setError] = useState("");
@@ -230,6 +212,7 @@ function GameInner() {
         bvp={data.bvp || []}
         awayClub={data.awayTeam ? { name: data.awayTeam.name, kPct: data.awayTeam.kPct, avg: data.awayTeam.avg, ops: data.awayTeam.ops } : null}
         homeClub={data.homeTeam ? { name: data.homeTeam.name, kPct: data.homeTeam.kPct, avg: data.homeTeam.avg, ops: data.homeTeam.ops } : null}
+        confirmed={Boolean(data.lineupPosted)}
       />
       <StarterKs
         away={data.awayPitcher ? { id: data.awayPitcher.id, name: data.awayPitcher.name, hand: data.awayPitcher.hand, team: game.awayTeam, foe: game.homeTeam, wins: data.awayPitcher.wins, losses: data.awayPitcher.losses, gs: data.awayPitcher.gamesStarted, ip: data.awayPitcher.inningsPitched, k9: data.awayPitcher.k9, era: data.awayPitcher.era, so: data.awayPitcher.strikeOuts, oppK: data.homeTeam?.kPct ?? null } : null}

@@ -158,7 +158,7 @@ export function SimHundred({
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-widest text-accent">100 sims</p>
-          <h2 className="mt-1 font-semibold">One run, from the posted number</h2>
+          <h2 className="mt-1 font-semibold">A split of the posted total</h2>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">

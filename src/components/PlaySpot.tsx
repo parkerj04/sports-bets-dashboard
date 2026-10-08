@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Edge } from "@/lib/mlb";
 import type { BvP } from "@/lib/propdesk";
 import { scoreTone } from "@/lib/score-color";
+import { PropRank, type PropItem } from "@/components/PropRank";
 import { mergeLogs, personLogUrls, readSplits } from "@/lib/mlb-log";
 import { isPlayable } from "@/lib/edges";
 import { SlipCheck } from "@/components/SlipTray";
@@ -123,6 +124,7 @@ export function PlaySpot({
   bvp,
   awayClub,
   homeClub,
+  confirmed = false,
 }: {
   away: string;
   home: string;
@@ -133,6 +135,7 @@ export function PlaySpot({
   bvp: BvP[];
   awayClub: Club | null;
   homeClub: Club | null;
+  confirmed?: boolean;
 }) {
   const [spot, setSpot] = useState<Spot>("game");
   const [gameMarket, setGameMarket] = useState<GameMarket>("ML");
@@ -169,6 +172,45 @@ export function PlaySpot({
   const hits = shown.filter((row) => valueOf(row, batMarket) > line).length;
   const gameNotes = notes.filter((n) => (gameMarket === "ML" ? n.market === "Moneyline" : n.market === "Game Total" || n.market === "Total"));
   const stealNote = player ? notes.find((n) => n.market === "Stolen Bases" && n.pick.includes(lastName(player.name))) : undefined;
+  const deskRows = useMemo(() => {
+    const markets = ["Hits", "HR", "H+R+RBI", "SB"] as const;
+    const out: PropItem[] = [];
+    for (const h of roster) {
+      const log = logs[h.id];
+      if (!log?.length) continue;
+      const foe = h.team === away ? home : away;
+      const arm = h.team === away ? homeArm : awayArm;
+      const prior = bvp.find((row) => row.batterId === h.id) || null;
+      const bvpLine = prior && prior.ab >= 5 ? `Career against ${arm?.name || "the starter"}: ${prior.h}-for-${prior.ab}, ${prior.hr} HR.` : `Career at-bats against ${arm?.name || "the starter"} are under 5, so that sample is not used.`;
+      const armLine = arm ? `${arm.name} (${arm.hand}HP) has a ${one(arm.era)} ERA, a ${one(arm.whip)} WHIP, and ${one(arm.hr9)} HR/9.` : "The starter is not posted.";
+      for (const market of markets) {
+        out.push({
+          id: `${h.id}-${market}`,
+          player: cleanName(h.name),
+          face: face(h.id),
+          team: lastName(h.team),
+          opp: lastName(foe),
+          market: market === "SB" ? "Steals" : market,
+          games: log.map((row) => ({
+            key: `${row.date}-${market}`,
+            date: when(row.date),
+            opp: row.opp,
+            value: valueOf(row, market),
+            box: `${when(row.date)} vs ${row.opp}: ${valueOf(row, market)} ${market}. The log line is ${row.h} H, ${row.hr} HR, ${row.rbi} RBI, ${row.sb} SB. A full box score is not in this file.`,
+          })),
+          confirmed,
+          season: [
+            { label: "AVG", value: h.avg },
+            { label: "HR", value: String(h.hr) },
+            { label: "RBI", value: String(h.rbi) },
+          ],
+          matchup: `${cleanName(h.name)} against ${arm?.name || "the starter"} for ${lastName(foe)}. ${armLine} ${bvpLine} Zones for this starter are on the matchup above. Red-zone style spray is not a baseball file.`,
+          script: market === "SB" ? `Bases against ${arm?.name || lastName(foe)}` : `Bat against ${arm?.name || lastName(foe)}`,
+        });
+      }
+    }
+    return out;
+  }, [roster, logs, away, home, homeArm, awayArm, bvp, confirmed]);
 
   return (
     <section className="card flex flex-col gap-3 p-4">
@@ -214,32 +256,9 @@ export function PlaySpot({
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => setMenu((v) => !v)} className="flex min-h-11 w-full items-center gap-3 rounded-xl bg-background px-3 text-left">
-            {player ? <Face id={player.id} name={player.name} className="size-8" /> : <span className="size-8 rounded-full bg-card" />}
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{player ? lastName(player.name) : "Choose a batter"}</span>
-              <span className="text-xs text-muted">{roster.length} on {lastName(side)}</span>
-            </span>
-            <span className="text-sm text-muted">{menu ? "Close" : "Open"}</span>
-          </button>
-          {menu ? (
-            <ul className="max-h-64 overflow-y-auto rounded-xl bg-background p-1">
-              {roster.map((h) => (
-                <li key={h.id}>
-                  <button type="button" onClick={() => { setPlayerId(h.id); setMenu(false); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 text-left">
-                    <Face id={h.id} name={h.name} className="size-8" />
-                    <span className="min-w-0 flex-1 truncate text-sm">{lastName(h.name)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {!player ? <p className="text-sm text-muted">No hitters posted for {side}.</p> : null}
-          {player && starts == null && !failed ? <p className="text-sm text-muted">Loading the 2026 log…</p> : null}
+          {!player && roster.length === 0 ? <p className="text-sm text-muted">No hitters posted for {side}.</p> : null}
           {failed ? <p className="text-sm text-danger">The 2026 log did not load.</p> : null}
-          {player && starts ? (
-            <BatterCard player={player} market={batMarket} setMarket={setBatMarket} rows={shown} all={starts} line={line} setLine={setLine} hits={hits} win={win} setWin={setWin} note={batMarket === "SB" ? stealNote : undefined} foe={foeName} arm={side === away ? homeArm : awayArm} club={side === away ? homeClub : awayClub} prior={bvp.find((row) => row.batterId === player.id) || null} />
-          ) : null}
+          <PropRank rows={deskRows} loading={!failed && roster.length > 0 && deskRows.length === 0} />
         </>
       )}
     </section>

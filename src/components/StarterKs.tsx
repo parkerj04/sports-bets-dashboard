@@ -280,7 +280,6 @@ export function StarterKs({
             <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
           </div>
           <p className="text-xs text-muted">Set at the middle of the 2026 starts. Move it and the colors follow. Not a sportsbook price.</p>
-          <KModel arm={arm} starts={starts} />
           <div>
             <p className="text-xs uppercase tracking-widest text-accent">Desk call</p>
             <h3 className="mt-1 text-2xl font-semibold">{call}</h3>
