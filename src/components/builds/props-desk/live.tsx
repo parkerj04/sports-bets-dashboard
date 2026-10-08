@@ -58,7 +58,7 @@ function statOf(week: Week, market: BoardMarket) {
 
 function plays(player: Player, market: BoardMarket) {
   if (market === "pass" || market === "passTd") return player.pass > 0 || player.passTd > 0;
-  if (market === "td") return player.weeks.some((week) => week.td > 0);
+  if (market === "td") return player.weeks.length > 0;
   return player.weeks.some((week) => statOf(week, market) > 0);
 }
 
@@ -337,15 +337,20 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
           </div>
           <div className="grid grid-cols-4 border-b border-card-border text-center">
             <div className="px-2 py-3"><div className="font-mono text-lg font-semibold">{active.weeks.length}</div><div className="text-[10px] uppercase tracking-widest text-muted">Games</div></div>
-            {BOARD.filter((item) => plays(active, item.key)).slice(0, 3).map((item) => {
-              const total = active.weeks.reduce((sum, week) => sum + statOf(week, item.key), 0);
-              return (
-                <div key={item.key} className="border-l border-card-border px-2 py-3">
-                  <div className="font-mono text-lg font-semibold">{Number.isInteger(total) ? total : one(total)}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted">{item.label}</div>
-                </div>
-              );
-            })}
+            {(() => {
+              const withTd = BOARD.filter((item) => item.key === "td" || plays(active, item.key));
+              const td = withTd.find((item) => item.key === "td");
+              const rest = withTd.filter((item) => item.key !== "td").slice(0, td ? 2 : 3);
+              return (td ? [...rest, td] : rest).map((item) => {
+                const total = active.weeks.reduce((sum, week) => sum + statOf(week, item.key), 0);
+                return (
+                  <div key={item.key} className="border-l border-card-border px-2 py-3">
+                    <div className="font-mono text-lg font-semibold">{Number.isInteger(total) ? total : one(total)}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted">{item.label}</div>
+                  </div>
+                );
+              });
+            })()}
           </div>
           <div className="space-y-3 p-4">
             <div className="flex items-baseline justify-between">
