@@ -48,6 +48,29 @@ function when(date: string) {
 function one(n: number) {
   return (Math.round(n * 10) / 10).toFixed(1);
 }
+
+function innings(ip: string) {
+  const [whole, frac] = String(ip || "0").split(".");
+  const outs = frac === "1" ? 1 / 3 : frac === "2" ? 2 / 3 : 0;
+  return (Number(whole) || 0) + outs;
+}
+
+function KModel({ arm, starts }: { arm: Arm; starts: Start[] }) {
+  if (!starts.length) return null;
+  const rate = starts.reduce((sum, row) => sum + row.k, 0) / starts.length;
+  const ip = starts.reduce((sum, row) => sum + innings(row.ip), 0) / starts.length;
+  const fromK9 = arm.k9 > 0 && ip > 0 ? (arm.k9 * ip) / 9 : rate;
+  const value = Math.round(((rate + fromK9) / 2) * 10) / 10;
+  return (
+    <div className="rounded-xl bg-background p-3">
+      <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
+      <div className="font-mono text-3xl font-semibold">{value.toFixed(1)}</div>
+      <p className="mt-1 text-sm text-muted">
+        {arm.name} projects to {value.toFixed(1)} strikeouts. The 2026 starts average {one(rate)} K. The season {one(arm.k9)} K/9 over a typical {one(ip)} innings is {one(fromK9)}. The number is the middle of those two. Not a book price.
+      </p>
+    </div>
+  );
+}
 function pct(n: number) {
   return `${Math.round(n * 1000) / 10}%`;
 }
@@ -251,6 +274,7 @@ export function StarterKs({
             <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
           </div>
           <p className="text-xs text-muted">Set at the middle of the 2026 starts. Move it and the colors follow. Not a sportsbook price.</p>
+          <KModel arm={arm} starts={starts} />
           <div>
             <p className="text-xs uppercase tracking-widest text-accent">Desk call</p>
             <h3 className="mt-1 text-2xl font-semibold">{call}</h3>

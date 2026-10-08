@@ -72,6 +72,24 @@ function lineFor(values: number[]) {
   return Math.round(mid * 2) / 2;
 }
 
+const UNIT: Record<Market, string> = {
+  rec: "receiving yards",
+  catches: "receptions",
+  rush: "rushing yards",
+  pass: "passing yards",
+  passTd: "passing touchdowns",
+};
+
+function rateModel(player: Player, market: Market, values: number[]) {
+  if (!values.length) return undefined;
+  const rate = values.reduce((sum, n) => sum + n, 0) / values.length;
+  const value = Math.round(rate * 10) / 10;
+  return {
+    value,
+    text: `${player.name} projects to ${value.toFixed(1)} ${UNIT[market]}. That is the 2026 rate over ${values.length} games. The defense file did not move it. Not a book price.`,
+  };
+}
+
 function ModelBox({ model }: { model?: { value: number; text: string } }) {
   if (!model) return null;
   return (
@@ -326,7 +344,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
             <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
           </div>
           <p className="mt-3 text-sm text-muted">{shown.call}. {shown.against}</p>
-          <ModelBox model={active.models?.[market]} />
+          <ModelBox model={active.models?.[market] || rateModel(active, market, values)} />
         </section>
       ) : null}
       <AnytimeSection away={away} home={home} pending={pending} />
