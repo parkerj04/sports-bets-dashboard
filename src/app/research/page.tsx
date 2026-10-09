@@ -7,12 +7,12 @@ import type { MlbLine } from "@/lib/mlb-odds";
 import type { NflGame } from "@/lib/nfl";
 import { BrandMark } from "@/components/Logo";
 import { AccountMark } from "@/components/AccountMark";
-import { ModelStrip } from "@/components/ModelCall";
 import { PropBoards } from "@/components/PropBoards";
 import { CfbBoard } from "@/components/CfbBoard";
 import { SportPicks } from "@/components/SportPicks";
 import { SlipTray } from "@/components/SlipTray";
 import { TrendBoard } from "@/components/TrendBoard";
+import { PlayCard } from "@/components/PlayCard";
 
 type Sport = "MLB" | "NFL" | "CFB";
 type SlateGame = GameMatchup & { line?: MlbLine | null };
@@ -36,6 +36,12 @@ function boardPrice(spread: string) {
   const n = Math.abs(parseFloat((String(spread).match(/-?\d+(?:\.\d+)?/) || [""])[0]));
   if (!Number.isFinite(n)) return spread;
   return n >= 100 ? `ML ${spread}` : `RL ${spread}`;
+}
+
+function nflSide(g: NflGame) {
+  const side = (g.leanML || "").replace(/ ML$/, "") || g.home;
+  const price = side === g.home ? g.mlHome : side === g.away ? g.mlAway : "";
+  return { title: side, price };
 }
 
 export default function ResearchPage() {
@@ -102,26 +108,25 @@ export default function ResearchPage() {
         )}
         {sport === "NFL" && (
           <section className="space-y-3">
-            <h1 className="text-xl font-semibold tracking-tight">NFL Week {nfl.week || "—"}</h1>
-            <p className="text-sm text-muted">Tap a game. The writeup is inside.</p>
-            {loading && <p className="text-sm text-muted">Loading NFL…</p>}
-            {nfl.games.map((g) => (
-              <Link key={g.id} href={`/research/nfl/game?id=${g.id}`} className={`card block p-4 ${g.broadcast === "Prime Video" ? "ring-1 ring-accent" : ""}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    {g.broadcast === "Prime Video" ? <div className="mb-1 text-xs text-accent">Thursday night</div> : null}
-                    <div className="font-semibold">{g.away} <span className="font-normal text-muted">{g.awayRecord}</span></div>
-                    <div className="text-sm text-muted">at {g.home} {g.homeRecord}</div>
-                  </div>
-                  <div className="text-right font-mono text-sm">
-                    <div>{g.spread}</div>
-                    <div className="text-muted">O/U {g.total}</div>
-                  </div>
-                </div>
-                {g.leanML ? <p className="mt-3 truncate text-sm text-accent">{g.leanML}</p> : null}
-                <ModelStrip away={g.away} home={g.home} spread={g.spread} total={g.total} />
-              </Link>
-            ))}
+            <h1 className="text-2xl font-semibold tracking-tight">NFL Week {nfl.week || "\u2014"}</h1>
+            <p className="text-sm leading-relaxed text-muted">One card per game. The badge stays off until a number beats the price. Open why, then open the game.</p>
+            {loading && <p className="text-sm text-muted">Loading NFL\u2026</p>}
+            {nfl.games.map((g) => {
+              const side = nflSide(g);
+              return (
+                <PlayCard
+                  key={g.id}
+                  href={`/research/nfl/game?id=${g.id}`}
+                  kicker={g.broadcast === "Prime Video" ? "Thursday night" : "NFL"}
+                  title={side.title}
+                  price={side.price}
+                  when={`${firstPitch(g.date) || "Time TBD"} \u00b7 ${g.away} at ${g.home}`}
+                  line={`Spread ${g.spread} \u00b7 Total ${g.total}${g.venue ? ` \u00b7 ${g.venue}` : ""}`}
+                  fors={g.aligns?.length ? g.aligns : ["Nothing in the registry is stacked."]}
+                  againsts={[...(g.misses || []), "Injuries, the quarterback, and the last five are inside the game, not on this card."]}
+                />
+              );
+            })}
             {(nfl.results || []).length > 0 && (
               <details className="card p-4">
                 <summary className="cursor-pointer text-sm font-semibold">Results</summary>
@@ -146,28 +151,21 @@ export default function ResearchPage() {
         )}
         {sport === "MLB" && (
           <section className="space-y-3">
-            <h1 className="text-xl font-semibold tracking-tight">MLB slate</h1>
-            <p className="text-sm text-muted">{slateDay(games[0]?.gameDate) || "Today"}. Tap a game. The lab is inside.</p>
-            {loading && <p className="text-sm text-muted">Loading slate…</p>}
+            <h1 className="text-2xl font-semibold tracking-tight">MLB slate</h1>
+            <p className="text-sm leading-relaxed text-muted">{slateDay(games[0]?.gameDate) || "Today"}. One card per game. The starters are named here. The lineup is inside the game.</p>
+            {loading && <p className="text-sm text-muted">Loading slate\u2026</p>}
             {error && !loading && <p className="text-sm text-danger">{error}</p>}
             {games.map((g) => (
-              <Link key={g.gamePk} href={`/research/game?id=${g.gamePk}`} className="card block p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-semibold">{g.awayTeam}</div>
-                    <div className="text-sm text-muted">at {g.homeTeam}</div>
-                    {firstPitch(g.gameDate) ? <div className="mt-1 text-xs text-accent">{firstPitch(g.gameDate)}</div> : null}
-                    <div className="mt-2 truncate text-sm">{g.awayPitcher || "TBD"} <span className="text-muted">vs</span> {g.homePitcher || "TBD"}</div>
-                  </div>
-                  {g.line ? (
-                    <div className="text-right font-mono text-sm">
-                      <div>{boardPrice(g.line.spread)}</div>
-                      <div className="text-muted">O/U {g.line.total}</div>
-                    </div>
-                  ) : null}
-                </div>
-                {g.line ? <ModelStrip away={g.awayTeam} home={g.homeTeam} spread={g.line.spread} total={g.line.total} sport="MLB" /> : null}
-              </Link>
+              <PlayCard
+                key={g.gamePk}
+                href={`/research/game?id=${g.gamePk}`}
+                kicker="MLB"
+                title={`${g.awayTeam} at ${g.homeTeam}`}
+                when={firstPitch(g.gameDate) || "Time TBD"}
+                line={g.line ? `${boardPrice(g.line.spread)} \u00b7 Total ${g.line.total}` : "No posted line"}
+                fors={[g.awayPitcher && g.homePitcher ? `${g.awayPitcher} vs ${g.homePitcher}` : "Both starters are not named yet."]}
+                againsts={[!g.awayPitcher || !g.homePitcher ? "A starter is still TBD." : "The lineup and the weather are inside the game, not on this card."]}
+              />
             ))}
             {mlbResults.length > 0 && (
               <details className="card p-4">
