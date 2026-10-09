@@ -19,6 +19,8 @@ export type CfbGame = {
   lean: string;
   why: string;
   score: number;
+  aligns: string[];
+  misses: string[];
 };
 
 import { footballRegistry } from "./football-desk";
@@ -80,6 +82,8 @@ function rowFrom(e: { id: string; competitions?: { competitors?: { homeAway: str
     lean: desk.pick,
     why: `${away.team.displayName} ${rec(away)} at ${home.team.displayName} ${rec(home)}. ${aq.name} ${aq.line} vs ${hq.name} ${hq.line}. Posted ${odds?.details || "NL"}, total ${odds?.overUnder ?? "NL"}. ${desk.why}`,
     score: desk.score,
+    aligns: desk.aligns,
+    misses: desk.misses,
   } satisfies CfbGame;
 }
 
