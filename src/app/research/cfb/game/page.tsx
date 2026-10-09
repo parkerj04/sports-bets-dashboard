@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { CfbGame } from "@/lib/cfb";
 import type { CfbLab } from "@/lib/cfb-lab";
+import { toSheet } from "@/lib/cfb-glance";
 import { footballRegistry } from "@/lib/football-desk";
 import { scoreTone } from "@/lib/score-color";
 import { AgentDesk } from "@/components/AgentDesk";
 import { FactLine, useDeskFacts } from "@/components/DeskFacts";
 import { GameHead } from "@/components/ModelCall";
+import { SeasonSheet } from "@/components/PlayCard";
 import { SimHundred } from "@/components/SimHundred";
 
 type Catcher = { name: string; team: string; rec: number; yards: number; td: number };
@@ -78,6 +80,7 @@ function Inner() {
   });
   const list = catchers.filter((l) => l.team === side);
   const active = list.find((l) => l.name === picked) || list[0];
+  const sheet = toSheet(game);
 
   return (
     <div className="game space-y-6" style={{ background: "#0e0e0c", color: "#f0eee6" }}>
@@ -90,6 +93,11 @@ function Inner() {
         forecast={null}
         sport="CFB"
       />
+      {sheet ? (
+        <div className="card p-4">
+          <SeasonSheet sheet={sheet} />
+        </div>
+      ) : null}
       <FactLine text={facts?.open} />
       <AgentDesk away={game.away} home={game.home} />
       <section className="space-y-3 border p-3" style={{ borderColor: "#2c2c28" }}>
