@@ -8,7 +8,7 @@ import { profitIfWon, type BetStatus } from "@/lib/types";
 
 type Row = { status: BetStatus; stake: number; odds: number };
 
-export function AccountMark({ inline = false }: { inline?: boolean }) {
+export function AccountMark({ inline = false, docked = false }: { inline?: boolean; docked?: boolean }) {
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -81,9 +81,14 @@ export function AccountMark({ inline = false }: { inline?: boolean }) {
   }
 
   const unitText = units == null ? "" : `${units >= 0 ? "+" : ""}${units.toFixed(2)}u`;
+  const place = inline
+    ? "relative flex items-center gap-2"
+    : docked
+      ? "relative flex w-full items-center justify-end gap-2 border-b border-card-border bg-background px-4 py-2"
+      : "fixed top-2 right-3 z-50 flex items-center gap-2";
 
   return (
-    <div ref={box} className={inline ? "relative flex items-center gap-2" : "fixed top-2 right-3 z-50 flex items-center gap-2"}>
+    <div ref={box} className={place}>
       {email && units != null ? (
         <span className={`rounded-xl border border-card-border bg-card px-2.5 py-2 font-mono text-xs ${units < 0 ? "text-danger" : "text-good"}`}>{unitText}</span>
       ) : null}
@@ -125,5 +130,5 @@ export function AccountMark({ inline = false }: { inline?: boolean }) {
 export function AccountSlot() {
   const path = usePathname();
   if (path === "/" || path === "/research" || path.startsWith("/auth")) return null;
-  return <AccountMark />;
+  return <AccountMark docked={path.includes("/game")} />;
 }
