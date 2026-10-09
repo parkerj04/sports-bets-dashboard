@@ -31,11 +31,14 @@ function friday(p: Play) {
   if ((p.score || 0) >= 70) return "Cut";
   return "Cap";
 }
-
 function tone(call: string) {
   if (call === "Keep") return "#3f6b45";
   if (call === "Cut") return "#c45c4a";
   return "#b8881e";
+}
+function watchLine(why: string) {
+  const hit = why.split("\n").find((line) => /^watch\b/i.test(line.trim()));
+  return hit ? hit.trim() : "";
 }
 
 function Board({ title, rows, label }: { title: string; rows: Play[]; label: string }) {
@@ -59,6 +62,30 @@ function Board({ title, rows, label }: { title: string; rows: Play[]; label: str
     </section>
   );
 }
+
+function ModelBox({ rows }: { rows: Play[] }) {
+  if (!rows.length) return null;
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-medium">Model</h3>
+      {oneEach(rows).map((p) => {
+        const watch = watchLine(p.why || "");
+        return (
+          <article key={p.id} className="border p-3 text-sm" style={{ background: "#0e0e0c", color: "#f0eee6", borderColor: "#2c2c28" }}>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs uppercase tracking-widest">This game</p>
+              <span className="font-mono">{p.score}</span>
+            </div>
+            <p className="mt-2">{p.pick}</p>
+            <p className="mt-2 leading-6" style={{ color: "#c8c4b8" }}>{p.why}</p>
+            {watch ? <p className="mt-2" style={{ color: "#b8881e" }}>{watch}</p> : null}
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
 function teamHit(page: string, code: string) {
   const t = page.toUpperCase();
   const c = code.toUpperCase();
@@ -66,6 +93,7 @@ function teamHit(page: string, code: string) {
     NE: ["PATRIOT", "NE"], BUF: ["BILL", "BUF"], TEN: ["TITAN", "TEN"], BAL: ["RAVEN", "BAL"],
     MIA: ["DOLPHIN", "MIA"], MIN: ["VIKING", "MIN"], KC: ["CHIEF", "KC"], LV: ["RAIDER", "LV"],
     DET: ["LION", "DET"], CAR: ["PANTHER", "CAR"], LAD: ["DODGER", "LAD"], ATL: ["BRAVE", "ATL"],
+    TB: ["BUCCANEER", "TB"], DAL: ["COWBOY", "DAL"], GB: ["PACKER", "GB"],
   };
   return (map[c] || [c]).some((w) => t.includes(w));
 }
@@ -80,10 +108,13 @@ export function AgentDesk({ away, home }: { away: string; home: string }) {
       .then((r) => r.json()).then((d) => setRows(d.plays || [])).catch(() => setRows([]));
   }, [away, home]);
   const desk = DESK.filter((p) => onGame(away, home, p));
-  const review = rows.filter((p) => !CLOSED.has(String(p.status || "intake").toLowerCase()));
-  if (!desk.length && !review.length) return null;
+  const open = rows.filter((p) => !CLOSED.has(String(p.status || "intake").toLowerCase()));
+  const model = open.filter((p) => String(p.id || "").startsWith("model-"));
+  const review = open.filter((p) => !String(p.id || "").startsWith("model-"));
+  if (!desk.length && !review.length && !model.length) return null;
   return (
     <>
+      <ModelBox rows={model} />
       <Board title="F.R.I.D.A.Y." rows={desk} label="Call" />
       <Board title="In review" rows={review} label="In review" />
     </>
