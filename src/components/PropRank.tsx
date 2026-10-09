@@ -117,16 +117,23 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
       {boxes.map((box) => (
         <div key={box.script} className="border" style={{ borderColor: "#2c2c28", background: "#0e0e0c" }}>
           <p className="border-b px-3 py-2 text-xs" style={{ borderColor: "#2c2c28", color: "#a89f90" }}>{box.script}</p>
-          {box.rows.map((item) => (
-            <button key={item.row.id} type="button" onClick={() => setOpenId(item.row.id)} className="flex min-h-11 w-full items-center gap-2 border-b px-3 py-2 text-left text-sm" style={{ borderColor: "#2c2c28", color: item.row.confirmed ? "#f0eee6" : "#c45c4a" }}>
-              {item.row.face ? <img src={item.row.face} alt="" className="size-8 shrink-0 rounded-full object-cover object-top" /> : <span className="size-8 shrink-0 rounded-full" style={{ background: "#2c2c28" }} />}
-              <span className="min-w-0 flex-1 truncate">{item.row.star ? "★ " : ""}{item.row.player}</span>
-              <span className="shrink-0 text-xs" style={{ color: "#a89f90" }}>{item.row.market}</span>
-              <span className="w-10 shrink-0 text-right font-mono">{one(item.number)}</span>
-              <span className="w-12 shrink-0 text-right font-mono">{item.stats.hits}/{item.stats.n}</span>
-              <span className="w-12 shrink-0 truncate text-right text-xs" style={{ color: "#a89f90" }}>{item.row.opp}</span>
+          {box.rows.map((item, i) => {
+            const clear = item.stats.n > 0 && item.stats.hits / item.stats.n >= 0.5;
+            return (
+            <button key={item.row.id} type="button" onClick={() => setOpenId(item.row.id)} className="flex min-h-11 w-full items-center gap-3 border-b px-3 py-2 text-left" style={{ borderColor: "#2c2c28" }}>
+              <span className="w-4 font-mono text-xs" style={{ color: "#a89f90" }}>{i + 1}</span>
+              {item.row.face ? <img src={item.row.face} alt="" className="size-9 shrink-0 rounded-full object-cover object-top" /> : <span className="size-9 shrink-0 rounded-full" style={{ background: "#2c2c28" }} />}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm" style={{ color: item.row.confirmed ? "#f0eee6" : "#c45c4a" }}>{item.row.star ? "★ " : ""}{item.row.player}</span>
+                <span className="block truncate text-xs" style={{ color: "#a89f90" }}>{item.row.market} {one(item.number)} · research · {item.row.opp}</span>
+              </span>
+              <span className="shrink-0 text-right font-mono text-sm" style={{ color: clear ? "#3f6b45" : "#c45c4a" }}>
+                <span className="block">{item.stats.hits} of {item.stats.n}</span>
+                <span className="block text-[10px]" style={{ color: "#a89f90" }}>games</span>
+              </span>
             </button>
-          ))}
+            );
+          })}
         </div>
       ))}
     </section>
@@ -182,7 +189,8 @@ function Card({ item, number, onBack }: { item: PropItem; number: number; onBack
               {last.map((g, i) => {
                 const over = g.value > number;
                 return (
-                  <button key={g.key} type="button" onClick={() => { setPicked(i); setTab("Games"); }} className="flex h-full w-8 shrink-0 flex-col items-center justify-end">
+                  <button key={g.key} type="button" onClick={() => { setPicked(i); setTab("Games"); }} className="flex h-full w-9 shrink-0 flex-col items-center justify-end">
+                    <span className="mb-0.5 font-mono text-[9px]" style={{ color: over ? "#3f6b45" : "#c45c4a" }}>{g.value}</span>
                     <span className="w-5" style={{ height: `${Math.max((g.value / scale) * 100, 4)}%`, background: over ? "#3f6b45" : "#c45c4a" }} />
                   </button>
                 );
@@ -191,7 +199,7 @@ function Card({ item, number, onBack }: { item: PropItem; number: number; onBack
           </div>
           <div className="flex gap-1 overflow-x-auto">
             {last.map((g) => (
-              <div key={g.key} className="w-8 shrink-0 text-center text-[9px]" style={{ color: "#a89f90" }}>
+              <div key={g.key} className="w-9 shrink-0 text-center text-[9px]" style={{ color: "#a89f90" }}>
                 <div>{g.date}</div>
                 <div className="truncate">{g.opp}</div>
               </div>
