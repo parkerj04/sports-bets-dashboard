@@ -22,6 +22,7 @@ export type Scorer = {
 };
 
 type Raw = { name: string; team: string; pos: string; weeks: ScorerWeek[] };
+type Line = { away: string; home: string; spread: number; total: number };
 
 function split(line: string) {
   const out: string[] = [];
@@ -89,6 +90,38 @@ const load = unstable_cache(async (): Promise<Raw[]> => {
   return Array.from(grouped.values());
 }, ["nfl-player-weeks-2026-dates"], { revalidate: 3600 });
 
+async function lines(): Promise<Line[]> {
+  const res = await fetch(SCHED, { next: { revalidate: 3600 } });
+  if (!res.ok) return [];
+  const book = (await res.text()).split("\n");
+  const head = split(book[0]);
+  const col = (name: string) => head.indexOf(name);
+  const season = col("season");
+  const away = col("away_team");
+  const home = col("home_team");
+  const spread = col("spread_line");
+  const total = col("total_line");
+  const out: Line[] = [];
+  for (const line of book.slice(1)) {
+    if (!line) continue;
+    const c = split(line);
+    if (c[season] !== "2026") continue;
+    const sp = Number(c[spread]);
+    const tot = Number(c[total]);
+    if (!c[away] || !c[home] || !Number.isFinite(sp) || !Number.isFinite(tot)) continue;
+    out.push({ away: c[away], home: c[home], spread: sp, total: tot });
+  }
+  return out;
+}
+
+function implied(row: Line | undefined, team: string) {
+  if (!row) return "Implied points not on the schedule.";
+  const homePts = (row.total - row.spread) / 2;
+  const awayPts = row.total - homePts;
+  const pts = team === row.home ? homePts : awayPts;
+  return `Implied points ${tenth(pts)} (spread ${row.spread}, total ${row.total}).`;
+}
+
 function keyOf(name: string) {
   return name.toLowerCase().replace(/[^a-z]/g, "");
 }
@@ -153,7 +186,7 @@ function card(rows: Raw[]) {
     const place = ordered.findIndex((n) => n >= mine) + 1;
     return { mine, place, of: ordered.length };
   }
-  return (player: { name: string; pos: string }, weeksPlayed: ScorerWeek[], foe: string) => {
+  return (player: { name: string; pos: string }, weeksPlayed: ScorerWeek[], foe: string, script: string) => {
     const models: Scorer["models"] = {};
     if (!weeksPlayed.length) return models;
     for (const market of MODEL_MARKETS) {
@@ -169,12 +202,13 @@ function card(rows: Raw[]) {
       models[market] = {
         value: tenth(recent),
         text: [
-          `${player.name} ${UNIT[market]}. This week's number is not on the card, so the line used is his own season average, ${line}.`,
+          `${player.name} ${UNIT[market]}. Book prop line is not in this file, so the comparison line is his season average, ${line}.`,
           `Last 3 / season: ${tenth(recent)} / ${tenth(season)}.`,
           `Over that average: last 3 ${recentClears}/${last3.length}, season ${clears}/${values.length}.`,
           `Log: ${log}. A zero is the defense he drew, not the rate.`,
           `${foe} has allowed ${tenth(def.mine)} ${UNIT[market]} a game to ${player.pos}s, ${def.place} of ${def.of}, fewest first. Position bucket, not the man on him.`,
-          `Snap share, target share, and implied points are not on this card yet.`,
+          script,
+          `Snap share and target share are not on this card yet.`,
         ].join(" "),
       };
     }
@@ -184,13 +218,17 @@ function card(rows: Raw[]) {
 
 export async function gameScorers(away: string, home: string) {
   const want = new Map([away, home].map((t) => [NFL[t] || t, t]));
-  const [rows, awayIds, homeIds] = await Promise.all([
+  const [rows, awayIds, homeIds, book] = await Promise.all([
     load(),
     rosterIds(NFL[away] || away),
     rosterIds(NFL[home] || home),
+    lines(),
   ]);
   const ids = new Map([...awayIds, ...homeIds]);
   const score = card(rows);
+  const fileAway = NFL[away] || away;
+  const fileHome = NFL[home] || home;
+  const row = book.find((g) => (g.away === fileAway && g.home === fileHome) || (g.away === fileHome && g.home === fileAway));
   const players: Scorer[] = rows
     .filter((r) => want.has(r.team))
     .map((r) => {
@@ -211,13 +249,13 @@ export async function gameScorers(away: string, home: string) {
         total,
         scored: weeks.filter((w) => w.td > 0).length,
         weeks,
-        models: score({ name: r.name, pos: r.pos }, weeks, foe),
+        models: score({ name: r.name, pos: r.pos }, weeks, foe, implied(row, NFL[team] || team)),
       };
     })
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. Last 3 against season. Defense number is what that team allowed to the position. Not a book line.",
+    source: "nflverse 2026. Last 3 against season. Implied points from the schedule spread and total. Prop line is not in this file.",
     players,
   };
 }
