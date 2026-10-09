@@ -96,12 +96,23 @@ function rateModel(player: Player, market: Market, values: number[]) {
 
 function ModelBox({ model }: { model?: { value: number; text: string } }) {
   if (!model) return null;
+  const rows = model.text.split(/\. (?=[A-Z])/).filter(Boolean);
   return (
-    <div className="mt-4 rounded-xl bg-background p-3">
-      <div className="text-xs uppercase tracking-widest text-accent">Protected model</div>
-      <div className="font-mono text-3xl font-semibold">{model.value.toFixed(1)}</div>
-      <p className="mt-1 text-sm text-muted">{model.text}</p>
-    </div>
+    <table className="mt-4 w-full text-sm">
+      <tbody>
+        {rows.map((row) => {
+          const cut = row.indexOf(":");
+          const label = cut > 0 && cut < 42 ? row.slice(0, cut) : "Note";
+          const value = cut > 0 && cut < 42 ? row.slice(cut + 1).trim() : row;
+          return (
+            <tr key={row} className="border-t border-card-border">
+              <td className="py-2 pr-3 text-muted">{label}</td>
+              <td className="py-2 text-right font-mono">{value}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
