@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { CfbGame } from "@/lib/cfb";
+import { toSheet } from "@/lib/cfb-glance";
 import { PlayCard } from "@/components/PlayCard";
 
 export function CfbBoard() {
@@ -14,7 +15,7 @@ export function CfbBoard() {
   return (
     <section className="space-y-3">
       <h1 className="text-2xl font-semibold tracking-tight">College football week {week || "-"}</h1>
-      <p className="text-sm leading-relaxed text-muted">One card per game. The badge stays off until a number beats the price. Open why, then open the game.</p>
+      <p className="text-sm leading-relaxed text-muted">One card per game. Season scoring is on the card. Injuries and the last five are inside the game.</p>
       {loading && <p className="text-muted text-sm">Loading college...</p>}
       {games.map((g) => {
         const side = (g.lean || "").replace(/ ML$/, "") || g.home;
@@ -28,6 +29,7 @@ export function CfbBoard() {
             price={price}
             when={`${g.away} at ${g.home}`}
             line={`Spread ${g.spread} · Total ${g.total} · ${g.awayQb} vs ${g.homeQb}`}
+            sheet={toSheet(g)}
             fors={g.aligns?.length ? g.aligns : ["Nothing in the registry is stacked."]}
             againsts={[...(g.misses || []), "College does not have a charted catch file. Season receptions are inside the game."]}
           />
