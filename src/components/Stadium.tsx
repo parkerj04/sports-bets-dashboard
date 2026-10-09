@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string; x?: number | null; coverage?: string; concept?: string };
+type Play = {
+  week: string; def: string; loc: string; length?: string;
+  yards: number | null; air?: number | null; yac?: number | null; td?: boolean; desc?: string;
+  qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string;
+  x?: number | null; coverage?: string; concept?: string;
+};
 
 const COLORS = ["#2f6fed", "#e23b3b", "#f08a24", "#c084fc", "#3dd68c", "#1aa7c7", "#d4b24a", "#d4537e"];
 const ORD = ["", "1st", "2nd", "3rd", "4th"];
@@ -41,6 +46,39 @@ function shortName(name: string) {
   return `${initial}.${last}`;
 }
 
+function clean(value?: string) {
+  return (value || "").replace(/^estimate:\s*/i, "").trim();
+}
+
+function explain(play: Play): [string, string][] {
+  const coverage = clean(play.coverage);
+  const concept = clean(play.concept);
+  const down = ORD[Number(play.down)] || "";
+  const routeBits = [play.length, play.loc && `thrown ${play.loc}`].filter(Boolean);
+  if (play.air != null) routeBits.push(`${play.air} air yards`);
+  if (play.yac != null) routeBits.push(`${play.yac} after the catch`);
+  const route = routeBits.length ? routeBits.join(", ") : "Route not in the play file.";
+  const possible = concept && !/not enough/i.test(concept)
+    ? `${concept}. Estimate from the throw, not a charted call.${play.desc ? ` Log: ${play.desc}` : ""}`
+    : play.desc || "Not enough on the play to name it.";
+  const why: string[] = [];
+  if (down && play.togo) why.push(`${down} and ${play.togo}`);
+  if (play.from) why.push(`the ball was at ${play.from}`);
+  if ((play.air ?? 0) >= 16 || play.length === "deep") why.push("the throw was down the field");
+  else if (play.air != null && play.air <= 3) why.push("the throw was at the line");
+  if ((play.yac ?? 0) >= 10) why.push(`${play.yac} yards came after the catch, so the gain lived on the run`);
+  else if (play.yac != null && play.yac <= 1 && (play.yards ?? 0) > 0) why.push("almost none of the gain came after the catch");
+  if (play.td) why.push("it scored");
+  else if (play.yards != null) why.push(`the catch was worth ${play.yards}`);
+  if (play.to) why.push(`the spot on the field is the end of the catch, ${play.to}`);
+  return [
+    ["Coverage", !coverage || /not enough/i.test(coverage) ? "Not charted." : `${coverage}. Estimate from the play shape, not film.`],
+    ["Route", route],
+    ["Possible play", possible],
+    ["Why", why.length ? `${why.join(". ")}.` : "Not enough on the play to say why it was there."],
+  ];
+}
+
 function Post({ edge, dir, mid }: { edge: number; dir: -1 | 1; mid: number }) {
   const upright = edge + dir * 10;
   return (
@@ -68,6 +106,7 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
   const fieldX = 130;
   const fieldW = 740;
   const midY = 118;
+  const rows = play ? explain(play) : [];
   return (
     <div className="overflow-hidden bg-black text-white">
       <div className="flex items-center gap-3 px-3 py-4">
@@ -123,16 +162,28 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
           );
         })}
       </svg>
-      <div className="px-3 py-3 text-sm">
+      <div className="px-3 pt-3 text-sm">
         {play ? (
           <p>
             <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: COLORS[open % COLORS.length] }}>{open + 1}</span>
             vs {play.def} · Q{play.qtr || "?"} {play.time || ""} · {ORD[Number(play.down)] || "?"} & {play.togo || "?"} · {play.yards ?? "?"} yards
           </p>
         ) : (
-          <p className="text-white/60">{rec ? `${rec} catches.` : "Tap a dot."}</p>
+          <p className="text-white/60">{rec ? `${rec} catches. Tap a dot.` : "Tap a dot."}</p>
         )}
       </div>
+      {rows.length > 0 ? (
+        <table className="mx-3 mt-3 mb-3 w-[calc(100%-1.5rem)] border-collapse text-sm">
+          <tbody>
+            {rows.map(([label, figure]) => (
+              <tr key={label} className="border-t border-white/15 align-top">
+                <th className="w-28 py-2.5 pr-3 text-left text-xs font-normal tracking-wide text-white/50">{label}</th>
+                <td className="py-2.5 text-left leading-snug text-white">{figure}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
     </div>
   );
 }
