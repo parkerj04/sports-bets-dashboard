@@ -13,9 +13,9 @@ export function CfbBoard() {
   }, []);
   return (
     <section className="space-y-3">
-      <h1 className="text-2xl font-semibold tracking-tight">College football week {week || "\u2014"}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">College football week {week || "-"}</h1>
       <p className="text-sm leading-relaxed text-muted">One card per game. The badge stays off until a number beats the price. Open why, then open the game.</p>
-      {loading && <p className="text-muted text-sm">Loading college\u2026</p>}
+      {loading && <p className="text-muted text-sm">Loading college...</p>}
       {games.map((g) => {
         const side = (g.lean || "").replace(/ ML$/, "") || g.home;
         const price = side === g.home ? g.mlHome : side === g.away ? g.mlAway : "";
@@ -27,7 +27,7 @@ export function CfbBoard() {
             title={side}
             price={price}
             when={`${g.away} at ${g.home}`}
-            line={`Spread ${g.spread} \u00b7 Total ${g.total} \u00b7 ${g.awayQb} vs ${g.homeQb}`}
+            line={`Spread ${g.spread} · Total ${g.total} · ${g.awayQb} vs ${g.homeQb}`}
             fors={g.aligns?.length ? g.aligns : ["Nothing in the registry is stacked."]}
             againsts={[...(g.misses || []), "College does not have a charted catch file. Season receptions are inside the game."]}
           />
