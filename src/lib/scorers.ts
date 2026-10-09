@@ -112,34 +112,70 @@ const MODEL_MARKETS = ["rec", "catches", "rush", "pass", "passTd", "td"] as cons
 type ModelMarket = (typeof MODEL_MARKETS)[number];
 
 const UNIT: Record<ModelMarket, string> = {
-  rec: "receiving yards",
+  rec: "rec yds",
   catches: "receptions",
-  rush: "rushing yards",
-  pass: "passing yards",
-  passTd: "passing touchdowns",
-  td: "anytime touchdowns",
+  rush: "rush yds",
+  pass: "pass yds",
+  passTd: "pass TD",
+  td: "anytime TD",
 };
 
 function tenth(n: number) {
   return Math.round(n * 10) / 10;
 }
-
+function mean(xs: number[]) {
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+}
 function weekStat(w: ScorerWeek, market: ModelMarket) {
   return w[market];
 }
 
-function protect(rows: Raw[]) {
-  return (player: { name: string; pos: string; team: string }, weeksPlayed: ScorerWeek[]) => {
+function card(rows: Raw[]) {
+  const allowed = new Map<string, number[]>();
+  for (const row of rows) {
+    for (const w of row.weeks) {
+      for (const market of MODEL_MARKETS) {
+        const key = `${w.opp}|${row.pos}|${market}`;
+        const list = allowed.get(key) || [];
+        list.push(weekStat(w, market));
+        allowed.set(key, list);
+      }
+    }
+  }
+  function rank(opp: string, pos: string, market: ModelMarket) {
+    const mine = mean(allowed.get(`${opp}|${pos}|${market}`) || []);
+    const teams = new Map<string, number>();
+    for (const [key, list] of allowed) {
+      const [team, p, m] = key.split("|");
+      if (p === pos && m === market) teams.set(team, mean(list));
+    }
+    const ordered = [...teams.values()].sort((a, b) => a - b);
+    const place = ordered.findIndex((n) => n >= mine) + 1;
+    return { mine, place, of: ordered.length };
+  }
+  return (player: { name: string; pos: string }, weeksPlayed: ScorerWeek[], foe: string) => {
     const models: Scorer["models"] = {};
-    const n = weeksPlayed.length;
-    if (!n) return models;
+    if (!weeksPlayed.length) return models;
     for (const market of MODEL_MARKETS) {
       const values = weeksPlayed.map((w) => weekStat(w, market));
-      const rate = values.reduce((a, b) => a + b, 0) / n;
-      const log = weeksPlayed.map((w) => `${w.opp} ${tenth(weekStat(w, market))}`).join(", ");
+      const last3 = values.slice(-3);
+      const season = mean(values);
+      const recent = mean(last3);
+      const line = tenth(season);
+      const clears = values.filter((n) => n > line).length;
+      const recentClears = last3.filter((n) => n > line).length;
+      const def = rank(foe, player.pos, market);
+      const log = weeksPlayed.slice(-5).map((w) => `${w.opp} ${tenth(weekStat(w, market))}`).join(", ");
       models[market] = {
-        value: tenth(rate),
-        text: `${player.name} is at ${tenth(rate).toFixed(1)} ${UNIT[market]} a game over ${n} logged games. Log: ${log}. No shell is charted. No defender is named. No route is named. A role bucket is not a coverage, so no defense gap is added. Not a lean. Not a book price.`,
+        value: tenth(recent),
+        text: [
+          `${player.name} ${UNIT[market]}. This week's number is not on the card, so the line used is his own season average, ${line}.`,
+          `Last 3 / season: ${tenth(recent)} / ${tenth(season)}.`,
+          `Over that average: last 3 ${recentClears}/${last3.length}, season ${clears}/${values.length}.`,
+          `Log: ${log}. A zero is the defense he drew, not the rate.`,
+          `${foe} has allowed ${tenth(def.mine)} ${UNIT[market]} a game to ${player.pos}s, ${def.place} of ${def.of}, fewest first. Position bucket, not the man on him.`,
+          `Snap share, target share, and implied points are not on this card yet.`,
+        ].join(" "),
       };
     }
     return models;
@@ -154,15 +190,17 @@ export async function gameScorers(away: string, home: string) {
     rosterIds(NFL[home] || home),
   ]);
   const ids = new Map([...awayIds, ...homeIds]);
-  const score = protect(rows);
+  const score = card(rows);
   const players: Scorer[] = rows
     .filter((r) => want.has(r.team))
     .map((r) => {
       const weeks = [...r.weeks].sort((a, b) => a.week - b.week);
       const total = weeks.reduce((s, w) => s + w.td, 0);
+      const team = want.get(r.team) || r.team;
+      const foe = team === away ? home : away;
       return {
         name: r.name,
-        team: want.get(r.team) || r.team,
+        team,
         pos: r.pos,
         id: ids.get(keyOf(r.name)) || "",
         rec: weeks.reduce((s, w) => s + w.rec, 0),
@@ -173,13 +211,13 @@ export async function gameScorers(away: string, home: string) {
         total,
         scored: weeks.filter((w) => w.td > 0).length,
         weeks,
-        models: score({ name: r.name, pos: r.pos, team: want.get(r.team) || r.team }, weeks),
+        models: score({ name: r.name, pos: r.pos }, weeks, foe),
       };
     })
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. The number is his own per-game average. No defense gap. A shell is not charted.",
+    source: "nflverse 2026. Last 3 against season. Defense number is what that team allowed to the position. Not a book line.",
     players,
   };
 }
