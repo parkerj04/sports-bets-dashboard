@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Play = { week: string; def: string; loc: string; yards: number | null; qtr?: string; time?: string; down?: string; togo?: string; from?: string; to?: string; x?: number | null; coverage?: string; concept?: string };
 
-const COLORS = ["#e23b3b", "#2f6fed", "#f08a24", "#7a4de0", "#1f9d57", "#1aa7c7", "#d4b24a", "#d4537e"];
+const COLORS = ["#2f6fed", "#e23b3b", "#f08a24", "#c084fc", "#3dd68c", "#1aa7c7", "#d4b24a", "#d4537e"];
 const ORD = ["", "1st", "2nd", "3rd", "4th"];
 const NAME: Record<string, string> = {
   PIT: "STEELERS", CLE: "BROWNS", BAL: "RAVENS", CIN: "BENGALS", BUF: "BILLS", MIA: "DOLPHINS",
@@ -15,7 +15,7 @@ const NAME: Record<string, string> = {
   SF: "49ERS", SEA: "SEAHAWKS",
 };
 const SKIN: Record<string, { end: string; ink: string }> = {
-  PIT: { end: "#101010", ink: "#ffb612" }, CLE: { end: "#311d00", ink: "#ff3c00" },
+  PIT: { end: "#0a0a0a", ink: "#ffb612" }, CLE: { end: "#3a2a1a", ink: "#ff6a1a" },
   BAL: { end: "#241773", ink: "#9e7c0c" }, CIN: { end: "#111111", ink: "#fb4f14" },
   BUF: { end: "#00338d", ink: "#c60c30" }, MIA: { end: "#008e97", ink: "#fc4c02" },
   NE: { end: "#002244", ink: "#c60c30" }, NYJ: { end: "#125740", ink: "#ffffff" },
@@ -33,8 +33,15 @@ const SKIN: Record<string, { end: string; ink: string }> = {
   SF: { end: "#aa0000", ink: "#ffffff" }, SEA: { end: "#002244", ink: "#69be28" },
 };
 
-function Post({ edge, dir }: { edge: number; dir: -1 | 1 }) {
-  const mid = 123;
+function shortName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return name;
+  const initial = parts[0].replace(/\./g, "")[0] || "";
+  const last = parts.slice(1).join("").replace(/\s/g, "");
+  return `${initial}.${last}`;
+}
+
+function Post({ edge, dir, mid }: { edge: number; dir: -1 | 1; mid: number }) {
   const upright = edge + dir * 10;
   return (
     <g stroke="#f4d27a" strokeWidth="3" fill="none">
@@ -53,75 +60,79 @@ export function Stadium({ venue, home, away, team, name, rec, plays }: { venue?:
   const homeKey = home.toUpperCase();
   const awayKey = away.toUpperCase();
   const playerLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${club.toLowerCase()}.png`;
+  const homeLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${homeKey.toLowerCase()}.png`;
   const awaySkin = SKIN[awayKey] || { end: "#111", ink: "#ffffff" };
   const homeSkin = SKIN[homeKey] || { end: "#111", ink: "#ffffff" };
   const clubSkin = SKIN[club] || awaySkin;
   const play = plays[open];
   const fieldX = 130;
   const fieldW = 740;
+  const midY = 118;
   return (
-    <div className="overflow-hidden rounded-lg border border-black bg-black text-white">
-      <div className="flex items-center gap-3 px-3 py-3">
-        <img src={playerLogo} alt={club} className="h-14 w-14 rounded-full bg-white object-contain p-1" />
-        <div>
-          <div className="text-xl font-extrabold leading-tight"><span style={{ color: clubSkin.ink }}>{name || "Player"}</span> <span className="text-white">— 2026</span></div>
-          <div className="mt-1 text-sm text-white/80">{plays.length || rec} charted plays. {NAME[awayKey] || away} at {NAME[homeKey] || home}{venue ? ` · ${venue}` : ""}.</div>
+    <div className="overflow-hidden bg-black text-white">
+      <div className="flex items-center gap-3 px-3 py-4">
+        <img src={playerLogo} alt="" className="size-16 shrink-0 rounded-full bg-white object-contain p-1.5" />
+        <div className="min-w-0">
+          <p className="text-[22px] leading-none font-extrabold tracking-tight" style={{ color: clubSkin.ink }}>
+            {shortName(name || "Player")} · {NAME[club] || club}
+          </p>
+          <p className="mt-1 text-2xl leading-none font-extrabold text-white">— 2026</p>
+          <p className="mt-2 text-[15px] leading-snug text-white/70">
+            {NAME[awayKey] || away} at {NAME[homeKey] || home}
+            {venue ? ` · ${venue}` : ""}
+          </p>
         </div>
       </div>
-      <div className="h-1.5" style={{ background: homeSkin.ink }} />
-      <svg viewBox="0 0 1040 280" className="w-full bg-[#1f7a34]">
-        <rect x="36" y="18" width="94" height="210" fill={awaySkin.end} stroke="#fff" strokeWidth="2" />
-        <rect x="870" y="18" width="94" height="210" fill={homeSkin.end} stroke="#fff" strokeWidth="2" />
-        <text x="83" y="126" fill={awaySkin.ink} fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(-90 83 126)">{NAME[awayKey] || awayKey}</text>
-        <text x="917" y="126" fill={homeSkin.ink} fontSize="12" fontWeight="800" textAnchor="middle" letterSpacing="1" transform="rotate(90 917 126)">{NAME[homeKey] || homeKey}</text>
-        <rect x={fieldX} y="18" width={fieldW} height="210" fill="#21863c" stroke="#fff" strokeWidth="2" />
+      <div className="h-1.5" style={{ background: homeSkin.ink === "#ffffff" ? homeSkin.end : homeSkin.ink }} />
+      <svg viewBox="0 0 1040 270" className="w-full bg-[#1f7a34]">
+        <rect x="36" y="14" width="94" height="200" fill={awaySkin.end} stroke="#fff" strokeWidth="2" />
+        <rect x="870" y="14" width="94" height="200" fill={homeSkin.end} stroke="#fff" strokeWidth="2" />
+        <text x="83" y="118" fill={awaySkin.ink} fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="1.5" transform="rotate(-90 83 118)">{NAME[awayKey] || awayKey}</text>
+        <text x="917" y="118" fill={homeSkin.ink} fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="1.5" transform="rotate(90 917 118)">{NAME[homeKey] || homeKey}</text>
+        <rect x={fieldX} y="14" width={fieldW} height="200" fill="#21863c" stroke="#fff" strokeWidth="2" />
         {Array.from({ length: 21 }, (_, i) => fieldX + (i / 20) * fieldW).map((x, i) => (
-          <line key={i} x1={x} y1="18" x2={x} y2="228" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.6 : 0.6} />
+          <line key={i} x1={x} y1="14" x2={x} y2="214" stroke="#fff" strokeWidth={i % 2 === 0 ? 1.6 : 0.6} />
         ))}
         {Array.from({ length: 20 }, (_, i) => fieldX + ((i + 0.5) / 20) * fieldW).map((x) => (
           <g key={x}>
-            <line x1={x - 7} y1="78" x2={x + 7} y2="78" stroke="#fff" strokeWidth="1.4" />
-            <line x1={x - 7} y1="168" x2={x + 7} y2="168" stroke="#fff" strokeWidth="1.4" />
+            <line x1={x - 8} y1="72" x2={x + 8} y2="72" stroke="#fff" strokeWidth="1.5" />
+            <line x1={x - 8} y1="156" x2={x + 8} y2="156" stroke="#fff" strokeWidth="1.5" />
           </g>
         ))}
         {Array.from({ length: 11 }, (_, i) => {
           const x = fieldX + (i / 10) * fieldW;
           const label = i <= 5 ? i * 10 : (10 - i) * 10;
-          return <text key={i} x={x} y="256" fill="#fff" fontSize="14" fontWeight="700" textAnchor="middle">{label}</text>;
+          return <text key={i} x={x} y="248" fill="#fff" fontSize="15" fontWeight="700" textAnchor="middle">{label}</text>;
         })}
-        <Post edge={36} dir={-1} />
-        <Post edge={964} dir={1} />
-        <circle cx={fieldX + fieldW / 2} cy="123" r="28" fill="#111" opacity="0.28" />
-        <image href={`https://a.espncdn.com/i/teamlogos/nfl/500/${homeKey.toLowerCase()}.png`} x={fieldX + fieldW / 2 - 18} y="105" width="36" height="36" />
+        <Post edge={36} dir={-1} mid={midY} />
+        <Post edge={964} dir={1} mid={midY} />
+        <circle cx={fieldX + fieldW / 2} cy={midY} r="26" fill="#111" opacity="0.35" />
+        <image href={homeLogo} x={fieldX + fieldW / 2 - 18} y={midY - 18} width="36" height="36" />
         {plays.map((p, i) => {
-          const lane = p.loc === "left" ? 58 : p.loc === "right" ? 188 : 123;
-          const y = lane + ((i % 5) - 2) * 8;
+          const lane = p.loc === "left" ? 52 : p.loc === "right" ? 176 : midY;
+          const y = Math.max(32, Math.min(196, lane + ((i % 5) - 2) * 8));
           const spot = p.x == null ? 8 + ((i * 17) % 84) : Number(p.x);
-          const x = fieldX + (spot / 100) * fieldW;
+          const x = fieldX + (Math.min(96, Math.max(4, spot)) / 100) * fieldW;
           const on = open === i;
           return (
             <g key={i} onClick={() => setOpen(i)} style={{ cursor: "pointer" }}>
-              <circle cx={x} cy={y} r="18" fill="transparent" />
-              <circle cx={x} cy={y} r={on ? 14 : 10} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={on ? 3 : 1.5} />
-              <text x={x} y={y + 4} textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff">{i + 1}</text>
+              <circle cx={x} cy={y} r="16" fill="transparent" />
+              <circle cx={x} cy={y} r={on ? 13 : 10} fill={COLORS[i % COLORS.length]} stroke="#fff" strokeWidth={on ? 2.5 : 1.2} />
+              <text x={x} y={y + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{i + 1}</text>
             </g>
           );
         })}
       </svg>
-      <div className="m-3 rounded-lg bg-white p-3 text-[#1c1c1c]">
+      <div className="px-3 py-3 text-sm">
         {play ? (
-          <div className="flex gap-3">
-            <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: COLORS[open % COLORS.length] }}>{open + 1}</span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold">vs {play.def} — Q{play.qtr || "?"}, {play.time || "—"} — {ORD[Number(play.down)] || "?"} & {play.togo || "?"} — {play.yards ?? "?"} yards — {play.from || "?"} to {play.to || "?"}</span>
-              <span className="mt-0.5 block text-xs text-[#4b5563]">Likely coverage: {(play.coverage || "estimate unavailable").replace("estimate: ", "")} | Likely concept: {(play.concept || "estimate unavailable").replace("estimate: ", "")}</span>
-            </span>
-          </div>
+          <p>
+            <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: COLORS[open % COLORS.length] }}>{open + 1}</span>
+            vs {play.def} · Q{play.qtr || "?"} {play.time || ""} · {ORD[Number(play.down)] || "?"} & {play.togo || "?"} · {play.yards ?? "?"} yards
+          </p>
         ) : (
-          <p className="text-sm text-[#4b5563]">Tap a dot.</p>
+          <p className="text-white/60">{rec ? `${rec} catches.` : "Tap a dot."}</p>
         )}
       </div>
-      <p className="px-3 pb-3 text-[11px] text-white/50">Dots are catch spots from the 2026 play file. Coverage lines are estimates, not charted film.</p>
     </div>
   );
 }
