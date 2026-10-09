@@ -38,27 +38,21 @@ export function PlayCard({
       </div>
       <p className="mt-3 text-sm text-muted">{when}</p>
       <p className="mt-1 text-sm">{line}</p>
-      <p className="mt-3 text-sm">
-        {pct != null ? `The price implies ${pct}%. ` : ""}
-        This card does not add a model percent. A record alone is not an edge.
-      </p>
-      <details className="mt-3 border-t border-card-border pt-2">
-        <summary className="cursor-pointer py-1 text-sm">Why this pick</summary>
-        <div className="mt-3 space-y-3 text-sm">
-          <div>
-            <div className="text-good">The case for</div>
-            <ul className="mt-1 list-disc space-y-1 pl-4 text-muted">
-              {fors.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </div>
-          <div>
-            <div className="text-danger">The case against</div>
-            <ul className="mt-1 list-disc space-y-1 pl-4 text-muted">
-              {againsts.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </div>
+      {pct != null ? <p className="mt-2 font-mono text-sm">{pct}% implied by the price</p> : null}
+      <div className="mt-3 space-y-3 text-sm">
+        <div>
+          <div className="text-good">The case for</div>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {fors.map((item) => <li key={item}>{item}</li>)}
+          </ul>
         </div>
-      </details>
+        <div>
+          <div className="text-danger">The case against</div>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-muted">
+            {againsts.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
+      </div>
       <Link href={href} className="mt-3 block text-sm text-accent">Open the game</Link>
     </article>
   );
