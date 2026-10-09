@@ -21,9 +21,16 @@ export type CfbGame = {
   score: number;
   aligns: string[];
   misses: string[];
+  glance: {
+    season: number;
+    pool: number;
+    away: CfbSide;
+    home: CfbSide;
+  } | null;
 };
 
 import { footballRegistry } from "./football-desk";
+import { loadCfbGlance, type CfbSide } from "./cfb-glance";
 
 const POWER: Record<string, string> = { "1": "ACC", "4": "Big 12", "5": "Big Ten", "8": "SEC" };
 const AGENT = new Set(["PITT", "PIT", "VT", "PSU", "NW", "NU", "MTST", "IDHO", "IDA", "LIB", "DEL"]);
@@ -37,7 +44,7 @@ function qb(t: { leaders?: { name: string; leaders?: { displayValue: string; ath
   return { name: row?.athlete?.displayName || "QB TBD", line: row?.displayValue || "no season line" };
 }
 
-function rowFrom(e: { id: string; competitions?: { competitors?: { homeAway: string; team: { displayName: string; abbreviation: string; conferenceId?: string }; records?: { type: string; summary: string }[]; leaders?: { name: string; leaders?: { displayValue: string; athlete?: { displayName?: string } }[] }[] }[]; odds?: { details?: string; overUnder?: number; moneyline?: { away?: { close?: { odds?: string } }; home?: { close?: { odds?: string } } } }[] }[] }) {
+function rowFrom(e: { id: string; competitions?: { competitors?: { homeAway: string; team: { displayName: string; abbreviation: string; conferenceId?: string }; records?: { type: string; summary: string }[]; leaders?: { name: string; leaders?: { displayValue: string; athlete?: { displayName?: string } }[] }[] }[]; odds?: { details?: string; overUnder?: number; moneyline?: { away?: { close?: { odds?: string } }; home?: { close?: { odds?: string } } } }[] }[] }, book: { season: number; pool: number; teams: Map<string, CfbSide> }) {
   const c = e.competitions?.[0] || {};
   const comps = c.competitors || [];
   const home = comps.find((t) => t.homeAway === "home");
@@ -61,6 +68,8 @@ function rowFrom(e: { id: string; competitions?: { competitors?: { homeAway: str
     awayQbLine: aq.line,
     homeQbLine: hq.line,
   });
+  const awayStat = book.teams.get(away.team.abbreviation) || null;
+  const homeStat = book.teams.get(home.team.abbreviation) || null;
   return {
     id: String(e.id),
     away: away.team.displayName,
@@ -84,6 +93,7 @@ function rowFrom(e: { id: string; competitions?: { competitors?: { homeAway: str
     score: desk.score,
     aligns: desk.aligns,
     misses: desk.misses,
+    glance: awayStat && homeStat ? { season: book.season, pool: book.pool, away: awayStat, home: homeStat } : null,
   } satisfies CfbGame;
 }
 
@@ -107,9 +117,12 @@ function cfbCards(away: string, home: string, awayScore: string, homeScore: stri
 }
 
 export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[]; results: CfbResult[] }> {
-  const boards = await Promise.all([
-    fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=200", { cache: "no-store" }),
-    fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=200", { cache: "no-store" }),
+  const [boards, book] = await Promise.all([
+    Promise.all([
+      fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=200", { cache: "no-store" }),
+      fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=81&limit=200", { cache: "no-store" }),
+    ]),
+    loadCfbGlance(),
   ]);
   const games: CfbGame[] = [];
   const results: CfbResult[] = [];
@@ -120,7 +133,7 @@ export async function getCfbWeek(): Promise<{ week: number; games: CfbGame[]; re
     const data = await res.json();
     week = week || data.week?.number || 0;
     for (const e of data.events || []) {
-      const game = rowFrom(e);
+      const game = rowFrom(e, book);
       if (!game || seen.has(game.id)) continue;
       seen.add(game.id);
       const c = e.competitions?.[0] || {};
