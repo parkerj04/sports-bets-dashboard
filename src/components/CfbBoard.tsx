@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import type { CfbGame } from "@/lib/cfb";
+import { PlayCard } from "@/components/PlayCard";
 
 export function CfbBoard() {
   const [week, setWeek] = useState(0);
@@ -13,24 +13,26 @@ export function CfbBoard() {
   }, []);
   return (
     <section className="space-y-3">
-      <h1 className="text-xl font-semibold tracking-tight">College football week {week || "—"}</h1>
-      <p className="text-sm text-muted">Tap a game. The quarterbacks are inside.</p>
-      {loading && <p className="text-muted text-sm">Loading college…</p>}
-      {games.map((g) => (
-        <Link key={g.id} href={`/research/cfb/game?id=${g.id}`} className="card block p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="font-semibold">{g.away} <span className="font-normal text-muted">{g.awayRecord}</span></div>
-              <div className="text-sm text-muted">at {g.home} {g.homeRecord}</div>
-              <p className="mt-2 truncate text-sm">{g.awayQb} <span className="text-muted">vs</span> {g.homeQb}</p>
-            </div>
-            <div className="text-right font-mono text-sm">
-              <div>{g.spread}</div>
-              <div className="text-muted">O/U {g.total}</div>
-            </div>
-          </div>
-        </Link>
-      ))}
+      <h1 className="text-2xl font-semibold tracking-tight">College football week {week || "\u2014"}</h1>
+      <p className="text-sm leading-relaxed text-muted">One card per game. The badge stays off until a number beats the price. Open why, then open the game.</p>
+      {loading && <p className="text-muted text-sm">Loading college\u2026</p>}
+      {games.map((g) => {
+        const side = (g.lean || "").replace(/ ML$/, "") || g.home;
+        const price = side === g.home ? g.mlHome : side === g.away ? g.mlAway : "";
+        return (
+          <PlayCard
+            key={g.id}
+            href={`/research/cfb/game?id=${g.id}`}
+            kicker="CFB"
+            title={side}
+            price={price}
+            when={`${g.away} at ${g.home}`}
+            line={`Spread ${g.spread} \u00b7 Total ${g.total} \u00b7 ${g.awayQb} vs ${g.homeQb}`}
+            fors={g.aligns?.length ? g.aligns : ["Nothing in the registry is stacked."]}
+            againsts={[...(g.misses || []), "College does not have a charted catch file. Season receptions are inside the game."]}
+          />
+        );
+      })}
       {results.length > 0 && (
         <details className="card p-4">
           <summary className="cursor-pointer text-sm font-semibold">Results</summary>
