@@ -56,6 +56,11 @@ function rowFrom(e: { id: string; competitions?: { competitors?: { homeAway: str
   if (!awayPower && !homePower && !agentGame) return null;
   const odds = c.odds?.[0];
   const aq = qb(away); const hq = qb(home);
+  const OUT: Record<string, { name: string; line: string }> = {
+    IOWA: { name: "Jeremy Hecklinski", line: "Hank Brown out, shoulder. Thamel, Oct 9. First start." },
+  };
+  if (OUT[away.team.abbreviation]) Object.assign(aq, OUT[away.team.abbreviation]);
+  if (OUT[home.team.abbreviation]) Object.assign(hq, OUT[home.team.abbreviation]);
   const desk = footballRegistry({
     away: away.team.displayName,
     home: home.team.displayName,
