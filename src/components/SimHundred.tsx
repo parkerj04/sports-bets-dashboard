@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 type Final = { away: number; home: number };
+type Sport = "NFL" | "CFB" | "MLB";
 
 function hash(text: string) {
   let h = 2166136261;
@@ -60,7 +61,7 @@ function readLine(spread: string, totalRaw: string | number, homeTag: string, aw
   return { total, homeSpread, homeImp, awayImp };
 }
 
-function draw(sport: "NFL" | "MLB", homeImp: number, awayImp: number, rng: () => number): Final {
+function draw(sport: Sport, homeImp: number, awayImp: number, rng: () => number): Final {
   if (sport === "MLB") return { away: poisson(awayImp, rng), home: poisson(homeImp, rng) };
   const margin = normal(homeImp - awayImp, 13.5, rng);
   const sum = Math.max(0, normal(homeImp + awayImp, 10, rng));
@@ -80,7 +81,7 @@ export function SimHundred({
   total,
   seed,
 }: {
-  sport: "NFL" | "MLB";
+  sport: Sport;
   away: string;
   home: string;
   awayTag: string;
@@ -117,7 +118,7 @@ export function SimHundred({
       if (g.home > g.away) homeWin += 1;
       else if (g.away > g.home) awayWin += 1;
       else ties += 1;
-      if (sport === "NFL" ? Math.abs(margin) <= 8 : Math.abs(margin) === 1) close += 1;
+      if (sport === "MLB" ? Math.abs(margin) === 1 : Math.abs(margin) <= 8) close += 1;
       const key = `${awayTag} ${g.away} ${homeTag} ${g.home}`;
       scores.set(key, (scores.get(key) || 0) + 1);
       homeSum += g.home;
@@ -137,14 +138,14 @@ export function SimHundred({
       avgAway: (awaySum / 100).toFixed(1),
       avgHome: (homeSum / 100).toFixed(1),
       total: line.total,
-      note: sport === "NFL"
-        ? "One run of 100, tied to this game. Each draw uses the posted spread with a 13.5-point swing and the posted total with a 10-point swing. It does not get redrawn. It is the market shaken up, not a scouting report."
-        : "One run of 100, tied to this game. Each team’s runs are a Poisson draw at its implied total from the posted number. It does not get redrawn. It does not know the lineup or the umpire.",
+      note: sport === "MLB"
+        ? "One run of 100, tied to this game. Each team\u2019s runs are a Poisson draw at its implied total from the posted number. It does not get redrawn. It does not know the lineup or the umpire."
+        : "One run of 100, tied to this game. Each draw uses the posted spread with a 13.5-point swing and the posted total with a 10-point swing. It does not get redrawn. It is the market shaken up, not a scouting report.",
     };
   }, [sport, away, home, awayTag, homeTag, spread, total, seed]);
 
   if (!report) return null;
-  const closeLabel = sport === "NFL" ? "One score" : "One run";
+  const closeLabel = sport === "MLB" ? "One run" : "One score";
   const tiles = [
     { n: report.homeCover, label: `${homeTag} covers` },
     { n: report.awayCover, label: `${awayTag} covers` },
