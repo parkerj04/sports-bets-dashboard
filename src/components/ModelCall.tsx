@@ -84,17 +84,23 @@ export function GameHead({
   const missing = !forecast;
   const totalText = total === "" || total == null ? "NL" : String(total);
   return (
-    <header className="border-b px-0 py-3 text-sm" style={{ borderColor: "#2c2c28", color: "#f0eee6" }}>
-      <div className="flex items-baseline justify-between gap-3">
-        <h1 className="min-w-0 truncate text-base font-medium">{away} @ {home}</h1>
-        <span className="shrink-0 font-mono">{posted || "NL"}</span>
-      </div>
-      <div className="mt-1 flex items-baseline justify-between gap-3">
-        <span className="font-mono">{model ? `${model.awayTag} ${model.awayScore}, ${model.homeTag} ${model.homeScore}` : "No model score"}</span>
-        <span className="text-right font-mono" style={{ color: missing ? "#c45c4a" : "#f0eee6" }}>
-          {missing ? `${totalText} weather not loaded` : `${totalText} ${forecast}`}
-        </span>
-      </div>
+    <header className="border-b py-3 text-sm" style={{ borderColor: "#2c2c28", color: "#f0eee6" }}>
+      <h1 className="text-xl font-medium leading-tight">{away}</h1>
+      <p className="text-xl font-medium leading-tight">at {home}</p>
+      <p className="mt-1 font-mono text-sm">{posted || "NL"}</p>
+      {model ? (
+        <p className="mt-3 whitespace-nowrap font-mono">
+          {model.awayTag} {model.awayScore}
+          <span className="mx-2" style={{ color: "#7a746a" }}>·</span>
+          {model.homeTag} {model.homeScore}
+        </p>
+      ) : (
+        <p className="mt-3">No model score</p>
+      )}
+      <p className="mt-1 font-mono" style={{ color: missing ? "#c45c4a" : "#f0eee6" }}>
+        {totalText}
+        {missing ? " weather not loaded" : forecast ? ` ${forecast}` : ""}
+      </p>
     </header>
   );
 }
