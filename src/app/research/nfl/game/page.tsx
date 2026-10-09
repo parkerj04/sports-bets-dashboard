@@ -78,7 +78,6 @@ function Inner() {
         sport="NFL"
       />
       <FactLine text={facts?.open} />
-      <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
       <AgentDesk away={lab.away} home={lab.home} />
       <PropsDesk away={lab.awayAbbr} home={lab.homeAbbr} embedded pending={!/final/i.test(lab.status)} />
       <div className="card overflow-x-auto p-4">
@@ -124,6 +123,12 @@ function Inner() {
         </div>
         <p className="text-muted">{desk.why}{notes.length ? ` ${notes.map((n) => n.desk).join(" ")}` : ""}</p>
       </section>
+      <details className="border p-3" style={{ borderColor: "#2c2c28" }}>
+        <summary className="cursor-pointer text-sm">Targets on the field</summary>
+        <div className="mt-3">
+          <CoverageSplit away={lab.awayAbbr} home={lab.homeAbbr} venue={lab.venue} />
+        </div>
+      </details>
     </div>
   );
 }
