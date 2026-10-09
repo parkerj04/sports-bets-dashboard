@@ -19,6 +19,8 @@ export interface NflGame {
   leanTotal?: string;
   leanWhy?: string;
   leanScore?: number;
+  aligns?: string[];
+  misses?: string[];
 }
 
 export type SlateResult = {
@@ -32,7 +34,7 @@ import { impliedTotals } from "./ticket";
 import { footballRegistry } from "./football-desk";
 import { newsLine } from "./nfl-news";
 
-function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanScore">): NflGame {
+function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanScore" | "aligns" | "misses">): NflGame {
   const total = typeof g.total === "number" ? g.total : parseFloat(String(g.total)) || 44;
   const desk = footballRegistry({
     away: g.away,
@@ -46,11 +48,11 @@ function scoreGame(g: Omit<NflGame, "leanML" | "leanTotal" | "leanWhy" | "leanSc
   const imp = impliedTotals(g.total, g.spread, g.home, g.away);
   const news = newsLine(g.away, g.home);
   const leanWhy =
-    `${g.away} ${g.awayRecord} at ${g.home} ${g.homeRecord}, ${g.venue || "site TBD"}. Posted ${g.spread}, total ${total}, ML ${g.mlAway || "—"}/${g.mlHome || "—"}. ` +
+    `${g.away} ${g.awayRecord} at ${g.home} ${g.homeRecord}, ${g.venue || "site TBD"}. Posted ${g.spread}, total ${total}, ML ${g.mlAway || "\u2014"}/${g.mlHome || "\u2014"}. ` +
     (imp ? `Implied points ${g.away} ${imp.awayImp} / ${g.home} ${imp.homeImp}. ` : "") +
     (news ? `${news} ` : "") +
     `${desk.why} Total note: ${leanTotal} at ${total}, and that is a number read, not a play. Open the game lab before a unit. Injuries, QB status, and last 5 are not on this slate card.`;
-  return { ...g, leanML: desk.pick, leanTotal, leanWhy, leanScore: desk.score };
+  return { ...g, leanML: desk.pick, leanTotal, leanWhy, leanScore: desk.score, aligns: desk.aligns, misses: desk.misses };
 }
 
 function deskCards(away: string, home: string, awayScore: string, homeScore: string): string[] {
