@@ -310,16 +310,6 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
     setLine(lineFor(active.weeks.map((week) => statOf(week, next))));
   }
 
-  const leaders = roster.flatMap((player) => {
-    const market = BOARD.find((item) => item.key !== "td" && plays(player, item.key)) || BOARD.find((item) => item.key === "td");
-    if (!market || !player.weeks.length) return [];
-    const nums = player.weeks.map((week) => statOf(week, market.key));
-    const research = lineFor(nums);
-    const last = nums.slice(-10);
-    const hits = last.filter((n) => n > research).length;
-    return [{ player, market: market.key, label: market.label, research, hits, n: last.length }];
-  }).filter((row) => row.n > 0).sort((a, b) => b.hits / b.n - a.hits / a.n || b.n - a.n).slice(0, 8);
-
   return (
     <section className="flex w-full flex-col gap-3">
       <header>
@@ -335,30 +325,6 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
           </button>
         ))}
       </div>
-      {leaders.length > 0 ? (
-        <ol className="card overflow-hidden">
-          <li className="flex items-center justify-between px-3 py-2 text-xs text-muted">
-            <span>Last 10, by how often the log cleared it</span>
-            <span>No book price</span>
-          </li>
-          {leaders.map((row, i) => (
-            <li key={`${row.player.team}-${row.player.name}`} className="border-t border-card-border">
-              <button type="button" onClick={() => pickPlayer(row.player, row.market)} className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left">
-                <span className="w-4 font-mono text-xs text-muted">{i + 1}</span>
-                {row.player.id ? <img src={headshot(row.player.id)} alt="" className="size-9 shrink-0 rounded-full object-cover object-top" /> : <span className="size-9 shrink-0 rounded-full bg-background" />}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{row.player.name}</span>
-                  <span className="block truncate text-xs text-muted">{row.label} {one(row.research)} · research</span>
-                </span>
-                <span className={`shrink-0 text-right font-mono text-sm ${row.hits / row.n >= 0.5 ? "text-good" : "text-danger"}`}>
-                  <span className="block">{row.hits} of {row.n}</span>
-                  <span className="block text-[10px] text-muted">games</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      ) : null}
       {!players ? <p className="text-sm text-muted">Loading the prop board…</p> : null}
       {players ? (
         <div>

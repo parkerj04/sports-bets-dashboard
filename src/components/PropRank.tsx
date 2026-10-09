@@ -76,17 +76,29 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
       .sort((a, b) => b.stats.pct - a.stats.pct || b.stats.n - a.stats.n);
   }, [rows, win]);
 
+  const people = useMemo(() => {
+    const map = new Map<string, typeof ranked>();
+    for (const item of ranked) {
+      const key = `${item.row.team}|${item.row.player}`;
+      map.set(key, [...(map.get(key) || []), item]);
+    }
+    return [...map.values()]
+      .map((mates) => ({ best: mates.slice().sort((a, b) => b.stats.pct - a.stats.pct)[0], mates }))
+      .sort((a, b) => b.best.stats.pct - a.best.stats.pct || b.best.stats.n - a.best.stats.n);
+  }, [ranked]);
+
   const boxes = useMemo(() => {
     const seen = new Set<string>();
-    const out: { script: string; rows: typeof ranked }[] = [];
-    for (const item of ranked) {
-      if (seen.has(item.row.id)) continue;
-      const mates = ranked.filter((x) => x.row.script === item.row.script);
-      mates.forEach((m) => seen.add(m.row.id));
-      out.push({ script: item.row.script, rows: mates });
+    const out: { script: string; rows: typeof people }[] = [];
+    for (const person of people) {
+      const key = `${person.best.row.team}|${person.best.row.player}`;
+      if (seen.has(key)) continue;
+      const mates = people.filter((x) => x.best.row.script === person.best.row.script);
+      mates.forEach((m) => seen.add(`${m.best.row.team}|${m.best.row.player}`));
+      out.push({ script: person.best.row.script, rows: mates });
     }
     return out;
-  }, [ranked]);
+  }, [people]);
 
   const open = ranked.find((x) => x.row.id === openId) || null;
   const samePlayer = open ? ranked.filter((x) => x.row.player === open.row.player && x.row.team === open.row.team) : [];
@@ -101,7 +113,6 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
           ))}
         </div>
       </div>
-      <p className="text-xs" style={{ color: "#a89f90" }}>Ranked by how often the log cleared this number. No book is posted, so the number is the player’s own median and the row says research.</p>
       {loading ? <p className="text-sm" style={{ color: "#a89f90" }}>Loading logs…</p> : null}
       {!loading && ranked.length === 0 ? <p className="text-sm" style={{ color: "#a89f90" }}>No real log to rank.</p> : null}
       {open ? (
@@ -117,20 +128,14 @@ export function PropRank({ rows, loading }: { rows: PropItem[]; loading?: boolea
       {boxes.map((box) => (
         <div key={box.script} className="border" style={{ borderColor: "#2c2c28", background: "#0e0e0c" }}>
           <p className="border-b px-3 py-2 text-xs" style={{ borderColor: "#2c2c28", color: "#a89f90" }}>{box.script}</p>
-          {box.rows.map((item, i) => {
+          {box.rows.map((person) => {
+            const item = person.best;
             const clear = item.stats.n > 0 && item.stats.hits / item.stats.n >= 0.5;
             return (
-            <button key={item.row.id} type="button" onClick={() => setOpenId(item.row.id)} className="flex min-h-11 w-full items-center gap-3 border-b px-3 py-2 text-left" style={{ borderColor: "#2c2c28" }}>
-              <span className="w-4 font-mono text-xs" style={{ color: "#a89f90" }}>{i + 1}</span>
+            <button key={item.row.player + item.row.team} type="button" onClick={() => setOpenId(item.row.id)} className="flex min-h-11 w-full items-center gap-3 border-b px-3 py-2 text-left" style={{ borderColor: "#2c2c28" }}>
               {item.row.face ? <img src={item.row.face} alt="" className="size-9 shrink-0 rounded-full object-cover object-top" /> : <span className="size-9 shrink-0 rounded-full" style={{ background: "#2c2c28" }} />}
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm" style={{ color: item.row.confirmed ? "#f0eee6" : "#c45c4a" }}>{item.row.star ? "★ " : ""}{item.row.player}</span>
-                <span className="block truncate text-xs" style={{ color: "#a89f90" }}>{item.row.market} {one(item.number)} · research · {item.row.opp}</span>
-              </span>
-              <span className="shrink-0 text-right font-mono text-sm" style={{ color: clear ? "#3f6b45" : "#c45c4a" }}>
-                <span className="block">{item.stats.hits} of {item.stats.n}</span>
-                <span className="block text-[10px]" style={{ color: "#a89f90" }}>games</span>
-              </span>
+              <span className="min-w-0 flex-1 truncate text-sm" style={{ color: item.row.confirmed ? "#f0eee6" : "#c45c4a" }}>{person.mates.some((m) => m.row.star) ? "★ " : ""}{item.row.player}</span>
+              <span className="shrink-0 font-mono text-sm" style={{ color: clear ? "#3f6b45" : "#c45c4a" }}>{item.stats.hits}/{item.stats.n}</span>
             </button>
             );
           })}
