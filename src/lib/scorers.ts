@@ -1,10 +1,10 @@
 import { unstable_cache } from "next/cache";
 
-const FILE = "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv";
 const SCHED = "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv";
 const NFL: Record<string, string> = { WSH: "WAS", LAR: "LA" };
+const SEASONS = [2025, 2026];
 
-export type ScorerWeek = { week: number; date: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
+export type ScorerWeek = { season: number; week: number; date: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
 export type Scorer = {
   name: string;
   team: string;
@@ -21,7 +21,7 @@ export type Scorer = {
   models: Partial<Record<"rec" | "catches" | "rush" | "pass" | "passTd" | "td", { value: number; text: string }>>;
 };
 
-type Raw = { name: string; team: string; pos: string; weeks: ScorerWeek[] };
+type Raw = { name: string; team: string; pos: string; latest: number; weeks: ScorerWeek[] };
 type Line = { away: string; home: string; spread: number; total: number };
 
 function split(line: string) {
@@ -37,9 +37,12 @@ function split(line: string) {
   return out;
 }
 
+function weekFile(year: number) {
+  return `https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_${year}.csv`;
+}
+
 const load = unstable_cache(async (): Promise<Raw[]> => {
-  const [res, sched] = await Promise.all([fetch(FILE), fetch(SCHED)]);
-  if (!res.ok) return [];
+  const [sched, ...stats] = await Promise.all([fetch(SCHED), ...SEASONS.map((year) => fetch(weekFile(year)))]);
   const days = new Map<string, string>();
   if (sched.ok) {
     const book = (await sched.text()).split("\n");
@@ -50,45 +53,58 @@ const load = unstable_cache(async (): Promise<Raw[]> => {
     for (const line of book.slice(1)) {
       if (!line) continue;
       const c = split(line);
-      if (c[season] !== "2026" || !c[id] || !c[day]) continue;
+      if ((c[season] !== "2025" && c[season] !== "2026") || !c[id] || !c[day]) continue;
       days.set(c[id], c[day]);
     }
   }
-  const text = await res.text();
-  const lines = text.split("\n");
-  const header = split(lines[0]);
-  const col = (name: string) => header.indexOf(name);
-  const i = {
-    name: col("player_display_name"), team: col("team"), pos: col("position"),
-    type: col("season_type"), week: col("week"), opp: col("opponent_team"), game: col("game_id"),
-    rushTd: col("rushing_tds"), recTd: col("receiving_tds"),
-    rushYds: col("rushing_yards"), recYds: col("receiving_yards"),
-    catches: col("receptions"), passYds: col("passing_yards"), passTd: col("passing_tds"),
-  };
   const grouped = new Map<string, Raw>();
-  for (const line of lines.slice(1)) {
-    if (!line) continue;
-    const c = split(line);
-    if (c[i.type] !== "REG") continue;
-    if (!["WR", "TE", "RB", "QB"].includes(c[i.pos])) continue;
-    const td = (Number(c[i.rushTd]) || 0) + (Number(c[i.recTd]) || 0);
-    const rec = Number(c[i.recYds]) || 0;
-    const rush = Number(c[i.rushYds]) || 0;
-    const catches = Number(c[i.catches]) || 0;
-    const pass = Number(c[i.passYds]) || 0;
-    const passTd = Number(c[i.passTd]) || 0;
-    const key = `${c[i.team]}|${c[i.name]}`;
-    const row = grouped.get(key) || { name: c[i.name], team: c[i.team], pos: c[i.pos], weeks: [] };
-    row.weeks.push({
-      week: Number(c[i.week]) || 0,
-      date: days.get(c[i.game]) || "",
-      td, rec, rush, catches, pass, passTd,
-      opp: c[i.opp] || "",
-    });
-    grouped.set(key, row);
+  for (const res of stats) {
+    if (!res.ok) continue;
+    const lines = (await res.text()).split("\n");
+    const header = split(lines[0]);
+    const col = (name: string) => header.indexOf(name);
+    const i = {
+      id: col("player_id"), name: col("player_display_name"), team: col("team"), pos: col("position"),
+      season: col("season"), type: col("season_type"), week: col("week"), opp: col("opponent_team"), game: col("game_id"),
+      rushTd: col("rushing_tds"), recTd: col("receiving_tds"),
+      rushYds: col("rushing_yards"), recYds: col("receiving_yards"),
+      catches: col("receptions"), passYds: col("passing_yards"), passTd: col("passing_tds"),
+    };
+    for (const line of lines.slice(1)) {
+      if (!line) continue;
+      const c = split(line);
+      if (c[i.type] !== "REG") continue;
+      if (!["WR", "TE", "RB", "QB"].includes(c[i.pos])) continue;
+      const season = Number(c[i.season]) || 0;
+      if (!SEASONS.includes(season)) continue;
+      const week = Number(c[i.week]) || 0;
+      const td = (Number(c[i.rushTd]) || 0) + (Number(c[i.recTd]) || 0);
+      const rec = Number(c[i.recYds]) || 0;
+      const rush = Number(c[i.rushYds]) || 0;
+      const catches = Number(c[i.catches]) || 0;
+      const pass = Number(c[i.passYds]) || 0;
+      const passTd = Number(c[i.passTd]) || 0;
+      const key = c[i.id] || c[i.name];
+      if (!key) continue;
+      const row = grouped.get(key) || { name: c[i.name], team: c[i.team], pos: c[i.pos], latest: 0, weeks: [] };
+      const stamp = season * 100 + week;
+      if (stamp >= row.latest) {
+        row.latest = stamp;
+        row.team = c[i.team];
+        row.pos = c[i.pos];
+        row.name = c[i.name] || row.name;
+      }
+      row.weeks.push({
+        season, week, date: days.get(c[i.game]) || "",
+        td, rec, rush, catches, pass, passTd,
+        opp: c[i.opp] || "",
+      });
+      grouped.set(key, row);
+    }
   }
-  return Array.from(grouped.values());
-}, ["nfl-player-weeks-2026-dates"], { revalidate: 3600 });
+  for (const row of grouped.values()) row.weeks.sort((a, b) => a.season - b.season || a.week - b.week);
+  return Array.from(grouped.values()).filter((row) => row.weeks.some((week) => week.season === 2026));
+}, ["nfl-player-weeks-2025-2026"], { revalidate: 3600 });
 
 async function lines(): Promise<Line[]> {
   const res = await fetch(SCHED, { next: { revalidate: 3600 } });
@@ -167,6 +183,7 @@ function card(rows: Raw[]) {
   const allowed = new Map<string, number[]>();
   for (const row of rows) {
     for (const w of row.weeks) {
+      if (w.season !== 2026) continue;
       for (const market of MODEL_MARKETS) {
         const key = `${w.opp}|${row.pos}|${market}`;
         const list = allowed.get(key) || [];
@@ -188,25 +205,28 @@ function card(rows: Raw[]) {
   }
   return (player: { name: string; pos: string }, weeksPlayed: ScorerWeek[], foe: string, script: string) => {
     const models: Scorer["models"] = {};
-    if (!weeksPlayed.length) return models;
+    const seasonWeeks = weeksPlayed.filter((w) => w.season === 2026);
+    const last10 = weeksPlayed.slice(-10);
+    const base = seasonWeeks.length ? seasonWeeks : last10;
+    if (!base.length) return models;
     for (const market of MODEL_MARKETS) {
-      const values = weeksPlayed.map((w) => weekStat(w, market));
-      const last3 = values.slice(-3);
+      const values = base.map((w) => weekStat(w, market));
+      const recentValues = last10.map((w) => weekStat(w, market));
       const season = mean(values);
-      const recent = mean(last3);
+      const recent = mean(recentValues);
       const line = tenth(season);
       const clears = values.filter((n) => n > line).length;
-      const recentClears = last3.filter((n) => n > line).length;
+      const recentClears = recentValues.filter((n) => n > line).length;
       const def = rank(foe, player.pos, market);
-      const log = weeksPlayed.slice(-5).map((w) => `${w.opp} ${tenth(weekStat(w, market))}`).join(", ");
+      const log = last10.map((w) => `${w.season === 2026 ? "" : `${w.season} `}${w.opp} ${tenth(weekStat(w, market))}`).join(", ");
       models[market] = {
         value: tenth(recent),
         text: [
-          `${player.name} ${UNIT[market]}. Book prop line is not in this file, so the comparison line is his season average, ${line}.`,
-          `Last 3 / season: ${tenth(recent)} / ${tenth(season)}.`,
-          `Over that average: last 3 ${recentClears}/${last3.length}, season ${clears}/${values.length}.`,
+          `${player.name} ${UNIT[market]}. Book prop line is not in this file, so the comparison line is his 2026 average, ${line}.`,
+          `Last 10 / 2026: ${tenth(recent)} / ${tenth(season)}.`,
+          `Over that 2026 average: last 10 ${recentClears}/${recentValues.length}, 2026 ${clears}/${values.length}.`,
           `Log: ${log}. A zero is the defense he drew, not the rate.`,
-          `${foe} has allowed ${tenth(def.mine)} ${UNIT[market]} a game to ${player.pos}s, ${def.place} of ${def.of}, fewest first. Position bucket, not the man on him.`,
+          `${foe} has allowed ${tenth(def.mine)} ${UNIT[market]} a game to ${player.pos}s, ${def.place} of ${def.of}, fewest first. Position bucket, not the man on him. 2026 only.`,
           script,
           `Snap share and target share are not on this card yet.`,
         ].join(" "),
@@ -232,8 +252,9 @@ export async function gameScorers(away: string, home: string) {
   const players: Scorer[] = rows
     .filter((r) => want.has(r.team))
     .map((r) => {
-      const weeks = [...r.weeks].sort((a, b) => a.week - b.week);
-      const total = weeks.reduce((s, w) => s + w.td, 0);
+      const weeks = r.weeks;
+      const seasonWeeks = weeks.filter((w) => w.season === 2026);
+      const total = seasonWeeks.reduce((s, w) => s + w.td, 0);
       const team = want.get(r.team) || r.team;
       const foe = team === away ? home : away;
       return {
@@ -241,13 +262,13 @@ export async function gameScorers(away: string, home: string) {
         team,
         pos: r.pos,
         id: ids.get(keyOf(r.name)) || "",
-        rec: weeks.reduce((s, w) => s + w.rec, 0),
-        rush: weeks.reduce((s, w) => s + w.rush, 0),
-        catches: weeks.reduce((s, w) => s + w.catches, 0),
-        pass: weeks.reduce((s, w) => s + w.pass, 0),
-        passTd: weeks.reduce((s, w) => s + w.passTd, 0),
+        rec: seasonWeeks.reduce((s, w) => s + w.rec, 0),
+        rush: seasonWeeks.reduce((s, w) => s + w.rush, 0),
+        catches: seasonWeeks.reduce((s, w) => s + w.catches, 0),
+        pass: seasonWeeks.reduce((s, w) => s + w.pass, 0),
+        passTd: seasonWeeks.reduce((s, w) => s + w.passTd, 0),
         total,
-        scored: weeks.filter((w) => w.td > 0).length,
+        scored: seasonWeeks.filter((w) => w.td > 0).length,
         weeks,
         models: score({ name: r.name, pos: r.pos }, weeks, foe, implied(row, NFL[team] || team)),
       };
@@ -255,7 +276,7 @@ export async function gameScorers(away: string, home: string) {
     .filter((p) => p.rec > 0 || p.rush > 0 || p.catches > 0 || p.pass > 0 || p.passTd > 0 || p.total > 0)
     .sort((a, b) => b.rec - a.rec || a.name.localeCompare(b.name));
   return {
-    source: "nflverse 2026. Last 3 against season. Implied points from the schedule spread and total. Prop line is not in this file.",
+    source: "nflverse. L10 is the last 10 games played, and it crosses into 2025 when this season is shorter. The line is the 2026 average. Prop line is not in this file.",
     players,
   };
 }
