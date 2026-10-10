@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { headshot, one, pct, summarize, teamLogo } from "./data";
 
-type Week = { week: number; date?: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
+type Week = { season?: number; week: number; date?: string; td: number; rec: number; rush: number; catches: number; pass: number; passTd: number; opp: string };
 type Player = {
   name: string;
   team: string;
@@ -22,12 +22,15 @@ type Market = "rec" | "catches" | "rush" | "pass" | "passTd";
 
 const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function playedOn(date?: string, week?: number) {
-  if (date && date.includes("-")) {
-    const [, m, d] = date.split("-");
-    return `${MONTHS[Number(m)] || ""} ${Number(d)}`.trim();
-  }
-  return week ? `W${week}` : "";
+function playedOn(date?: string, week?: number, season?: number) {
+  const base = date && date.includes("-")
+    ? `${MONTHS[Number(date.split("-")[1])] || ""} ${Number(date.split("-")[2])}`.trim()
+    : week ? `W${week}` : "";
+  return season && season !== 2026 ? `${base} '${String(season).slice(-2)}` : base;
+}
+
+function thisYear(weeks: Week[]) {
+  return weeks.filter((week) => (week.season ?? 2026) === 2026);
 }
 
 const LOGO: Record<string, string> = { WAS: "WSH", LA: "LAR" };
@@ -64,7 +67,7 @@ function plays(player: Player, market: BoardMarket) {
 
 function takeWeeks(weeks: Week[], win: "L5" | "L10" | "L15" | "2026" | "H2H", foe: string) {
   if (win === "H2H") return weeks.filter((week) => week.opp === foe);
-  if (win === "2026") return weeks;
+  if (win === "2026") return thisYear(weeks);
   const n = win === "L5" ? 5 : win === "L10" ? 10 : 15;
   return weeks.slice(-n);
 }
@@ -137,7 +140,7 @@ function Bars({ weeks, values, line, pendingOpp }: { weeks: { label: string; abb
   return (
     <div>
       <div className="overflow-x-auto pb-1">
-        <div className="relative" style={{ width: Math.max(bars.length * 58, 280) }}>
+        <div className="relative" style={{ width: Math.max(bars.length * 68, 280) }}>
           <div className="relative h-52">
             <div className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground" style={{ bottom: `${linePct}%` }}>
               <span className="absolute -top-3 right-0 rounded-full bg-foreground px-2 py-0.5 font-mono text-xs font-semibold text-background">{one(line)}</span>
@@ -149,7 +152,7 @@ function Bars({ weeks, values, line, pendingOpp }: { weeks: { label: string; abb
                 const over = !empty && b.value! > line;
                 const inside = !empty && height > 24;
                 return (
-                  <button key={`${b.label}-${i}`} type="button" onClick={() => setPicked(i)} className="relative h-full w-14 shrink-0">
+                  <button key={`${b.label}-${i}`} type="button" onClick={() => setPicked(i)} className="relative h-full w-16 shrink-0">
                     {!empty && !inside ? <span className={`absolute inset-x-0 text-center font-mono text-xs font-semibold ${over ? "text-good" : "text-danger"}`} style={{ bottom: `calc(${height}% + 2px)` }}>{b.value}</span> : null}
                     <span className={`absolute inset-x-1.5 bottom-0 rounded-md ${empty ? "border border-dashed border-accent/50" : over ? "bg-good" : "bg-danger"} ${picked === i ? "ring-2 ring-accent" : ""}`} style={{ height: `${height}%` }}>
                       {empty ? <span className="grid h-full place-items-center text-sm text-muted">?</span> : inside ? <span className="block pt-1 text-center font-mono text-xs font-semibold text-background">{b.value}</span> : null}
@@ -161,7 +164,7 @@ function Bars({ weeks, values, line, pendingOpp }: { weeks: { label: string; abb
           </div>
           <div className="mt-3 flex">
             {bars.map((b, i) => (
-              <div key={`${b.label}-m-${i}`} className="flex w-14 shrink-0 flex-col items-center">
+              <div key={`${b.label}-m-${i}`} className="flex w-16 shrink-0 flex-col items-center">
                 <span className={`grid size-8 place-items-center rounded-full bg-background ring-1 ${picked === i ? "ring-accent" : "ring-card-border"}`}>
                   <img src={mark(b.abbr)} alt="" className="size-5 object-contain" />
                 </span>
@@ -200,7 +203,7 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
 
   const roster = (players || []).filter((p) => p.team === side).sort((a, b) => a.name.localeCompare(b.name));
   const active = roster.find((p) => p.name === name) || null;
-  const values = active ? active.weeks.map((w) => w.td) : [];
+  const values = active ? thisYear(active.weeks).map((w) => w.td) : [];
   const shown = summarize(values, line);
   const note = values.length ? read(values, line) : null;
 
@@ -256,7 +259,7 @@ export function AnytimeSection({ away, home, pending = false }: { away: string; 
               line={line}
               values={values}
               pendingOpp={pending ? (active.team === away ? home : away) : undefined}
-              weeks={active.weeks.map((w) => ({ label: playedOn(w.date, w.week), abbr: w.opp, value: w.td }))}
+              weeks={thisYear(active.weeks).map((w) => ({ label: playedOn(w.date, w.week, w.season), abbr: w.opp, value: w.td }))}
             />
           </div>
           {note ? <p className="mt-2 text-sm text-muted">{note.call}. {note.against}</p> : null}
@@ -296,6 +299,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
   const foe = active ? (active.team === away ? home : away) : home;
   const tabs = active ? BOARD.filter((item) => plays(active, item.key)) : BOARD;
   const view = tabs.some((item) => item.key === market) ? market : (tabs[0]?.key || "catches");
+  const seasonWeeks = active ? thisYear(active.weeks) : [];
   const weeks = active ? takeWeeks(active.weeks, win, foe) : [];
   const values = weeks.map((week) => statOf(week, view));
   const shown = active ? read(values, line) : null;
@@ -307,18 +311,19 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
 
   function pickPlayer(player: Player, market?: BoardMarket) {
     const next = market && (market === "td" || plays(player, market)) ? market : (BOARD.find((item) => plays(player, item.key))?.key || "catches");
-    const nums = player.weeks.map((week) => statOf(week, next));
+    const nums = thisYear(player.weeks).map((week) => statOf(week, next));
     setName(player.name);
     setMarket(next);
     setOpen(false);
     setWin("L10");
-    setLine(lineFor(nums));
+    setLine(lineFor(nums.length ? nums : player.weeks.map((week) => statOf(week, next))));
   }
 
   function pickMarket(next: BoardMarket) {
     if (!active) return;
     setMarket(next);
-    setLine(lineFor(active.weeks.map((week) => statOf(week, next))));
+    const nums = thisYear(active.weeks).map((week) => statOf(week, next));
+    setLine(lineFor(nums.length ? nums : active.weeks.map((week) => statOf(week, next))));
   }
 
   return (
@@ -374,13 +379,13 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
             </div>
           </div>
           <div className="grid grid-cols-4 border-b border-card-border text-center">
-            <div className="px-2 py-3"><div className="font-mono text-lg font-semibold">{active.weeks.length}</div><div className="text-[10px] uppercase tracking-widest text-muted">Games</div></div>
+            <div className="px-2 py-3"><div className="font-mono text-lg font-semibold">{seasonWeeks.length}</div><div className="text-[10px] uppercase tracking-widest text-muted">2026</div></div>
             {(() => {
               const withTd = BOARD.filter((item) => item.key === "td" || plays(active, item.key));
               const td = withTd.find((item) => item.key === "td");
               const rest = withTd.filter((item) => item.key !== "td").slice(0, td ? 2 : 3);
               return (td ? [...rest, td] : rest).map((item) => {
-                const total = active.weeks.reduce((sum, week) => sum + statOf(week, item.key), 0);
+                const total = seasonWeeks.reduce((sum, week) => sum + statOf(week, item.key), 0);
                 return (
                   <div key={item.key} className="border-l border-card-border px-2 py-3">
                     <div className="font-mono text-lg font-semibold">{Number.isInteger(total) ? total : one(total)}</div>
@@ -426,11 +431,12 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
                 </button>
               ))}
             </div>
+            {weeks.some((week) => week.season && week.season !== 2026) ? <p className="text-xs text-muted">This is the last {weeks.length} games he played. A '25 date is last season. The line stays his 2026 average.</p> : null}
             <Bars
               line={line}
               values={values}
               pendingOpp={pending ? foe : undefined}
-              weeks={weeks.map((week) => ({ label: playedOn(week.date, week.week), abbr: week.opp, value: statOf(week, view) }))}
+              weeks={weeks.map((week) => ({ label: playedOn(week.date, week.week, week.season), abbr: week.opp, value: statOf(week, view) }))}
             />
             <div className="flex items-center gap-2">
               <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Lower the line" onClick={() => setLine((v) => Math.max(0, Math.round((v - 0.5) * 10) / 10))}>−</button>
@@ -438,7 +444,7 @@ export function LiveBoard({ away, home, pending = false }: { away: string; home:
               <button type="button" className="size-11 shrink-0 rounded-full bg-background text-lg" aria-label="Raise the line" onClick={() => setLine((v) => Math.round((v + 0.5) * 10) / 10)}>+</button>
             </div>
             <p className="text-sm text-muted">{shown.call}. {shown.against}</p>
-            <ModelBox model={view === "td" ? active.models?.td : (active.models?.[view] || rateModel(active, view, active.weeks.map((week) => statOf(week, view))))} />
+            <ModelBox model={view === "td" ? active.models?.td : (active.models?.[view] || rateModel(active, view, seasonWeeks.map((week) => statOf(week, view))))} />
           </div>
         </section>
       ) : null}
